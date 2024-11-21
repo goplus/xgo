@@ -258,14 +258,56 @@ func formatClass(file *ast.File, pkg string, class string, entry string) {
 		classPkg:  path.Base(pkg),
 		className: class,
 	}
+	if file.Name.Name == "main" {
+		file.NoPkgDecl = true
+	}
+	var fnEntry *ast.FuncDecl
+	var decls []ast.Decl
+	var varSpecs []ast.Spec
+	for _, decl := range file.Decls {
+		switch v := decl.(type) {
+		case *ast.FuncDecl:
+			if isClassFunc(v, class) {
+				v.IsClass = true
+				switch v.Name.Name {
+				case entry:
+					fnEntry = v
+					file.ShadowEntry = v
+					continue
+				case "Classfname":
+					v.Shadow = true
+				}
+			}
+		case *ast.GenDecl:
+			if v.Tok == token.TYPE {
+				if spec, ok := v.Specs[0].(*ast.TypeSpec); ok && spec.Name.Name == class {
+					if st, ok := spec.Type.(*ast.StructType); ok {
+						for _, fs := range st.Fields.List {
+							if len(fs.Names) == 0 {
+								continue
+							}
+							varSpecs = append(varSpecs, &ast.ValueSpec{Names: fs.Names, Type: fs.Type})
+						}
+						continue
+					}
+				}
+			}
+		}
+		decls = append(decls, decl)
+	}
+	if len(varSpecs) != 0 {
+		decls = append([]ast.Decl{&ast.GenDecl{Tok: token.VAR, Specs: varSpecs}}, decls...)
+	}
+	if fnEntry != nil {
+		decls = append(decls, fnEntry)
+	}
+	file.Decls = decls
+
 	for _, decl := range file.Decls {
 		switch v := decl.(type) {
 		case *ast.FuncDecl:
 			// delay the process, because package level vars need to be processed first.
 			funcs = append(funcs, v)
-			if isClassFunc(v, class) && v.Name.Name == entry {
-				file.ShadowEntry = v
-			}
 		case *ast.GenDecl:
 			switch v.Tok {
 			case token.IMPORT:
@@ -344,6 +386,7 @@ func funcRecv(v *ast.FuncDecl) *ast.Ident {
 
 func formatFuncDecl(ctx *formatCtx, v *ast.FuncDecl) {
 	if ctx.classMode && isClassFunc(v, ctx.className) {
+		v.IsClass = true
 		if recv := funcRecv(v); recv != nil {
 			ctx.funcRecv = recv.Name
 			defer func() {
