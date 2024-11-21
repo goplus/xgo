@@ -83,6 +83,28 @@ func Gopstyle(file *ast.File) {
 	XGoStyle(file)
 }
 
+func XGoClassSource(src []byte, pkg string, class string, entry string, filename ...string) (ret []byte, err error) {
+	var fname string
+	if filename != nil {
+		fname = filename[0]
+	}
+	fset := token.NewFileSet()
+	var f *ast.File
+	if f, err = parser.ParseFile(fset, fname, src, parser.ParseComments); err == nil {
+		XGoClass(f, pkg, class, entry)
+		var buf bytes.Buffer
+		if err = format.Node(&buf, fset, f); err == nil {
+			ret = buf.Bytes()
+		}
+	}
+	return
+}
+
+// GopClass format ast.File to Go+ class
+func XGoClass(file *ast.File, pkg string, class string, entry string) {
+	formatClass(file, pkg, class, entry)
+}
+
 func findFuncDecl(decls []ast.Decl, name string) (int, *ast.FuncDecl) {
 	for i, decl := range decls {
 		if fn, ok := decl.(*ast.FuncDecl); ok {
@@ -156,8 +178,12 @@ type importCtx struct {
 }
 
 type formatCtx struct {
-	imports map[string]*importCtx
-	scope   *types.Scope
+	imports   map[string]*importCtx
+	scope     *types.Scope
+	classMode bool   //class mode
+	classPkg  string //class pkg name
+	className string //this class
+	funcRecv  string //this class func recv
 }
 
 func (ctx *formatCtx) insert(name string) {
@@ -223,6 +249,60 @@ func formatFile(file *ast.File) {
 	}
 }
 
+func formatClass(file *ast.File, pkg string, class string, entry string) {
+	var funcs []*ast.FuncDecl
+	ctx := &formatCtx{
+		imports:   make(map[string]*importCtx),
+		scope:     types.NewScope(nil, token.NoPos, token.NoPos, ""),
+		classMode: true,
+		classPkg:  path.Base(pkg),
+		className: class,
+	}
+	for _, decl := range file.Decls {
+		switch v := decl.(type) {
+		case *ast.FuncDecl:
+			// delay the process, because package level vars need to be processed first.
+			funcs = append(funcs, v)
+			if isClassFunc(v, class) && v.Name.Name == entry {
+				file.ShadowEntry = v
+			}
+		case *ast.GenDecl:
+			switch v.Tok {
+			case token.IMPORT:
+				for _, item := range v.Specs {
+					var spec = item.(*ast.ImportSpec)
+					var pkgPath = toString(spec.Path)
+					var name string
+					if spec.Name == nil {
+						name = path.Base(pkgPath) // TODO: open pkgPath to get pkgName
+					} else {
+						name = spec.Name.Name
+						if name == "." || name == "_" {
+							continue
+						}
+					}
+					ctx.imports[name] = &importCtx{pkgPath: pkgPath, decl: v, spec: spec}
+				}
+			default:
+				formatGenDecl(ctx, v)
+			}
+		}
+	}
+
+	for _, fn := range funcs {
+		formatFuncDecl(ctx, fn)
+	}
+	for _, imp := range ctx.imports {
+		if imp.pkgPath == "fmt" && !imp.isUsed {
+			if len(imp.decl.Specs) == 1 {
+				file.Decls = deleteDecl(file.Decls, imp.decl)
+			} else {
+				imp.decl.Specs = deleteSpec(imp.decl.Specs, imp.spec)
+			}
+		}
+	}
+}
+
 func formatGenDecl(ctx *formatCtx, v *ast.GenDecl) {
 	switch v.Tok {
 	case token.VAR, token.CONST:
@@ -242,7 +322,35 @@ func formatGenDecl(ctx *formatCtx, v *ast.GenDecl) {
 	}
 }
 
+func isClassFunc(v *ast.FuncDecl, className string) bool {
+	if v.Recv != nil && len(v.Recv.List) == 1 {
+		typ := v.Recv.List[0].Type
+		if star, ok := typ.(*ast.StarExpr); ok {
+			typ = star.X
+		}
+		if ident, ok := typ.(*ast.Ident); ok && ident.Name == className {
+			return true
+		}
+	}
+	return false
+}
+
+func funcRecv(v *ast.FuncDecl) *ast.Ident {
+	if v.Recv != nil && len(v.Recv.List) == 1 && len(v.Recv.List[0].Names) == 1 {
+		return v.Recv.List[0].Names[0]
+	}
+	return nil
+}
+
 func formatFuncDecl(ctx *formatCtx, v *ast.FuncDecl) {
+	if ctx.classMode && isClassFunc(v, ctx.className) {
+		if recv := funcRecv(v); recv != nil {
+			ctx.funcRecv = recv.Name
+			defer func() {
+				ctx.funcRecv = ""
+			}()
+		}
+	}
 	formatFuncType(ctx, v.Type)
 	formatBlockStmt(ctx, v.Body)
 }
