@@ -37,6 +37,12 @@ func testClass(t *testing.T, name string, pkg string, class string, entry string
 func TestClassSpx(t *testing.T) {
 	testClass(t, "spx class", "github.com/goplus/spx", "Calf", "Main", `package main
 
+import (
+	"github.com/goplus/spx"
+	"fmt"
+	"log"
+)
+
 type Calf struct {
 	spx.Sprite
 	*Game
@@ -46,6 +52,9 @@ type Calf struct {
 func (this *Calf) Update() {
 	this.index++
 }
+func (this *Calf) Dump() {
+	log.Println(this.info)
+}
 func (this *Calf) Main() {
 	this.OnStart(func() {
 		this.Say("Hello Go+")
@@ -54,7 +63,11 @@ func (this *Calf) Main() {
 func (this *Calf) Classfname() string {
 	return "Calf"
 }
-`, `var (
+`, `import (
+	"log"
+)
+
+var (
 	index int
 	info  string
 )
@@ -63,8 +76,13 @@ func Update() {
 	index++
 }
 
+func Dump() {
+	log.println info
+}
+
 onStart func() {
 	say "Hello Go+"
 }
 `)
+
 }

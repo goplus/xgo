@@ -263,6 +263,7 @@ func formatClass(file *ast.File, pkg string, class string, entry string) {
 	}
 	var fnEntry *ast.FuncDecl
 	var decls []ast.Decl
+	var imports []ast.Decl
 	var varSpecs []ast.Spec
 	for _, decl := range file.Decls {
 		switch v := decl.(type) {
@@ -279,7 +280,11 @@ func formatClass(file *ast.File, pkg string, class string, entry string) {
 				}
 			}
 		case *ast.GenDecl:
-			if v.Tok == token.TYPE {
+			switch v.Tok {
+			case token.IMPORT:
+				imports = append(imports, v)
+				continue
+			case token.TYPE:
 				if spec, ok := v.Specs[0].(*ast.TypeSpec); ok && spec.Name.Name == class {
 					if st, ok := spec.Type.(*ast.StructType); ok {
 						for _, fs := range st.Fields.List {
@@ -295,13 +300,15 @@ func formatClass(file *ast.File, pkg string, class string, entry string) {
 		}
 		decls = append(decls, decl)
 	}
+
+	file.Decls = imports
 	if len(varSpecs) != 0 {
-		decls = append([]ast.Decl{&ast.GenDecl{Tok: token.VAR, Specs: varSpecs}}, decls...)
+		file.Decls = append(file.Decls, &ast.GenDecl{Tok: token.VAR, Specs: varSpecs})
 	}
+	file.Decls = append(file.Decls, decls...)
 	if fnEntry != nil {
-		decls = append(decls, fnEntry)
+		file.Decls = append(file.Decls, fnEntry)
 	}
-	file.Decls = decls
 
 	for _, decl := range file.Decls {
 		switch v := decl.(type) {
@@ -335,7 +342,7 @@ func formatClass(file *ast.File, pkg string, class string, entry string) {
 		formatFuncDecl(ctx, fn)
 	}
 	for _, imp := range ctx.imports {
-		if imp.pkgPath == "fmt" && !imp.isUsed {
+		if !imp.isUsed {
 			if len(imp.decl.Specs) == 1 {
 				file.Decls = deleteDecl(file.Decls, imp.decl)
 			} else {
