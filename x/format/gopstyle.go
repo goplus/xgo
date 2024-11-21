@@ -83,7 +83,7 @@ func Gopstyle(file *ast.File) {
 	XGoStyle(file)
 }
 
-func XGoClassSource(src []byte, pkg string, class string, entry string, filename ...string) (ret []byte, err error) {
+func XGoClassSource(src []byte, pkg string, class string, prog bool, filename ...string) (ret []byte, err error) {
 	var fname string
 	if filename != nil {
 		fname = filename[0]
@@ -91,7 +91,7 @@ func XGoClassSource(src []byte, pkg string, class string, entry string, filename
 	fset := token.NewFileSet()
 	var f *ast.File
 	if f, err = parser.ParseFile(fset, fname, src, parser.ParseComments); err == nil {
-		XGoClass(f, pkg, class, entry)
+		XGoClass(f, pkg, class, prog)
 		var buf bytes.Buffer
 		if err = format.Node(&buf, fset, f); err == nil {
 			ret = buf.Bytes()
@@ -100,9 +100,9 @@ func XGoClassSource(src []byte, pkg string, class string, entry string, filename
 	return
 }
 
-// GopClass format ast.File to Go+ class
-func XGoClass(file *ast.File, pkg string, class string, entry string) {
-	formatClass(file, pkg, class, entry)
+// XGoClass format ast.File to Go+ class
+func XGoClass(file *ast.File, pkg string, class string, prog bool) {
+	formatClass(file, pkg, class, prog)
 }
 
 func findFuncDecl(decls []ast.Decl, name string) (int, *ast.FuncDecl) {
@@ -249,7 +249,7 @@ func formatFile(file *ast.File) {
 	}
 }
 
-func formatClass(file *ast.File, pkg string, class string, entry string) {
+func formatClass(file *ast.File, pkg string, class string, proj bool) {
 	var funcs []*ast.FuncDecl
 	ctx := &formatCtx{
 		imports:   make(map[string]*importCtx),
@@ -271,13 +271,24 @@ func formatClass(file *ast.File, pkg string, class string, entry string) {
 			if isClassFunc(v, class) {
 				v.IsClass = true
 				switch v.Name.Name {
-				case entry:
-					fnEntry = v
-					file.ShadowEntry = v
-					continue
+				case "MainEntry":
+					if proj {
+						fnEntry = v
+						file.ShadowEntry = v
+						continue
+					}
+				case "Main":
+					if !proj {
+						fnEntry = v
+						file.ShadowEntry = v
+						continue
+					}
+					v.Shadow = true
 				case "Classfname":
 					v.Shadow = true
 				}
+			} else if v.Name.Name == "main" && proj {
+				v.Shadow = true
 			}
 		case *ast.GenDecl:
 			switch v.Tok {
@@ -323,7 +334,7 @@ func formatClass(file *ast.File, pkg string, class string, entry string) {
 					var pkgPath = toString(spec.Path)
 					var name string
 					if spec.Name == nil {
-						name = path.Base(pkgPath) // TODO: open pkgPath to get pkgName
+						name = path.Base(pkgPath)
 					} else {
 						name = spec.Name.Name
 						if name == "." || name == "_" {
