@@ -83,7 +83,7 @@ func Gopstyle(file *ast.File) {
 	XGoStyle(file)
 }
 
-func XGoClassSource(src []byte, pkg string, class string, prog bool, filename ...string) (ret []byte, err error) {
+func XGoClassSource(src []byte, pkg string, class string, proj bool, filename ...string) (ret []byte, err error) {
 	var fname string
 	if filename != nil {
 		fname = filename[0]
@@ -91,7 +91,7 @@ func XGoClassSource(src []byte, pkg string, class string, prog bool, filename ..
 	fset := token.NewFileSet()
 	var f *ast.File
 	if f, err = parser.ParseFile(fset, fname, src, parser.ParseComments); err == nil {
-		XGoClass(f, pkg, class, prog)
+		XGoClass(f, pkg, class, proj)
 		var buf bytes.Buffer
 		if err = format.Node(&buf, fset, f); err == nil {
 			ret = buf.Bytes()
@@ -299,7 +299,7 @@ func formatClass(file *ast.File, pkg string, class string, proj bool) {
 				if spec, ok := v.Specs[0].(*ast.TypeSpec); ok && spec.Name.Name == class {
 					if st, ok := spec.Type.(*ast.StructType); ok {
 						for _, fs := range st.Fields.List {
-							if len(fs.Names) == 0 {
+							if len(fs.Names) == 0 && pkg != "" {
 								continue
 							}
 							varSpecs = append(varSpecs, &ast.ValueSpec{Names: fs.Names, Type: fs.Type})

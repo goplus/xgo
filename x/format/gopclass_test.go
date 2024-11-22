@@ -197,3 +197,43 @@ func reset() {
 log.println "MainEntry"
 `)
 }
+
+func TestClassGox(t *testing.T) {
+	testClass(t, "gox class", "", "Rect", false, `package main
+
+type BaseClass struct {
+	x int
+	y int
+}
+type AggClass struct {
+}
+type Rect struct {
+	BaseClass
+	Width  float64
+	Height float64
+	*AggClass
+}
+
+func (this *Rect) Area() float64 {
+	return this.Width * this.Height
+}
+`, `var (
+	BaseClass
+	Width  float64
+	Height float64
+	*AggClass
+)
+
+type BaseClass struct {
+	x int
+	y int
+}
+
+type AggClass struct {
+}
+
+func Area() float64 {
+	return Width * Height
+}
+`)
+}
