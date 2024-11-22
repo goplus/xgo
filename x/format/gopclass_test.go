@@ -22,20 +22,24 @@ import (
 	"github.com/goplus/xgo/x/format"
 )
 
-func testClass(t *testing.T, name string, pkg string, class string, proj bool, src, expect string) {
+func testClass(t *testing.T, name string, cfg *format.ClassConfig, src, expect string) {
 	t.Run(name, func(t *testing.T) {
-		result, err := format.XGoClassSource([]byte(src), pkg, class, proj, name)
+		result, err := format.XGoClassSource([]byte(src), cfg, name)
 		if err != nil {
 			t.Fatal("format.XGoClassSource failed:", err)
 		}
 		if ret := string(result); ret != expect {
-			t.Fatalf("%s => Expect:\n%s\n=> Got:\n%s\n", name, expect, ret)
+			t.Fatalf("%s => Expect:\n%s\n=> Got:\n%s\n== end", name, expect, ret)
 		}
 	})
 }
 
 func TestClassSpx(t *testing.T) {
-	testClass(t, "spx class", "github.com/goplus/spx", "Calf", false, `package main
+	testClass(t, "spx class", &format.ClassConfig{
+		PkgPath:   "github.com/goplus/spx",
+		ClassName: "Calf",
+		Overload:  map[string]string{"OnMsg__1": "OnMsg"},
+	}, `package main
 
 import (
 	"github.com/goplus/spx"
@@ -109,11 +113,11 @@ func Dump() {
 	log.println info
 }
 
-onStart func() {
+onStart => {
 	say "Hello Go+"
 }
 
-onMsg__1 "tap", func() {
+onMsg "tap", => {
 
 	for calfPlay {
 
@@ -138,7 +142,11 @@ onMsg__1 "tap", func() {
 }
 
 func TestClassProj(t *testing.T) {
-	testClass(t, "spx project", "github.com/goplus/spx", "Game", true, `package main
+	testClass(t, "spx project", &format.ClassConfig{
+		PkgPath:   "github.com/goplus/spx",
+		ClassName: "Game",
+		Project:   true,
+	}, `package main
 
 import "github.com/goplus/spx"
 import "log"
@@ -152,15 +160,10 @@ type Game struct {
 var calfPlay = false
 var calfDie = false
 var calfGravity = 0.0
-//line main.spx:30:1
 func (this *Game) reset() {
-//line main.spx:31:1
 	this.userScore = 0
-//line main.spx:32:1
 	calfPlay = false
-//line main.spx:33:1
 	calfDie = false
-//line main.spx:34:1
 	calfGravity = 0.0
 }
 func (this *Game) MainEntry() {
@@ -184,13 +187,9 @@ var calfDie = false
 var calfGravity = 0.0
 
 func reset() {
-
 	userScore = 0
-
 	calfPlay = false
-
 	calfDie = false
-
 	calfGravity = 0.0
 }
 
@@ -199,7 +198,10 @@ log.println "MainEntry"
 }
 
 func TestClassGox(t *testing.T) {
-	testClass(t, "gox class", "", "Rect", false, `package main
+	testClass(t, "gox class", &format.ClassConfig{
+		ClassName: "Rect",
+		Comments:  true,
+	}, `package main
 
 type BaseClass struct {
 	x int
@@ -214,6 +216,7 @@ type Rect struct {
 	*AggClass
 }
 
+// Area is call rect area
 func (this *Rect) Area() float64 {
 	return this.Width * this.Height
 }
@@ -232,8 +235,107 @@ type BaseClass struct {
 type AggClass struct {
 }
 
+// Area is call rect area
 func Area() float64 {
 	return Width * Height
 }
+`)
+}
+
+func TestClassGopt(t *testing.T) {
+	testClass(t, "test class", &format.ClassConfig{
+		PkgPath:   "github.com/goplus/gop/cl/internal/spx",
+		ClassName: "Game",
+		Project:   true,
+		Gopt: map[string]string{
+			"Gopt_Sprite_Clone__0": "Clone",
+			"Gopt_Sprite_Clone__1": "Clone",
+		},
+		Overload: map[string]string{"Broadcast__0": "Broadcast"},
+	}, `package main
+
+import "github.com/goplus/gop/cl/internal/spx"
+
+type Game struct {
+	*spx.MyGame
+	Kai Kai
+}
+func (this *Game) onInit() {
+	spx.Gopt_Sprite_Clone__0(this.Kai)
+	this.Broadcast__0("msg1")
+}
+func (this *Game) MainEntry() {
+}
+func (this *Game) Main() {
+	spx.Gopt_MyGame_Main(this)
+}
+func main() {
+	new(Game).Main()
+}
+`, `var Kai Kai
+
+func onInit() {
+	Kai.clone
+	broadcast "msg1"
+}
+
+
+`)
+	testClass(t, "test class", &format.ClassConfig{
+		PkgPath:   "github.com/goplus/gop/cl/internal/spx",
+		ClassName: "Kai",
+		Gopt: map[string]string{
+			"Gopt_Sprite_Clone__0": "Clone",
+			"Gopt_Sprite_Clone__1": "Clone",
+		},
+		Overload: map[string]string{"Broadcast__0": "Broadcast"},
+	}, `package main
+
+import "github.com/goplus/gop/cl/internal/spx"
+
+type info struct {
+	x int
+	y int
+}
+
+type Kai struct {
+	spx.Sprite
+	*Game
+	a int
+}
+
+func (this *Kai) onInit() {
+	this.a = 1
+	spx.Gopt_Sprite_Clone__0(this)
+	spx.Gopt_Sprite_Clone__1(this, info{1, 2})
+	spx.Gopt_Sprite_Clone__1(this, &info{1, 2})
+}
+func (this *Kai) onCloned() {
+	this.Say("Hi")
+}
+func (this *Kai) Classfname() string {
+	return "Kai"
+}
+func (this *Kai) Main() {
+}
+`, `var a int
+
+type info struct {
+	x int
+	y int
+}
+
+func onInit() {
+	a = 1
+	clone
+	clone info{1, 2}
+	clone &info{1, 2}
+}
+
+func onCloned() {
+	say "Hi"
+}
+
+
 `)
 }

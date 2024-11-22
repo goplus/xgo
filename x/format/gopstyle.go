@@ -83,15 +83,28 @@ func Gopstyle(file *ast.File) {
 	XGoStyle(file)
 }
 
-func XGoClassSource(src []byte, pkg string, class string, proj bool, filename ...string) (ret []byte, err error) {
+type ClassConfig struct {
+	PkgPath   string            // Go+ class project pkgpath, empty if normal .gox class. (optional)
+	ClassName string            // project or class name.
+	Project   bool              // true means ClassName is project.
+	Comments  bool              // true means parse comments.
+	Gopt      map[string]string // Gopt_ function name mapping. (optional)
+	Overload  map[string]string // Overload function name mapping. (optional)
+}
+
+func XGoClassSource(src []byte, cfg *ClassConfig, filename ...string) (ret []byte, err error) {
 	var fname string
 	if filename != nil {
 		fname = filename[0]
 	}
 	fset := token.NewFileSet()
+	mode := parser.AllErrors
+	if cfg.Comments {
+		mode |= parser.ParseComments
+	}
 	var f *ast.File
-	if f, err = parser.ParseFile(fset, fname, src, parser.ParseComments); err == nil {
-		XGoClass(f, pkg, class, proj)
+	if f, err = parser.ParseFile(fset, fname, src, mode); err == nil {
+		XGoClass(f, cfg)
 		var buf bytes.Buffer
 		if err = format.Node(&buf, fset, f); err == nil {
 			ret = buf.Bytes()
@@ -101,8 +114,8 @@ func XGoClassSource(src []byte, pkg string, class string, proj bool, filename ..
 }
 
 // XGoClass format ast.File to Go+ class
-func XGoClass(file *ast.File, pkg string, class string, prog bool) {
-	formatClass(file, pkg, class, prog)
+func XGoClass(file *ast.File, cfg *ClassConfig) {
+	formatClass(file, cfg)
 }
 
 func findFuncDecl(decls []ast.Decl, name string) (int, *ast.FuncDecl) {
@@ -178,12 +191,11 @@ type importCtx struct {
 }
 
 type formatCtx struct {
-	imports   map[string]*importCtx
-	scope     *types.Scope
-	classMode bool   //class mode
-	classPkg  string //class pkg name
-	className string //this class
-	funcRecv  string //this class func recv
+	imports  map[string]*importCtx
+	scope    *types.Scope
+	classCfg *ClassConfig
+	classPkg string //this class pkg name
+	funcRecv string //this class func recv
 }
 
 func (ctx *formatCtx) insert(name string) {
@@ -249,14 +261,13 @@ func formatFile(file *ast.File) {
 	}
 }
 
-func formatClass(file *ast.File, pkg string, class string, proj bool) {
+func formatClass(file *ast.File, cfg *ClassConfig) {
 	var funcs []*ast.FuncDecl
 	ctx := &formatCtx{
-		imports:   make(map[string]*importCtx),
-		scope:     types.NewScope(nil, token.NoPos, token.NoPos, ""),
-		classMode: true,
-		classPkg:  path.Base(pkg),
-		className: class,
+		imports:  make(map[string]*importCtx),
+		scope:    types.NewScope(nil, token.NoPos, token.NoPos, ""),
+		classCfg: cfg,
+		classPkg: path.Base(cfg.PkgPath),
 	}
 	if file.Name.Name == "main" {
 		file.NoPkgDecl = true
@@ -268,17 +279,17 @@ func formatClass(file *ast.File, pkg string, class string, proj bool) {
 	for _, decl := range file.Decls {
 		switch v := decl.(type) {
 		case *ast.FuncDecl:
-			if isClassFunc(v, class) {
+			if isClassFunc(v, cfg.ClassName) {
 				v.IsClass = true
 				switch v.Name.Name {
 				case "MainEntry":
-					if proj {
+					if cfg.Project {
 						fnEntry = v
 						file.ShadowEntry = v
 						continue
 					}
 				case "Main":
-					if !proj {
+					if !cfg.Project {
 						fnEntry = v
 						file.ShadowEntry = v
 						continue
@@ -287,7 +298,7 @@ func formatClass(file *ast.File, pkg string, class string, proj bool) {
 				case "Classfname":
 					v.Shadow = true
 				}
-			} else if v.Name.Name == "main" && proj {
+			} else if v.Name.Name == "main" && cfg.Project {
 				v.Shadow = true
 			}
 		case *ast.GenDecl:
@@ -296,10 +307,10 @@ func formatClass(file *ast.File, pkg string, class string, proj bool) {
 				imports = append(imports, v)
 				continue
 			case token.TYPE:
-				if spec, ok := v.Specs[0].(*ast.TypeSpec); ok && spec.Name.Name == class {
+				if spec, ok := v.Specs[0].(*ast.TypeSpec); ok && spec.Name.Name == cfg.ClassName {
 					if st, ok := spec.Type.(*ast.StructType); ok {
 						for _, fs := range st.Fields.List {
-							if len(fs.Names) == 0 && pkg != "" {
+							if len(fs.Names) == 0 && cfg.PkgPath != "" {
 								continue
 							}
 							varSpecs = append(varSpecs, &ast.ValueSpec{Names: fs.Names, Type: fs.Type})
@@ -403,7 +414,7 @@ func funcRecv(v *ast.FuncDecl) *ast.Ident {
 }
 
 func formatFuncDecl(ctx *formatCtx, v *ast.FuncDecl) {
-	if ctx.classMode && isClassFunc(v, ctx.className) {
+	if ctx.classCfg != nil && isClassFunc(v, ctx.classCfg.ClassName) {
 		v.IsClass = true
 		if recv := funcRecv(v); recv != nil {
 			ctx.funcRecv = recv.Name

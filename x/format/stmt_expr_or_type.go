@@ -182,7 +182,7 @@ func formatSelectorExpr(ctx *formatCtx, v *ast.SelectorExpr, ref *ast.Expr) {
 		if _, o := ctx.scope.LookupParent(x.Name, token.NoPos); o != nil {
 			break
 		}
-		if ctx.classMode && (x.Name == ctx.funcRecv || x.Name == ctx.classPkg) {
+		if ctx.classCfg != nil && (x.Name == ctx.funcRecv || x.Name == ctx.classPkg) {
 			*ref = v.Sel
 			break
 		}
@@ -221,7 +221,7 @@ func isClassSched(ctx *formatCtx, stmt ast.Stmt) bool {
 
 func formatStmts(ctx *formatCtx, stmts []ast.Stmt) {
 	for i, stmt := range stmts {
-		if ctx.classMode && isClassSched(ctx, stmt) {
+		if ctx.classCfg != nil && isClassSched(ctx, stmt) {
 			stmts[i] = &ast.EmptyStmt{}
 			continue
 		}
@@ -283,10 +283,20 @@ func formatStmt(ctx *formatCtx, stmt ast.Stmt) {
 func formatExprStmt(ctx *formatCtx, v *ast.ExprStmt) {
 	switch x := v.X.(type) {
 	case *ast.CallExpr:
-		if ctx.classMode {
-			if sel, ok := x.Fun.(*ast.SelectorExpr); ok && sel.Sel.Name == "Sched" {
-				if ident, ok := sel.X.(*ast.Ident); ok && ident.Name == ctx.classPkg {
-					return
+		if ctx.classCfg != nil {
+			if sel, ok := x.Fun.(*ast.SelectorExpr); ok {
+				if name, ok := ctx.classCfg.Overload[sel.Sel.Name]; ok {
+					sel.Sel.Name = name
+				} else if ident, ok := sel.X.(*ast.Ident); ok && ident.Name == ctx.classPkg {
+					if name, ok := ctx.classCfg.Gopt[sel.Sel.Name]; ok {
+						if len(x.Args) > 0 {
+							x.Fun = &ast.SelectorExpr{
+								X:   x.Args[0],
+								Sel: ast.NewIdent(name),
+							}
+							x.Args = x.Args[1:]
+						}
+					}
 				}
 			}
 		}
