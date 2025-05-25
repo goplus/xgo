@@ -32,9 +32,9 @@ import (
 
 const (
 	testingGoFile    = "_test"
-	autoGenFile      = "gop_autogen.go"
-	autoGenTestFile  = "gop_autogen_test.go"
-	autoGen2TestFile = "gop_autogen2_test.go"
+	autoGenFile      = "xgo_autogen.go"
+	autoGenTestFile  = "xgo_autogen_test.go"
+	autoGen2TestFile = "xgo_autogen2_test.go"
 )
 
 type GenFlags int
@@ -48,12 +48,12 @@ const (
 
 // -----------------------------------------------------------------------------
 
-// GenGo generates gop_autogen.go for a XGo package directory.
+// GenGo generates xgo_autogen.go for a XGo package directory.
 func GenGo(dir string, conf *Config, genTestPkg bool) (string, bool, error) {
 	return GenGoEx(dir, conf, genTestPkg, 0)
 }
 
-// GenGoEx generates gop_autogen.go for a XGo package directory.
+// GenGoEx generates xgo_autogen.go for a XGo package directory.
 func GenGoEx(dir string, conf *Config, genTestPkg bool, flags GenFlags) (string, bool, error) {
 	recursively := strings.HasSuffix(dir, "/...")
 	if recursively {
@@ -182,7 +182,7 @@ func genGoIn(dir string, conf *Config, genTestPkg bool, flags GenFlags, gen ...*
 	if err != nil {
 		return errors.NewWith(err, `out.WriteFile(file)`, -2, "(*gogen.Package).WriteFile", out, file)
 	}
-	if gen != nil { // say `gop_autogen.go generated`
+	if gen != nil { // say `xgo_autogen.go generated`
 		*gen[0] = true
 	}
 
@@ -211,7 +211,7 @@ const (
 	modReadonly = 0555
 )
 
-// GenGoPkgPath generates gop_autogen.go for a XGo package.
+// GenGoPkgPath generates xgo_autogen.go for a XGo package.
 func GenGoPkgPath(workDir, pkgPath string, conf *Config, allowExtern bool) (localDir string, recursively bool, err error) {
 	return GenGoPkgPathEx(workDir, pkgPath, conf, allowExtern, 0)
 }
@@ -229,7 +229,7 @@ func remotePkgPath(pkgPath string, conf *Config, recursively bool, flags GenFlag
 	return
 }
 
-// GenGoPkgPathEx generates gop_autogen.go for a XGo package.
+// GenGoPkgPathEx generates xgo_autogen.go for a XGo package.
 func GenGoPkgPathEx(workDir, pkgPath string, conf *Config, allowExtern bool, flags GenFlags) (localDir string, recursively bool, err error) {
 	recursively = strings.HasSuffix(pkgPath, "/...")
 	if recursively {
@@ -282,7 +282,7 @@ func GenGoFiles(autogen string, files []string, conf *Config) (outFiles []string
 			file := files[0]
 			srcDir, fname := filepath.Split(file)
 			if hasMultiXgoFiles(srcDir) {
-				autogen = filepath.Join(srcDir, "gop_autogen_"+fname+".go")
+				autogen = filepath.Join(srcDir, "xgo_autogen_"+fname+".go")
 			}
 		}
 	}

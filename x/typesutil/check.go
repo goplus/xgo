@@ -68,7 +68,7 @@ type Config struct {
 	// Fset provides source position information for syntax trees and types (required).
 	Fset *token.FileSet
 
-	// WorkingDir is the directory in which to run gop compiler (optional).
+	// WorkingDir is the directory in which to run xgo compiler (optional).
 	// If WorkingDir is not set, os.Getwd() is used.
 	WorkingDir string
 
@@ -88,28 +88,28 @@ type Checker struct {
 	conf    *types.Config
 	opts    *Config
 	goInfo  *types.Info
-	gopInfo *Info
+	xgoInfo *Info
 }
 
 // NewChecker returns a new Checker instance for a given package.
 // Package files may be added incrementally via checker.Files.
-func NewChecker(conf *types.Config, opts *Config, goInfo *types.Info, gopInfo *Info) *Checker {
-	return &Checker{conf, opts, goInfo, gopInfo}
+func NewChecker(conf *types.Config, opts *Config, goInfo *types.Info, xgoInfo *Info) *Checker {
+	return &Checker{conf, opts, goInfo, xgoInfo}
 }
 
 // Files checks the provided files as part of the checker's package.
-func (p *Checker) Files(goFiles []*goast.File, gopFiles []*ast.File) (err error) {
+func (p *Checker) Files(goFiles []*goast.File, xgoFiles []*ast.File) (err error) {
 	opts := p.opts
 	pkgTypes := opts.Types
 	fset := opts.Fset
 	conf := p.conf
-	if len(gopFiles) == 0 {
+	if len(xgoFiles) == 0 {
 		checker := types.NewChecker(conf, fset, pkgTypes, p.goInfo)
 		return checker.Files(goFiles)
 	}
 	files := make([]*goast.File, 0, len(goFiles))
 	gofs := make(map[string]*goast.File)
-	gopfs := make(map[string]*ast.File)
+	xgofs := make(map[string]*ast.File)
 	for _, goFile := range goFiles {
 		f := fset.File(goFile.Pos())
 		if f == nil {
@@ -117,25 +117,25 @@ func (p *Checker) Files(goFiles []*goast.File, gopFiles []*ast.File) (err error)
 		}
 		file := f.Name()
 		fname := filepath.Base(file)
-		if strings.HasPrefix(fname, "gop_autogen") {
+		if strings.HasPrefix(fname, "xgo_autogen") {
 			continue
 		}
 		gofs[file] = goFile
 		files = append(files, goFile)
 	}
-	for _, gopFile := range gopFiles {
-		f := fset.File(gopFile.Pos())
+	for _, xgoFile := range xgoFiles {
+		f := fset.File(xgoFile.Pos())
 		if f == nil {
 			continue
 		}
-		gopfs[f.Name()] = gopFile
+		xgofs[f.Name()] = xgoFile
 	}
 	if debugVerbose {
-		log.Println("typesutil.Check:", pkgTypes.Path(), "gopFiles =", len(gopfs), "goFiles =", len(gofs))
+		log.Println("typesutil.Check:", pkgTypes.Path(), "xgoFiles =", len(xgofs), "goFiles =", len(gofs))
 	}
 	pkg := &ast.Package{
 		Name:    pkgTypes.Name(),
-		Files:   gopfs,
+		Files:   xgofs,
 		GoFiles: gofs,
 	}
 	mod := opts.Mod
@@ -147,7 +147,7 @@ func (p *Checker) Files(goFiles []*goast.File, gopFiles []*ast.File) (err error)
 		Fset:           fset,
 		LookupClass:    mod.LookupClass,
 		Importer:       conf.Importer,
-		Recorder:       NewRecorder(p.gopInfo),
+		Recorder:       NewRecorder(p.xgoInfo),
 		NoFileLine:     true,
 		NoAutoGenMain:  true,
 		NoSkipConstant: true,
@@ -178,8 +178,8 @@ func (p *Checker) Files(goFiles []*goast.File, gopFiles []*ast.File) (err error)
 		objMap := DeleteObjects(scope, files)
 		checker := types.NewChecker(conf, fset, pkgTypes, p.goInfo)
 		err = checker.Files(files)
-		// TODO: how to process error?
-		CorrectTypesInfo(scope, objMap, p.gopInfo.Uses)
+		// TODO(xsw): how to process error?
+		CorrectTypesInfo(scope, objMap, p.xgoInfo.Uses)
 		if opts.UpdateGoTypesOverload {
 			gogen.InitThisGopPkg(pkgTypes)
 		}

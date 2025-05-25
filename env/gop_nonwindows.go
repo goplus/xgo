@@ -19,6 +19,6 @@
 
 package env
 
-func isGopCmd(fname string) bool {
+func isXgoCmd(fname string) bool {
 	return fname == "gop"
 }

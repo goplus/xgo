@@ -120,7 +120,7 @@ func (p *printer) internalError(msg ...any) {
 	if debug {
 		fmt.Print(p.pos.String() + ": ")
 		fmt.Println(msg...)
-		panic("gop/printer")
+		panic("xgo/printer")
 	}
 }
 
@@ -990,7 +990,7 @@ func (p *printer) print(args ...any) {
 
 		default:
 			fmt.Fprintf(os.Stderr, "print: unsupported argument %v (%T)\n", arg, arg)
-			panic("gop/printer type")
+			panic("xgo/printer type")
 		}
 		// data != ""
 

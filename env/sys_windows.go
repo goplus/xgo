@@ -20,6 +20,6 @@ const (
 	envHOME = "USERPROFILE"
 )
 
-func isGopCmd(fname string) bool {
+func isXgoCmd(fname string) bool {
 	return fname == "gop.exe" || fname == "gop"
 }

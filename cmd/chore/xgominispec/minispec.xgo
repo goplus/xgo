@@ -19,7 +19,7 @@ import (
 	"gop/doc/spec/mini"
 	"gop/tpl"
 	"gop/tpl/matcher"
-	"gop/x/gopprojs"
+	"gop/x/xgoprojs"
 	"os"
 	"path/filepath"
 )
@@ -95,7 +95,7 @@ if *flagVerbose {
 dumpAST := *flagDumpAST
 nErr := 0
 
-projs, err := gopprojs.parseAll(pattern...)
+projs, err := xgoprojs.parseAll(pattern...)
 if err != nil {
 	fprintln os.Stderr, err
 	os.exit 1
@@ -103,14 +103,14 @@ if err != nil {
 
 for proj in projs {
 	switch v := proj.(type) {
-	case *gopprojs.DirProj:
+	case *xgoprojs.DirProj:
 		dir := v.Dir
 		recursively := dir.hasSuffix("/...")
 		if recursively {
 			dir = dir[:len(dir)-4]
 		}
 		nErr += parseDir(dir, recursively, dumpAST)
-	case *gopprojs.FilesProj:
+	case *xgoprojs.FilesProj:
 		nErr += parseFiles(v.Files, dumpAST)
 	default:
 		panic "only support local files and directories"

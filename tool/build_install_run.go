@@ -153,7 +153,7 @@ func RunPkgPath(pkgPath string, args []string, chDir bool, conf *Config, run *go
 		return errors.NewWith(err, `GenGoPkgPath("", pkgPath, conf, true)`, -2, "tool.GenGoPkgPath", "", pkgPath, conf, true)
 	}
 	if recursively {
-		return errors.NewWith(errors.New("can't use ... pattern for `gop run` command"), `recursively`, -1, "", recursively)
+		return errors.NewWith(errors.New("can't use ... pattern for `xgo run` command"), `recursively`, -1, "", recursively)
 	}
 	if chDir {
 		old := chdir(localDir)

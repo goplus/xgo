@@ -134,7 +134,7 @@ func ParseFSDir(fset *token.FileSet, fs FileSystem, dir string, conf Config) (pk
 		switch ext {
 		case ".xgo", ".gop":
 		case ".go":
-			if strings.HasPrefix(fname, "gop_autogen") {
+			if strings.HasPrefix(fname, "xgo_autogen") || strings.HasPrefix(fname, "gop_autogen") {
 				continue
 			}
 			useGoParser = (conf.Mode & ParseGoAsGoPlus) == 0

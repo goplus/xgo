@@ -37,6 +37,17 @@ if files != nfpms_files:
         print(f"      - src: \"{f}\"")
         print(f"        dst: \"/usr/lib/{{{{ .ProjectName }}}}/{f}\"")
 
+# Check archives[0].files
+archives_files = gorel["archives"][0].get("files", [])
+archives_files.sort()
+
+if files != archives_files:
+    failed = True
+    print("Files in archives are different from the ones in the repo")
+    print("Update .goreleaser.yaml in the archives section:")
+    for f in files:
+        print(f"      - \"{f}\"")
+
 if failed:
     exit(1)
 

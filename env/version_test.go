@@ -45,7 +45,7 @@ func TestPanic(t *testing.T) {
 }
 
 func TestEnv(t *testing.T) {
-	gopEnv = func() (string, error) {
+	xgoEnv = func() (string, error) {
 		wd, _ := os.Getwd()
 		root := filepath.Dir(wd)
 		return "v1.0.0-beta1\n2023-10-18_17-45-50\n" + root + "\n", nil

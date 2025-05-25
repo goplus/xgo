@@ -31,11 +31,11 @@ var (
 // XGOROOT returns the root of the XGo tree. It uses the GOPROOT environment variable,
 // if set at process start, or else the root used during the XGo build.
 func XGOROOT() string {
-	gopRoot, err := findXgoRoot()
+	xgoRoot, err := findXgoRoot()
 	if err != nil {
 		log.Panicln("XGOROOT not found:", err)
 	}
-	return gopRoot
+	return xgoRoot
 }
 
 const (
@@ -52,7 +52,7 @@ func findXgoRoot() (string, error) {
 		log.Panicf("\n%s (%s) is not valid\n", envXGOROOT, envXgoRoot)
 	}
 
-	// if parent directory is a valid gop root, use it
+	// if parent directory is a valid xgo root, use it
 	exePath, err := executableRealPath()
 	if err == nil {
 		dir := filepath.Dir(exePath)

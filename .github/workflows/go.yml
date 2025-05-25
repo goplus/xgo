@@ -101,9 +101,9 @@ jobs:
 
       - name: Check formatting
         run: |
-          if [ -n "$(go fmt ./... | grep -v gop_autogen)" ]; then
+          if [ -n "$(go fmt ./... | grep -v xgo_autogen)" ]; then
             echo "Some files are not properly formatted. Please run 'go fmt ./...'"
             exit 1
           fi
           ./all.bash
-          cd cmd/xgo; gop fmt -t ./...
+          cd cmd/xgo; xgo fmt -t ./...

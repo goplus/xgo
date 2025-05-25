@@ -300,7 +300,7 @@ func goDecl(decl gopast.Decl) ast.Decl {
 	case *gopast.FuncDecl:
 		return goFuncDecl(v)
 	}
-	log.Panicln("goDecl: unkown decl -", reflect.TypeOf(decl))
+	log.Panicln("goDecl: unknown decl -", reflect.TypeOf(decl))
 	return nil
 }
 

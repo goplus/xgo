@@ -48,8 +48,8 @@ const (
 	logSuffix = ".log"
 )
 
-func logFileOf(gopDir string, pid int) string {
-	return gopDir + logPrefix + strconv.Itoa(pid) + logSuffix
+func logFileOf(xgoDir string, pid int) string {
+	return xgoDir + logPrefix + strconv.Itoa(pid) + logSuffix
 }
 
 func isLog(fname string) bool {
@@ -83,7 +83,7 @@ func tooOld(d fs.DirEntry) bool {
 
 // ServeAndDial executes a command as a LangServer, makes a new connection to it
 // and returns a client of the LangServer based on the connection.
-func ServeAndDial(conf *ServeAndDialConfig, gopCmd string, args ...string) Client {
+func ServeAndDial(conf *ServeAndDialConfig, xgoCmd string, args ...string) Client {
 	if conf == nil {
 		conf = new(ServeAndDialConfig)
 	}
@@ -96,25 +96,25 @@ func ServeAndDial(conf *ServeAndDialConfig, gopCmd string, args ...string) Clien
 	if err != nil {
 		onErr(err)
 	}
-	gopDir := home + "/.xgo/"
-	err = os.MkdirAll(gopDir, 0755)
+	xgoDir := home + "/.xgo/"
+	err = os.MkdirAll(xgoDir, 0755)
 	if err != nil {
 		onErr(err)
 	}
 
 	// logFile is where the LangServer application log saves to.
 	// default is ~/.xgo/serve-{pid}.log
-	logFile := logFileOf(gopDir, os.Getpid())
+	logFile := logFileOf(xgoDir, os.Getpid())
 
 	// clean too old logfiles, and kill old LangServer processes
 	go func() {
-		if fis, e := os.ReadDir(gopDir); e == nil {
+		if fis, e := os.ReadDir(xgoDir); e == nil {
 			for _, fi := range fis {
 				if fi.IsDir() {
 					continue
 				}
 				if fname := fi.Name(); isLog(fname) && tooOld(fi) {
-					os.Remove(gopDir + fname)
+					os.Remove(xgoDir + fname)
 					killByPid(pidByName(fname))
 				}
 			}
@@ -135,7 +135,7 @@ func ServeAndDial(conf *ServeAndDialConfig, gopCmd string, args ...string) Clien
 		}
 		defer f.Close()
 
-		cmd = exec.Command(gopCmd, args...)
+		cmd = exec.Command(xgoCmd, args...)
 		cmd.Stdin = r
 		cmd.Stdout = w
 		cmd.Stderr = f
@@ -144,7 +144,7 @@ func ServeAndDial(conf *ServeAndDialConfig, gopCmd string, args ...string) Clien
 			onErr(err)
 		}
 
-		newLogFile := logFileOf(gopDir, cmd.Process.Pid)
+		newLogFile := logFileOf(xgoDir, cmd.Process.Pid)
 		os.Rename(logFile, newLogFile)
 
 		cmd.Wait()
@@ -155,7 +155,7 @@ func ServeAndDial(conf *ServeAndDialConfig, gopCmd string, args ...string) Clien
 			return
 		}
 		if proc := cmd.Process; proc != nil {
-			log.Println("==> ServeAndDial: kill", proc.Pid, gopCmd, args)
+			log.Println("==> ServeAndDial: kill", proc.Pid, xgoCmd, args)
 			proc.Kill()
 		}
 	})

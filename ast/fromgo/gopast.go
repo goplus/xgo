@@ -323,7 +323,7 @@ func gopDecl(decl ast.Decl) gopast.Decl {
 	case *ast.FuncDecl:
 		return gopFuncDecl(v)
 	}
-	log.Panicln("gopDecl: unkown decl -", reflect.TypeOf(decl))
+	log.Panicln("gopDecl: unknown decl -", reflect.TypeOf(decl))
 	return nil
 }
 

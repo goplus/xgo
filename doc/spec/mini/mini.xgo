@@ -17,8 +17,8 @@
 package mini
 
 import (
-	"github.com/goplus/xgo/token"
-	"github.com/goplus/xgo/tpl"
+	"xgo/token"
+	"xgo/tpl"
 )
 
 var _off = tpl.showConflict(false)

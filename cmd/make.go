@@ -351,8 +351,23 @@ func buildGoplusTools(useGoProxy bool) {
 		log.Fatalln(err)
 	}
 
+	switch ver := goVersion(); ver {
+	case "1.23", "1.24":
+		os.Chdir(gopBinPath)
+		work := filepath.Join(gopBinPath, "go.work")
+		workfile := "go " + ver + "\n\nuse ..\n"
+		err := os.WriteFile(work, []byte(workfile), 0644)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		defer os.Remove(work)
+		commandExecuteEnv = append(commandExecuteEnv,
+			"GOWORK="+work)
+	}
+
 	println("Building XGo tools...\n")
 	os.Chdir(commandsDir)
+
 	buildOutput, err := execCommand("go", "build", "-o", gopBinPath, "-v", "-ldflags", buildFlags, "./...")
 	if err != nil {
 		log.Fatalln(err)
@@ -362,7 +377,20 @@ func buildGoplusTools(useGoProxy bool) {
 	// Clear gop run cache
 	cleanGopRunCache()
 
-	println("\nGo+ tools built successfully!")
+	println("\nXGo tools built successfully!")
+}
+
+func goVersion() string {
+	out, err := execCommand("go", "version")
+	if err != nil {
+		log.Fatalln(err)
+	}
+	if i := strings.Index(out, "go1."); i != -1 {
+		if n := strings.IndexAny(out[i+4:], ". "); n != -1 {
+			return out[i+2 : i+4+n]
+		}
+	}
+	return ""
 }
 
 func showHelpPostInstall(installPath string) {
@@ -379,7 +407,7 @@ we recommend you add the above install directory into your PATH environment vari
 func install() {
 	installPath := linkGoplusToLocalBin()
 
-	println("\nGo+ tools installed successfully!")
+	println("\nXGo tools installed successfully!")
 
 	if _, err := execCommand("gop", "version"); err != nil {
 		showHelpPostInstall(installPath)

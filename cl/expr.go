@@ -151,12 +151,12 @@ func compileIdent(ctx *blockCtx, ident *ast.Ident, flags int) (pkg gogen.PkgRef,
 		oldo, o = o, obj
 	} else if o == nil {
 		// for support Gop_Exec, see TestSpxGopExec
-		if (clCommandIdent&flags) != 0 && recv != nil && gopMember(cb, recv, "Gop_Exec", ident) == nil {
+		if (clCommandIdent&flags) != 0 && recv != nil && xgoMember(cb, recv, "Gop_Exec", ident) == nil {
 			kind = objGopExec
 			return
 		}
 		// for support Gop_Env, see TestSpxGopEnv
-		if (clIdentInStringLitEx&flags) != 0 && recv != nil && gopMember(cb, recv, "Gop_Env", ident) == nil {
+		if (clIdentInStringLitEx&flags) != 0 && recv != nil && xgoMember(cb, recv, "Gop_Env", ident) == nil {
 			kind = objGopEnv
 			return
 		}
@@ -216,7 +216,7 @@ func compileEnvExpr(ctx *blockCtx, v *ast.EnvExpr) {
 	cb := ctx.cb
 	if ctx.isClass { // in a XGo class file
 		if recv := classRecv(cb); recv != nil {
-			if gopMember(cb, recv, "Gop_Env", v) == nil {
+			if xgoMember(cb, recv, "Gop_Env", v) == nil {
 				name := v.Name
 				cb.Val(name.Name, name).CallWith(1, 0, v)
 				return
@@ -235,7 +235,7 @@ func classRecv(cb *gogen.CodeBuilder) *types.Var {
 	return nil
 }
 
-func gopMember(cb *gogen.CodeBuilder, recv *types.Var, op string, src ...ast.Node) error {
+func xgoMember(cb *gogen.CodeBuilder, recv *types.Var, op string, src ...ast.Node) error {
 	_, e := cb.Val(recv).Member(op, gogen.MemberFlagVal, src...)
 	return e
 }
@@ -753,7 +753,7 @@ func builtinOrGopExec(ctx *blockCtx, ifn *ast.Ident, v *ast.CallExpr, flags goge
 func tryGopExec(cb *gogen.CodeBuilder, ifn *ast.Ident) bool {
 	if recv := classRecv(cb); recv != nil {
 		cb.InternalStack().PopN(1)
-		if gopMember(cb, recv, "Gop_Exec", ifn) == nil {
+		if xgoMember(cb, recv, "Gop_Exec", ifn) == nil {
 			cb.Val(ifn.Name, ifn)
 			return true
 		}
@@ -1555,17 +1555,21 @@ func comprehensionKind(v *ast.ComprehensionExpr) int {
 // {expr for k, v <- container, cond}
 // {kexpr: vexpr for k, v <- container, cond}
 func compileComprehensionExpr(ctx *blockCtx, v *ast.ComprehensionExpr, twoValue bool) {
+	const (
+		nameOk  = "_xgo_ok"
+		nameRet = "_xgo_ret"
+	)
 	kind := comprehensionKind(v)
 	pkg, cb := ctx.pkg, ctx.cb
 	var results *types.Tuple
 	var ret *gogen.Param
 	if v.Elt == nil {
-		boolean := pkg.NewParam(token.NoPos, "_gop_ok", types.Typ[types.Bool])
+		boolean := pkg.NewParam(token.NoPos, nameOk, types.Typ[types.Bool])
 		results = types.NewTuple(boolean)
 	} else {
-		ret = pkg.NewAutoParam("_gop_ret")
+		ret = pkg.NewAutoParam(nameRet)
 		if kind == comprehensionSelect && twoValue {
-			boolean := pkg.NewParam(token.NoPos, "_gop_ok", types.Typ[types.Bool])
+			boolean := pkg.NewParam(token.NoPos, nameOk, types.Typ[types.Bool])
 			results = types.NewTuple(ret, boolean)
 		} else {
 			results = types.NewTuple(ret)
@@ -1608,14 +1612,14 @@ func compileComprehensionExpr(ctx *blockCtx, v *ast.ComprehensionExpr, twoValue 
 	}
 	switch kind {
 	case comprehensionList:
-		// _gop_ret = append(_gop_ret, elt)
+		// _xgo_ret = append(_xgo_ret, elt)
 		cb.VarRef(ret)
 		cb.Val(pkg.Builtin().Ref("append"))
 		cb.Val(ret)
 		compileExpr(ctx, v.Elt)
 		cb.Call(2).Assign(1)
 	case comprehensionMap:
-		// _gop_ret[key] = val
+		// _xgo_ret[key] = val
 		cb.Val(ret)
 		kv := v.Elt.(*ast.KeyValueExpr)
 		compileExpr(ctx, kv.Key)
@@ -1653,6 +1657,10 @@ var (
 )
 
 func compileErrWrapExpr(ctx *blockCtx, v *ast.ErrWrapExpr, inFlags int) {
+	const (
+		nameErr = "_xgo_err"
+		nameRet = "_xgo_ret"
+	)
 	pkg, cb := ctx.pkg, ctx.cb
 	useClosure := v.Tok == token.NOT || v.Default != nil
 	if !useClosure && (cb.Scope().Parent() == types.Universe) {
@@ -1673,7 +1681,7 @@ func compileErrWrapExpr(ctx *blockCtx, v *ast.ErrWrapExpr, inFlags int) {
 
 	var ret []*types.Var
 	if n > 0 {
-		i, retName := 0, "_gop_ret"
+		i, retName := 0, nameRet
 		ret = make([]*gogen.Param, n)
 		for {
 			ret[i] = pkg.NewAutoParam(retName)
@@ -1681,7 +1689,7 @@ func compileErrWrapExpr(ctx *blockCtx, v *ast.ErrWrapExpr, inFlags int) {
 			if i >= n {
 				break
 			}
-			retName = "_gop_ret" + strconv.Itoa(i+1)
+			retName = nameRet + strconv.Itoa(i+1)
 		}
 	}
 	sig := types.NewSignatureType(nil, nil, nil, nil, types.NewTuple(ret...), false)
@@ -1691,8 +1699,8 @@ func compileErrWrapExpr(ctx *blockCtx, v *ast.ErrWrapExpr, inFlags int) {
 		cb.CallInlineClosureStart(sig, 0, false)
 	}
 
-	cb.NewVar(tyError, "_gop_err")
-	err := cb.Scope().Lookup("_gop_err")
+	cb.NewVar(tyError, nameErr)
+	err := cb.Scope().Lookup(nameErr)
 
 	for _, retVar := range ret {
 		cb.VarRef(retVar)

@@ -19,19 +19,19 @@ func (this *Game) MainEntry() {
 	this.Run()
 }
 func (this *Game) Main() {
-	_gop_obj0 := &Kai{Game: this}
-	spx3.Gopt_Game_Main(this, _gop_obj0)
+	_xgo_obj0 := &Kai{Game: this}
+	spx3.Gopt_Game_Main(this, _xgo_obj0)
 }
-func (this *Kai) Main(_gop_arg0 string) {
-	this.Sprite.Main(_gop_arg0)
+func (this *Kai) Main(_xgo_arg0 string) {
+	this.Sprite.Main(_xgo_arg0)
 	fmt.Println(jwt.Token("Hi"))
 }
 func (this *Kai) Classfname() string {
 	return "Kai"
 }
 func (this *Kai) Classclone() spx3.Handler {
-	_gop_ret := *this
-	return &_gop_ret
+	_xgo_ret := *this
+	return &_xgo_ret
 }
 func main() {
 	new(Game).Main()

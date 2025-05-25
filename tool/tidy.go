@@ -28,7 +28,7 @@ import (
 func Tidy(dir string, xgo *env.XGo) (err error) {
 	modObj, err := xgomod.Load(dir)
 	if err != nil {
-		return errors.NewWith(err, `gopmod.Load(dir, mod.GopModOnly)`, -2, "gopmod.Load", dir)
+		return errors.NewWith(err, `xgomod.Load(dir, mod.GopModOnly)`, -2, "xgomod.Load", dir)
 	}
 
 	modRoot := modObj.Root()
@@ -57,7 +57,7 @@ func Tidy(dir string, xgo *env.XGo) (err error) {
 		modObj.Cleanup()
 		err = modObj.Save()
 		if err != nil {
-			return errors.NewWith(err, `modObj.Save()`, -2, "(*gopmod.Module).Save")
+			return errors.NewWith(err, `modObj.Save()`, -2, "(*xgomod.Module).Save")
 		}
 	*/
 	conf := &Config{XGo: xgo}

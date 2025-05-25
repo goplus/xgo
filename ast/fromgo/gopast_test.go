@@ -72,7 +72,7 @@ func TestErrASTFile(t *testing.T) {
 }
 
 func TestErrDecl(t *testing.T) {
-	testPanic(t, "gopDecl: unkown decl - <nil>\n", func() {
+	testPanic(t, "gopDecl: unknown decl - <nil>\n", func() {
 		gopDecl(nil)
 	})
 	testPanic(t, "gopGenDecl: unknown spec - ILLEGAL\n", func() {

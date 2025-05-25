@@ -182,13 +182,13 @@ func (info *Info) OverloadOf(id *ast.Ident) (types.Object, []types.Object) {
 
 // -----------------------------------------------------------------------------
 
-type gopRecorder struct {
+type xgoRecorder struct {
 	*Info
 }
 
 // NewRecorder creates a new recorder for cl.NewPackage.
 func NewRecorder(info *Info) cl.Recorder {
-	return gopRecorder{info}
+	return xgoRecorder{info}
 }
 
 // Type maps expressions to their types, and for constant
@@ -208,7 +208,7 @@ func NewRecorder(info *Info) cl.Recorder {
 // identifier z in a variable declaration 'var z int' is found
 // only in the Defs map, and identifiers denoting packages in
 // qualified identifiers are collected in the Uses map.
-func (info gopRecorder) Type(e ast.Expr, tv types.TypeAndValue) {
+func (info xgoRecorder) Type(e ast.Expr, tv types.TypeAndValue) {
 	if debugVerbose {
 		log.Println("==> Type:", e, tv.Type)
 	}
@@ -229,7 +229,7 @@ func (info gopRecorder) Type(e ast.Expr, tv types.TypeAndValue) {
 //
 // Invariant: Instantiating Uses[id].Type() with Instances[id].TypeArgs
 // results in an equivalent of Instances[id].Type.
-func (info gopRecorder) Instantiate(id *ast.Ident, inst types.Instance) {
+func (info xgoRecorder) Instantiate(id *ast.Ident, inst types.Instance) {
 	if info.Instances != nil {
 		info.Instances[id] = inst
 	}
@@ -244,7 +244,7 @@ func (info gopRecorder) Instantiate(id *ast.Ident, inst types.Instance) {
 // For an embedded field, Def maps the field *Var it defines.
 //
 // Invariant: Defs[id] == nil || Defs[id].Pos() == id.Pos()
-func (info gopRecorder) Def(id *ast.Ident, obj types.Object) {
+func (info xgoRecorder) Def(id *ast.Ident, obj types.Object) {
 	if debugVerbose {
 		log.Println("==> Def:", id, obj)
 	}
@@ -258,7 +258,7 @@ func (info gopRecorder) Def(id *ast.Ident, obj types.Object) {
 // For an embedded field, Use maps the *TypeName it denotes.
 //
 // Invariant: Uses[id].Pos() != id.Pos()
-func (info gopRecorder) Use(id *ast.Ident, obj types.Object) {
+func (info xgoRecorder) Use(id *ast.Ident, obj types.Object) {
 	if debugVerbose {
 		log.Println("==> Use:", id, obj)
 	}
@@ -285,7 +285,7 @@ func (info gopRecorder) Use(id *ast.Ident, obj types.Object) {
 //	*ast.ImportSpec    *PkgName for imports without renames
 //	*ast.CaseClause    type-specific *Var for each type switch case clause (incl. default)
 //	*ast.Field         anonymous parameter *Var (incl. unnamed results)
-func (info gopRecorder) Implicit(node ast.Node, obj types.Object) {
+func (info xgoRecorder) Implicit(node ast.Node, obj types.Object) {
 	if debugVerbose {
 		log.Println("==> Implicit:", obj)
 	}
@@ -296,7 +296,7 @@ func (info gopRecorder) Implicit(node ast.Node, obj types.Object) {
 
 // Select maps selector expressions (excluding qualified identifiers)
 // to their corresponding selections.
-func (info gopRecorder) Select(e *ast.SelectorExpr, sel *types.Selection) {
+func (info xgoRecorder) Select(e *ast.SelectorExpr, sel *types.Selection) {
 	if info.Selections != nil {
 		info.Selections[e] = sel
 	}
@@ -325,7 +325,7 @@ func (info gopRecorder) Select(e *ast.SelectorExpr, sel *types.Selection) {
 //	*ast.CommClause
 //	*ast.ForStmt
 //	*ast.RangeStmt
-func (info gopRecorder) Scope(n ast.Node, scope *types.Scope) {
+func (info xgoRecorder) Scope(n ast.Node, scope *types.Scope) {
 	if debugVerbose {
 		log.Println("==> Scope:", scope)
 	}

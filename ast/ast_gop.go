@@ -70,7 +70,7 @@ type DomainTextLit struct {
 	Domain   *Ident    // domain name
 	ValuePos token.Pos // literal position
 	Value    string    // literal string; e.g. `\m\n\o`
-	Extra    any       // *DomainTextLitEx or *gop/tpl/ast.File, optional
+	Extra    any       // *DomainTextLitEx or *xgo/tpl/ast.File, optional
 }
 
 // DomainTextLitEx represents extra information for domain text literal.

@@ -1071,12 +1071,12 @@ import (
 )
 
 func main() {
-	for _gop_it := osx.EnumLines(func() (_gop_ret *os.File) {
-		var _gop_err error
-		_gop_ret, _gop_err = os.Open("foo.txt")
-		if _gop_err != nil {
-			_gop_err = errors.NewFrame(_gop_err, "open(\"foo.txt\")", "/foo/bar.xgo", 2, "main.main")
-			panic(_gop_err)
+	for _gop_it := osx.EnumLines(func() (_xgo_ret *os.File) {
+		var _xgo_err error
+		_xgo_ret, _xgo_err = os.Open("foo.txt")
+		if _xgo_err != nil {
+			_xgo_err = errors.NewFrame(_xgo_err, "open(\"foo.txt\")", "/foo/bar.xgo", 2, "main.main")
+			panic(_xgo_err)
 		}
 		return
 	}()); ; {
@@ -1348,7 +1348,7 @@ for range :10 {
 import "fmt"
 
 func main() {
-	for _gop_k := 0; _gop_k < 10; _gop_k += 1 {
+	for _xgo_k := 0; _xgo_k < 10; _xgo_k += 1 {
 		fmt.Println("Hi")
 	}
 }
@@ -1364,7 +1364,7 @@ for _ <- :10 {
 import "fmt"
 
 func main() {
-	for _gop_k := 0; _gop_k < 10; _gop_k += 1 {
+	for _xgo_k := 0; _xgo_k < 10; _xgo_k += 1 {
 		fmt.Println("Hi")
 	}
 }
@@ -1414,7 +1414,7 @@ func (t T) step() int {
 }
 func main() {
 	t := T{}
-	for i, _gop_end, _gop_step := t.start(), t.end(), t.step(); i < _gop_end; i += _gop_step {
+	for i, _xgo_end, _xgo_step := t.start(), t.end(), t.step(); i < _xgo_end; i += _xgo_step {
 		fmt.Println(i)
 	}
 }
@@ -1459,8 +1459,8 @@ func (t T) step() int {
 func main() {
 	t := T{}
 	i := 0
-	for _gop_k, _gop_end, _gop_step := t.start(), t.end(), t.step(); _gop_k < _gop_end; _gop_k += _gop_step {
-		i = _gop_k
+	for _xgo_k, _xgo_end, _xgo_step := t.start(), t.end(), t.step(); _xgo_k < _xgo_end; _xgo_k += _xgo_step {
+		i = _xgo_k
 		fmt.Println(i)
 	}
 }
@@ -1477,7 +1477,7 @@ for :10 {
 import "fmt"
 
 func main() {
-	for _gop_k := 0; _gop_k < 10; _gop_k += 1 {
+	for _xgo_k := 0; _xgo_k < 10; _xgo_k += 1 {
 		fmt.Println("Hi")
 	}
 }

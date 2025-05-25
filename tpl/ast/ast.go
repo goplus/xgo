@@ -72,7 +72,7 @@ type Rule struct {
 	Name    *Ident
 	TokPos  token.Pos // position of '='
 	Expr    Expr
-	RetProc Node // => { ... } (see gop/ast.LambdaExpr2) or nil
+	RetProc Node // => { ... } (see xgo/ast.LambdaExpr2) or nil
 }
 
 // IsList reports whether the rule is a list rule.

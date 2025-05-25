@@ -40,7 +40,7 @@ var Cmd = &base.Command{
 var (
 	flag                 = &Cmd.Flag
 	flagVerbose          = flag.Bool("v", false, "print verbose information")
-	flagCheckMode        = flag.Bool("t", false, "do check syntax only, no generate gop_autogen.go")
+	flagCheckMode        = flag.Bool("t", false, "do check syntax only, no generate xgo_autogen.go")
 	flagSingleMode       = flag.Bool("s", false, "run in single file mode for package")
 	flagIgnoreNotatedErr = flag.Bool(
 		"ignore-notated-error", false, "ignore notated errors, only available together with -t (check mode)")

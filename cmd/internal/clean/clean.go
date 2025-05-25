@@ -27,9 +27,11 @@ import (
 )
 
 const (
-	autoGenFileSuffix = "_autogen.go"
-	autoGenTestFile   = "gop_autogen_test.go"
-	autoGen2TestFile  = "gop_autogen2_test.go"
+	autoGenFileSuffix   = "_autogen.go"
+	autoGenGopTestFile  = "gop_autogen_test.go"
+	autoGen2GopTestFile = "gop_autogen2_test.go"
+	autoGenXgoTestFile  = "xgo_autogen_test.go"
+	autoGen2XgoTestFile = "xgo_autogen2_test.go"
 )
 
 // -----------------------------------------------------------------------------
@@ -61,7 +63,10 @@ func cleanAGFiles(dir string, execAct bool) {
 			}
 		}
 	}
-	autogens := []string{autoGenTestFile, autoGen2TestFile}
+	autogens := []string{
+		autoGenGopTestFile, autoGen2GopTestFile,
+		autoGenXgoTestFile, autoGen2XgoTestFile,
+	}
 	for _, autogen := range autogens {
 		file := filepath.Join(dir, autogen)
 		if _, err = os.Stat(file); err == nil {

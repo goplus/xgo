@@ -81,7 +81,7 @@ func (p *Importer) SetTags(tags string) {
 // CacheFile returns file path of the cache.
 func (p *Importer) CacheFile() string {
 	cacheDir, _ := os.UserCacheDir()
-	cacheDir += "/gop-build/"
+	cacheDir += "/xgo-build/"
 	os.MkdirAll(cacheDir, 0755)
 
 	fname := ""
@@ -119,7 +119,7 @@ func (p *Importer) PkgHash(pkgPath string, self bool) string {
 			return dirHash(p.mod, p.xgo, pkg.Dir, self)
 		}
 	}
-	if isPkgInMod(pkgPath, gopMod) || isPkgInMod(pkgPath, xMod) {
+	if isPkgInMod(pkgPath, xgoMod) || isPkgInMod(pkgPath, xMod) {
 		return cache.HashSkip
 	}
 	log.Println("PkgHash: unexpected package -", pkgPath)
@@ -127,21 +127,21 @@ func (p *Importer) PkgHash(pkgPath string, self bool) string {
 }
 
 const (
-	gopMod = "github.com/goplus/xgo"
+	xgoMod = "github.com/goplus/xgo"
 	xMod   = "github.com/qiniu/x"
 )
 
 // Import imports a Go/XGo package.
 func (p *Importer) Import(pkgPath string) (pkg *types.Package, err error) {
-	if strings.HasPrefix(pkgPath, gopMod) {
-		if suffix := pkgPath[len(gopMod):]; suffix == "" || suffix[0] == '/' {
-			gopRoot := p.xgo.Root
+	if strings.HasPrefix(pkgPath, xgoMod) {
+		if suffix := pkgPath[len(xgoMod):]; suffix == "" || suffix[0] == '/' {
+			xgoRoot := p.xgo.Root
 			if suffix == "/cl/internal/gop-in-go/foo" { // for test github.com/goplus/xgo/cl
-				if err = p.genGoExtern(gopRoot+suffix, false); err != nil {
+				if err = p.genGoExtern(xgoRoot+suffix, false); err != nil {
 					return
 				}
 			}
-			return p.impFrom.ImportFrom(pkgPath, gopRoot, 0)
+			return p.impFrom.ImportFrom(pkgPath, xgoRoot, 0)
 		}
 	}
 	if isPkgInMod(pkgPath, xMod) {
@@ -184,7 +184,7 @@ func (p *Importer) Import(pkgPath string) (pkg *types.Package, err error) {
 
 func (p *Importer) genGoExtern(dir string, isExtern bool) (err error) {
 	genfile := filepath.Join(dir, autoGenFile)
-	if _, err = os.Lstat(genfile); err != nil { // no gop_autogen.go
+	if _, err = os.Lstat(genfile); err != nil { // no xgo_autogen.go
 		if isExtern {
 			os.Chmod(dir, modWritable)
 			defer os.Chmod(dir, modReadonly)

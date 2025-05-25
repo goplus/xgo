@@ -79,7 +79,7 @@ type gmxProject struct {
 	schedStmts []goast.Stmt // nil or len(scheds) == 2 (delayload)
 	pkgImps    []gogen.PkgRef
 	pkgPaths   []string
-	autoimps   map[string]pkgImp // auto-import statement in gop.mod
+	autoimps   map[string]pkgImp // auto-import statement in gox.mod
 	gt         *Project
 	hasScheds  bool
 	gameIsPtr  bool
@@ -568,8 +568,8 @@ func genWorkClasses(
 	sp *spxObj, iobj, ilst int, callMain func()) (lstName string) {
 	const (
 		indexGame     = 1
-		objNamePrefix = "_gop_obj"
-		lstNamePrefix = "_gop_lst"
+		objNamePrefix = "_xgo_obj"
+		lstNamePrefix = "_xgo_lst"
 	)
 	embedded := (sp.feats&spriteEmbedded != 0)
 	sptypes := sp.types
@@ -625,7 +625,7 @@ func findMethod(o types.Object, name string) *types.Func {
 
 func makeMainSig(recv *types.Var, f *types.Func) *types.Signature {
 	const (
-		namePrefix = "_gop_arg"
+		namePrefix = "_xgo_arg"
 	)
 	sig := f.Type().(*types.Signature)
 	in := sig.Params()
@@ -649,12 +649,15 @@ func genClassfname(ctx *blockCtx, c *gmxClass) {
 }
 
 func genClassclone(ctx *blockCtx, classclone *types.Signature) {
+	const (
+		nameRet = "_xgo_ret"
+	)
 	pkg := ctx.pkg
 	recv := toRecv(ctx, ctx.classRecv)
 	ret := classclone.Results()
 	pkg.NewFunc(recv, "Classclone", nil, ret, false).BodyStart(pkg).
-		DefineVarStart(token.NoPos, "_gop_ret").VarVal("this").Elem().EndInit(1).
-		VarVal("_gop_ret").UnaryOp(gotoken.AND).Return(1).
+		DefineVarStart(token.NoPos, nameRet).VarVal("this").Elem().EndInit(1).
+		VarVal(nameRet).UnaryOp(gotoken.AND).Return(1).
 		End()
 }
 

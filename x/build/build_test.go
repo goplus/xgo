@@ -314,22 +314,22 @@ import (
 func add(x string, y string) (int, error) {
 	var _autoGo_1 int
 	{
-		var _gop_err error
-		_autoGo_1, _gop_err = strconv.Atoi(x)
-		if _gop_err != nil {
-			_gop_err = errors.NewFrame(_gop_err, "strconv.Atoi(x)", "main.xgo", 7, "main.add")
-			return 0, _gop_err
+		var _xgo_err error
+		_autoGo_1, _xgo_err = strconv.Atoi(x)
+		if _xgo_err != nil {
+			_xgo_err = errors.NewFrame(_xgo_err, "strconv.Atoi(x)", "main.xgo", 7, "main.add")
+			return 0, _xgo_err
 		}
 		goto _autoGo_2
 	_autoGo_2:
 	}
 	var _autoGo_3 int
 	{
-		var _gop_err error
-		_autoGo_3, _gop_err = strconv.Atoi(y)
-		if _gop_err != nil {
-			_gop_err = errors.NewFrame(_gop_err, "strconv.Atoi(y)", "main.xgo", 7, "main.add")
-			return 0, _gop_err
+		var _xgo_err error
+		_autoGo_3, _xgo_err = strconv.Atoi(y)
+		if _xgo_err != nil {
+			_xgo_err = errors.NewFrame(_xgo_err, "strconv.Atoi(y)", "main.xgo", 7, "main.add")
+			return 0, _xgo_err
 		}
 		goto _autoGo_4
 	_autoGo_4:
@@ -337,29 +337,29 @@ func add(x string, y string) (int, error) {
 	return _autoGo_1 + _autoGo_3, nil
 }
 func addSafe(x string, y string) int {
-	return func() (_gop_ret int) {
-		var _gop_err error
-		_gop_ret, _gop_err = strconv.Atoi(x)
-		if _gop_err != nil {
+	return func() (_xgo_ret int) {
+		var _xgo_err error
+		_xgo_ret, _xgo_err = strconv.Atoi(x)
+		if _xgo_err != nil {
 			return 0
 		}
 		return
-	}() + func() (_gop_ret int) {
-		var _gop_err error
-		_gop_ret, _gop_err = strconv.Atoi(y)
-		if _gop_err != nil {
+	}() + func() (_xgo_ret int) {
+		var _xgo_err error
+		_xgo_ret, _xgo_err = strconv.Atoi(y)
+		if _xgo_err != nil {
 			return 0
 		}
 		return
 	}()
 }
 func main() {
-	fmt.Println(func() (_gop_ret int) {
-		var _gop_err error
-		_gop_ret, _gop_err = add("100", "23")
-		if _gop_err != nil {
-			_gop_err = errors.NewFrame(_gop_err, "add(\"100\", \"23\")", "main.xgo", 14, "main.main")
-			panic(_gop_err)
+	fmt.Println(func() (_xgo_ret int) {
+		var _xgo_err error
+		_xgo_ret, _xgo_err = add("100", "23")
+		if _xgo_err != nil {
+			_xgo_err = errors.NewFrame(_xgo_err, "add(\"100\", \"23\")", "main.xgo", 14, "main.main")
+			panic(_xgo_err)
 		}
 		return
 	}())

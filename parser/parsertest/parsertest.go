@@ -141,7 +141,7 @@ func Expect(t *testing.T, pkg *ast.Package, expected string) {
 	output := b.String()
 	if expected != output {
 		fmt.Fprint(os.Stderr, output)
-		t.Fatal("gop.Parser: unexpect result")
+		t.Fatal("xgo.Parser: unexpect result")
 	}
 }
 
@@ -149,7 +149,7 @@ func ExpectEx(t *testing.T, outfile string, pkg *ast.Package, expected []byte) {
 	b := bytes.NewBuffer(nil)
 	Fprint(b, pkg)
 	if test.Diff(t, outfile, b.Bytes(), expected) {
-		t.Fatal("gop.Parser: unexpect result")
+		t.Fatal("xgo.Parser: unexpect result")
 	}
 }
 
@@ -160,6 +160,6 @@ func ExpectNode(t *testing.T, node any, expected string) {
 	output := b.String()
 	if expected != output {
 		fmt.Fprint(os.Stderr, output)
-		t.Fatal("gop.Parser: unexpect result")
+		t.Fatal("xgo.Parser: unexpect result")
 	}
 }

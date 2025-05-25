@@ -162,9 +162,9 @@ func (p *Changes) DirAdded(name string) {
 	})
 }
 
-// pattern: gop_autogen*.go
+// pattern: xgo_autogen*.go
 func isAutogen(fname string) bool {
-	return strings.HasPrefix(fname, "gop_autogen") && strings.HasSuffix(fname, ".go")
+	return strings.HasPrefix(fname, "xgo_autogen") && strings.HasSuffix(fname, ".go")
 }
 
 // pattern: .* or *~

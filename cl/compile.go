@@ -594,7 +594,7 @@ func NewPackage(pkgPath string, pkg *ast.Package, conf *Config) (p *gogen.Packag
 
 	proj, multi := gmxCheckProjs(p, ctx)
 
-	gopSyms := make(map[string]bool) // TODO: remove this map
+	gopSyms := make(map[string]bool) // TODO(xsw): remove this map
 	for name := range ctx.syms {
 		gopSyms[name] = true
 	}

@@ -64,7 +64,7 @@ func FprintNode(w io.Writer, lead string, v any, prefix, indent string) {
 			prefix += indent
 			for i := 0; i < n; i++ {
 				sf := tyElem.Field(i)
-				if sf.Name == "RetProc" { // skip RetProc field, see gop/tpl/ast.Rule
+				if sf.Name == "RetProc" { // skip RetProc field, see xgo/tpl/ast.Rule
 					continue
 				}
 				sfv := elem.Field(i).Interface()

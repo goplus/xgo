@@ -18,11 +18,14 @@ Abstract domain knowledge for it.
 XGo introduces `classfile` and `class framework` to abstract domain knowledge.
 
 * STEM Education: [spx: A XGo 2D Game Engine](https://github.com/goplus/spx)
+* AI Programming: [mcp: A XGo implementation of the Model Context Protocol (MCP)](https://github.com/goplus/mcp)
+* AI Programming: [mcptest: A XGo MCP Test Framework](https://github.com/goplus/mcp/tree/main/mtest)
 * Web Programming: [yap: Yet Another HTTP Web Framework](https://github.com/goplus/yap)
-* Web Programming: [yaptest: HTTP Test Framework](https://github.com/goplus/yap#yaptest-http-test-framework)
-* Web Programming: [ydb: Database Framework](https://github.com/goplus/yap#ydb-database-framework)
-* DevOps: [gsh: XGo DevOps Tools](https://github.com/qiniu/x/tree/main/gsh)
-* Unit Test: [classfile: Unit Test](#class-framework-unit-test)
+* Web Programming: [yaptest: A XGo HTTP Test Framework](https://github.com/goplus/yap/tree/main/ytest)
+* Web Programming: [ydb: A XGo Database Framework](https://github.com/goplus/yap/tree/main/ydb)
+* CLI Programming: [cobra: A Commander for modern XGo CLI interactions](https://github.com/goplus/cobra)
+* CLI Programming: [gsh: An alternative to write shell scripts](https://github.com/qiniu/x/tree/main/gsh)
+* Unit Test: [class framework: Unit Test](#class-framework-unit-test)
 * Mechanism: [What's Classfile](#whats-classfile)
 
 Sound a bit abstract? Let's take web programming as an example. First let us create a file named [get.yap](https://github.com/goplus/yap/blob/main/demo/classfile2_hello/get.yap) with the following content:

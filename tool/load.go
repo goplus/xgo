@@ -91,7 +91,7 @@ func isNotatedErr(err error, pkg *ast.Package, fset *token.FileSet) (notatedErr 
 	if f == nil {
 		return
 	}
-	gopf, ok := pkg.Files[f.Name()]
+	xgof, ok := pkg.Files[f.Name()]
 	if !ok {
 		return
 	}
@@ -104,7 +104,7 @@ func isNotatedErr(err error, pkg *ast.Package, fset *token.FileSet) (notatedErr 
 	} else {
 		end = f.Size()
 	}
-	text := string(gopf.Code[start:end])
+	text := string(xgof.Code[start:end])
 	commentOff := strings.Index(text, "//")
 	if commentOff < 0 {
 		return
@@ -314,7 +314,7 @@ func LoadDir(dir string, conf *Config, genTestPkg bool, promptGenGo ...bool) (ou
 }
 
 func afterLoad(mod *xgomod.Module, xgo *env.XGo, out, test *gogen.Package, conf *Config) {
-	if mod.Path() == gopMod { // nothing to do for XGo itself
+	if mod.Path() == xgoMod { // nothing to do for XGo itself
 		return
 	}
 	updateMod := !conf.DontUpdateGoMod && mod.HasModfile()

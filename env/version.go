@@ -44,13 +44,13 @@ func initEnv() {
 		return
 	}
 	if !strings.HasPrefix(buildVersion, "v"+MainVersion+".") {
-		panic("gop/env: [FATAL] Invalid buildVersion: " + buildVersion)
+		panic("xgo/env: [FATAL] Invalid buildVersion: " + buildVersion)
 	}
 }
 
 func initEnvByGop() {
-	if fname := filepath.Base(os.Args[0]); !isGopCmd(fname) {
-		if ret, err := gopEnv(); err == nil {
+	if fname := filepath.Base(os.Args[0]); !isXgoCmd(fname) {
+		if ret, err := xgoEnv(); err == nil {
 			parts := strings.SplitN(strings.TrimRight(ret, "\n"), "\n", 3)
 			if len(parts) == 3 {
 				buildVersion, buildDate, defaultXGoRoot = parts[0], parts[1], parts[2]
@@ -59,16 +59,16 @@ func initEnvByGop() {
 	}
 }
 
-var gopEnv = func() (string, error) {
+var xgoEnv = func() (string, error) {
 	var b bytes.Buffer
-	cmd := exec.Command("gop", "env", "GOPVERSION", "BUILDDATE", "GOPROOT")
+	cmd := exec.Command("xgo", "env", "GOPVERSION", "BUILDDATE", "GOPROOT")
 	cmd.Stdout = &b
 	err := cmd.Run()
 	return b.String(), err
 }
 
-// Installed checks is `gop` installed or not.
-// If returns false, it means `gop` is not installed or not in PATH.
+// Installed checks is `xgo` installed or not.
+// If returns false, it means `xgo` is not installed or not in PATH.
 func Installed() bool {
 	return buildVersion != ""
 }

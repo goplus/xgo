@@ -507,6 +507,11 @@ func compileForPhraseStmt(ctx *blockCtx, v *ast.ForPhraseStmt) {
 }
 
 func toForStmt(forPos token.Pos, value ast.Expr, body *ast.BlockStmt, re *ast.RangeExpr, tok token.Token, fp *ast.ForPhrase) *ast.ForStmt {
+	const (
+		nameK    = "_xgo_k"
+		nameStep = "_xgo_step"
+		nameEnd  = "_xgo_end"
+	)
 	nilIdent := value == nil
 	if !nilIdent {
 		if v, ok := value.(*ast.Ident); ok && v.Name == "_" {
@@ -514,7 +519,7 @@ func toForStmt(forPos token.Pos, value ast.Expr, body *ast.BlockStmt, re *ast.Ra
 		}
 	}
 	if nilIdent {
-		value = &ast.Ident{NamePos: forPos, Name: "_gop_k"}
+		value = &ast.Ident{NamePos: forPos, Name: nameK}
 	}
 	first := re.First
 	if first == nil {
@@ -530,7 +535,7 @@ func toForStmt(forPos token.Pos, value ast.Expr, body *ast.BlockStmt, re *ast.Ra
 		cond = re.Last
 	default:
 		replaceValue = true
-		cond = &ast.Ident{NamePos: forPos, Name: "_gop_end"}
+		cond = &ast.Ident{NamePos: forPos, Name: nameEnd}
 		initLhs = append(initLhs, cond)
 		initRhs = append(initRhs, re.Last)
 	}
@@ -542,14 +547,14 @@ func toForStmt(forPos token.Pos, value ast.Expr, body *ast.BlockStmt, re *ast.Ra
 			post = re.Expr3
 		default:
 			replaceValue = true
-			post = &ast.Ident{NamePos: forPos, Name: "_gop_step"}
+			post = &ast.Ident{NamePos: forPos, Name: nameStep}
 			initLhs = append(initLhs, post)
 			initRhs = append(initRhs, re.Expr3)
 		}
 	}
 	if tok == token.ASSIGN && replaceValue {
 		oldValue := value
-		value = &ast.Ident{NamePos: forPos, Name: "_gop_k"}
+		value = &ast.Ident{NamePos: forPos, Name: nameK}
 		initLhs[0] = value
 		body.List = append([]ast.Stmt{&ast.AssignStmt{
 			Lhs:    []ast.Expr{oldValue},

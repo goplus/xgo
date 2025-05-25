@@ -176,7 +176,7 @@ func startWith(words []aWord, tok token.Token) bool {
 	return false
 }
 
-// SourceEx formats src in canonical gopfmt style and returns the result
+// SourceEx formats src in canonical xgofmt style and returns the result
 // or an (I/O or syntax) error. src is expected to be a syntactically
 // correct XGo source file, or a list of XGo declarations or statements.
 //
