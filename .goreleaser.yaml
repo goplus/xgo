@@ -19,6 +19,18 @@ builds:
       - linux
       - windows
       - darwin
+  - id: gop
+    main: ./cmd/xgo
+    binary: bin/gop
+    ldflags:
+      - -X github.com/goplus/xgo/env.buildVersion=v{{.Version}}
+      - -X github.com/goplus/xgo/env.buildDate={{.Date}}
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
 
 archives:
   - format: tar.gz
@@ -254,6 +266,9 @@ nfpms:
       - src: "/usr/lib/{{ .ProjectName }}/bin/xgo"
         dst: /usr/bin/xgo
         type: symlink
+      - src: "/usr/lib/{{ .ProjectName }}/bin/xgo"
+        dst: /usr/bin/gop
+        type: symlink
 
 snapcrafts:
   - id: xgo
@@ -329,7 +344,7 @@ snapcrafts:
     apps:
       xgo:
         command: "xgo"
-        aliases: ["xgo"]
+        aliases: ["xgo", "gop"]
         environment:
           XGOROOT: "$SNAP"
 
