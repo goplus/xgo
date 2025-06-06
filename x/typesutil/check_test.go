@@ -18,9 +18,9 @@ import (
 )
 
 func init() {
-	if os.Getenv("GOPROOT") == "" {
+	if os.Getenv("XGOROOT") == "" {
 		dir, _ := os.Getwd()
-		os.Setenv("GOPROOT", filepath.Clean(filepath.Join(dir, "./../..")))
+		os.Setenv("XGOROOT", filepath.Clean(filepath.Join(dir, "./../..")))
 	}
 	typesutil.SetDebug(typesutil.DbgFlagDefault)
 }

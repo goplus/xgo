@@ -57,7 +57,7 @@ func (p *Path) checkExists(rootDir string) bool {
 	return checkPathExist(absPath, p.isDir)
 }
 
-func getGopRoot() string {
+func getXgoRoot() string {
 	pwd, _ := os.Getwd()
 
 	pathsToCheck := []Path{
@@ -69,19 +69,19 @@ func getGopRoot() string {
 
 	for _, path := range pathsToCheck {
 		if !path.checkExists(pwd) {
-			println("Error: This script should be run at the root directory of gop repository.")
+			println("Error: This script should be run at the root directory of xgo repository.")
 			os.Exit(1)
 		}
 	}
 	return pwd
 }
 
-var gopRoot = getGopRoot()
+var xgoRoot = getXgoRoot()
 var initCommandExecuteEnv = os.Environ()
 var commandExecuteEnv = initCommandExecuteEnv
 
 // Always put `gop` command as the first item, as it will be referenced by below code.
-var gopBinFiles = []string{"gop", "xgo"}
+var xgoBinFiles = []string{"gop", "xgo"}
 
 const (
 	inWindows = (runtime.GOOS == "windows")
@@ -89,9 +89,9 @@ const (
 
 func init() {
 	if inWindows {
-		for index, file := range gopBinFiles {
+		for index, file := range xgoBinFiles {
 			file += ".exe"
-			gopBinFiles[index] = file
+			xgoBinFiles[index] = file
 		}
 	}
 }
@@ -121,8 +121,8 @@ type (
 )
 
 func (p *gitRemoteImpl) CheckRemoteUrl() {
-	if getGitRemoteUrl("gop") == "" {
-		log.Fatalln("Error: git remote gop not found, please use `git remote add gop git@github.com:goplus/gop.git`.")
+	if getGitRemoteUrl("xgo") == "" {
+		log.Fatalln("Error: git remote xgo not found, please use `git remote add xgo git@github.com:goplus/xgo.git`.")
 	}
 }
 
@@ -237,7 +237,7 @@ func isGitRepo() bool {
 	if err != nil {
 		return false
 	}
-	return checkPathExist(filepath.Join(gopRoot, trimRight(gitDir)), true)
+	return checkPathExist(filepath.Join(xgoRoot, trimRight(gitDir)), true)
 }
 
 func getBuildDateTime() string {
@@ -260,21 +260,21 @@ func getBuildVer() string {
 }
 
 func getGopBuildFlags() string {
-	defaultXGoRoot := gopRoot
+	defaultXGoRoot := xgoRoot
 	if gopRootFinal := os.Getenv("GOPROOT_FINAL"); gopRootFinal != "" {
 		defaultXGoRoot = gopRootFinal
 	}
 	buildFlags := fmt.Sprintf("-X \"github.com/goplus/xgo/env.defaultXGoRoot=%s\"", defaultXGoRoot)
 	buildFlags += fmt.Sprintf(" -X \"github.com/goplus/xgo/env.buildDate=%s\"", getBuildDateTime())
 
-	version := findGopVersion()
+	version := findXgoVersion()
 	buildFlags += fmt.Sprintf(" -X \"github.com/goplus/xgo/env.buildVersion=%s\"", version)
 
 	return buildFlags
 }
 
 func detectGopBinPath() string {
-	return filepath.Join(gopRoot, "bin")
+	return filepath.Join(xgoRoot, "bin")
 }
 
 func detectGoBinPath() string {
@@ -311,7 +311,7 @@ func linkGoplusToLocalBin() string {
 		}
 	}
 
-	for _, file := range gopBinFiles {
+	for _, file := range xgoBinFiles {
 		sourceFile := filepath.Join(gopBinPath, file)
 		if !checkPathExist(sourceFile, false) {
 			log.Fatalf("Error: %s is not existed, you should build XGo before linking.\n", sourceFile)
@@ -334,7 +334,7 @@ func linkGoplusToLocalBin() string {
 }
 
 func buildGoplusTools(useGoProxy bool) {
-	commandsDir := filepath.Join(gopRoot, "cmd")
+	commandsDir := filepath.Join(xgoRoot, "cmd")
 	buildFlags := getGopBuildFlags()
 
 	if useGoProxy {
@@ -374,7 +374,7 @@ func buildGoplusTools(useGoProxy bool) {
 	}
 	print(buildOutput)
 
-	// Clear gop run cache
+	// Clear xgo run cache
 	cleanGopRunCache()
 
 	println("\nXGo tools built successfully!")
@@ -409,17 +409,17 @@ func install() {
 
 	println("\nXGo tools installed successfully!")
 
-	if _, err := execCommand("gop", "version"); err != nil {
+	if _, err := execCommand("xgo", "version"); err != nil {
 		showHelpPostInstall(installPath)
 	}
 }
 
 func runTestcases() {
 	println("Start running testcases.")
-	os.Chdir(gopRoot)
+	os.Chdir(xgoRoot)
 
 	coverage := "-coverprofile=coverage.txt"
-	gopCommand := filepath.Join(detectGopBinPath(), gopBinFiles[0])
+	gopCommand := filepath.Join(detectGopBinPath(), xgoBinFiles[0])
 	if !checkPathExist(gopCommand, false) {
 		println("Error: XGo must be installed before running testcases.")
 		os.Exit(1)
@@ -439,7 +439,7 @@ func clean() {
 	goBinPath := detectGoBinPath()
 
 	// Clean links
-	for _, file := range gopBinFiles {
+	for _, file := range xgoBinFiles {
 		targetLink := filepath.Join(goBinPath, file)
 		if checkPathExist(targetLink, false) {
 			if err := os.Remove(targetLink); err != nil {
@@ -505,9 +505,9 @@ func isInChina() bool {
 	return false
 }
 
-// findGopVersion returns current version of gop
-func findGopVersion() string {
-	versionFile := filepath.Join(gopRoot, "VERSION")
+// findXgoVersion returns current version of xgo
+func findXgoVersion() string {
+	versionFile := filepath.Join(xgoRoot, "VERSION")
 	// Read version from VERSION file
 	data, err := os.ReadFile(versionFile)
 	if err == nil {
@@ -557,7 +557,7 @@ func releaseNewVersion(tag string) {
 	}
 
 	// Cache new version
-	versionFile := filepath.Join(gopRoot, "VERSION")
+	versionFile := filepath.Join(xgoRoot, "VERSION")
 	if err := os.WriteFile(versionFile, []byte(version), 0644); err != nil {
 		log.Fatalf("Error: cache new version with error: %v\n", err)
 	}
@@ -569,7 +569,7 @@ func releaseNewVersion(tag string) {
 	}
 
 	// Tag the source code
-	if err := gitTagAndPushTo(tag, "gop", releaseBranch); err != nil {
+	if err := gitTagAndPushTo(tag, "xgo", releaseBranch); err != nil {
 		log.Fatalf("Error: gitTagAndPushTo with error: %v\n", err)
 	}
 
@@ -579,10 +579,10 @@ func releaseNewVersion(tag string) {
 func runRegtests() {
 	println("\nStart running regtests.")
 
-	cmd := exec.Command(filepath.Join(gopRoot, "bin/"+gopBinFiles[0]), "go", "./...")
+	cmd := exec.Command(filepath.Join(xgoRoot, "bin/"+xgoBinFiles[0]), "go", "./...")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	cmd.Dir = filepath.Join(gopRoot, "demo")
+	cmd.Dir = filepath.Join(xgoRoot, "demo")
 	err := cmd.Run()
 	if err != nil {
 		code := cmd.ProcessState.ExitCode()

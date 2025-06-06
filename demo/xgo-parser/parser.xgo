@@ -1,6 +1,6 @@
 import (
-	"gop/ast"
-	"gop/parser"
+	"xgo/ast"
+	"xgo/parser"
 )
 
 e := parser.parseExpr("10 + 3.2")!.(*ast.BinaryExpr)

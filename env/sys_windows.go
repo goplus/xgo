@@ -16,10 +16,13 @@
 
 package env
 
+import "strings"
+
 const (
 	envHOME = "USERPROFILE"
 )
 
 func isXgoCmd(fname string) bool {
-	return fname == "gop.exe" || fname == "gop"
+	fname = strings.TrimSuffix(fname, ".exe")
+	return fname == "xgo" || fname == "gop"
 }

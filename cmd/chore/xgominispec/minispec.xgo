@@ -16,12 +16,12 @@
 
 import (
 	"flag"
-	"gop/doc/spec/mini"
-	"gop/tpl"
-	"gop/tpl/matcher"
-	"gop/x/xgoprojs"
 	"os"
 	"path/filepath"
+	"xgo/doc/spec/mini"
+	"xgo/tpl"
+	"xgo/tpl/matcher"
+	"xgo/x/xgoprojs"
 )
 
 func isGopFile(file string) bool {

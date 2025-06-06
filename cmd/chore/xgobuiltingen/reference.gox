@@ -2,8 +2,8 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"xgo/env"
 	"runtime"
+	"xgo/env"
 )
 
 type exargs struct {
@@ -58,9 +58,9 @@ var (
 		"strconv": "${goroot}/src/strconv",
 		"strings": "${goroot}/src/strings",
 
-		"buil":        "${root}/../x/gop",
-		"iox":         "${root}/../x/gop/osx",
-		"osx":         "${root}/../x/gop/osx",
+		"buil":        "${root}/../x/xgo",
+		"iox":         "${root}/../x/osx",
+		"osx":         "${root}/../x/osx",
 		"stringslice": "${root}/../x/stringslice",
 		"strx":        "${root}/../x/stringutil",
 	}

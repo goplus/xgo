@@ -1,7 +1,7 @@
 import (
 	"c"
-	"c/sqlite"
 	"c/os"
+	"c/sqlite"
 )
 
 func check(err sqlite.Errno, db *sqlite.Sqlite3, at string) {

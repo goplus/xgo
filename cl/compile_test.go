@@ -2190,10 +2190,10 @@ func (p fooIter) Next() (key string, val int, ok bool) {
 func (p *foo) Gop_Enum() fooIter {
 }
 func main() {
-	for _gop_it := new(foo).Gop_Enum(); ; {
-		var _gop_ok bool
-		k, v, _gop_ok := _gop_it.Next()
-		if !_gop_ok {
+	for _xgo_it := new(foo).Gop_Enum(); ; {
+		var _xgo_ok bool
+		k, v, _xgo_ok := _xgo_it.Next()
+		if !_xgo_ok {
 			break
 		}
 		fmt.Println(k, v)
@@ -2289,10 +2289,10 @@ func newFoo() *foo {
 	return &foo{key: []int{3, 7}, val: []string{"Hi", "XGo"}}
 }
 func main() {
-	for _gop_it := newFoo().Gop_Enum(); ; {
-		var _gop_ok bool
-		k, v, _gop_ok := _gop_it.Next()
-		if !_gop_ok {
+	for _xgo_it := newFoo().Gop_Enum(); ; {
+		var _xgo_ok bool
+		k, v, _xgo_ok := _xgo_it.Next()
+		if !_xgo_ok {
 			break
 		}
 		fmt.Println(k, v)

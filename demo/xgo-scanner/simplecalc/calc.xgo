@@ -1,7 +1,7 @@
 import (
-	"gop/scanner"
-	"gop/token"
 	"os"
+	"xgo/scanner"
+	"xgo/token"
 )
 
 func calc(expr string) string {

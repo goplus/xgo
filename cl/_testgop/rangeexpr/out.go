@@ -2,18 +2,19 @@ package main
 
 import (
 	"fmt"
+
 	"github.com/qiniu/x/gop"
 )
 
 func main() {
-	fmt.Println(func() (_gop_ret []int) {
-		for _gop_it := gop.NewRange__0(0, 3, 1).Gop_Enum(); ; {
-			var _gop_ok bool
-			x, _gop_ok := _gop_it.Next()
-			if !_gop_ok {
+	fmt.Println(func() (_xgo_ret []int) {
+		for _xgo_it := gop.NewRange__0(0, 3, 1).Gop_Enum(); ; {
+			var _xgo_ok bool
+			x, _xgo_ok := _xgo_it.Next()
+			if !_xgo_ok {
 				break
 			}
-			_gop_ret = append(_gop_ret, x)
+			_xgo_ret = append(_xgo_ret, x)
 		}
 		return
 	}())

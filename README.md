@@ -13,13 +13,13 @@
 <!--
 [![VSCode](https://img.shields.io/badge/vscode-XGo-teal.svg)](https://github.com/gopcode/vscode-goplus)
 [![Discord](https://img.shields.io/discord/983646982100897802?label=Discord&logo=discord&logoColor=white)](https://discord.gg/mYjWCJDcAr)
-[![Interpreter](https://img.shields.io/badge/interpreter-iGo+-seagreen.svg)](https://github.com/goplus/igop)
+[![Interpreter](https://img.shields.io/badge/interpreter-iXGo-seagreen.svg)](https://github.com/goplus/ixgo)
 -->
 
 [![Build Status](https://github.com/goplus/xgo/actions/workflows/go.yml/badge.svg)](https://github.com/goplus/xgo/actions/workflows/go.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/goplus/xgo)](https://goreportcard.com/report/github.com/goplus/xgo)
-[![Coverage Status](https://codecov.io/gh/goplus/gop/branch/main/graph/badge.svg)](https://codecov.io/gh/goplus/gop)
-[![GitHub release](https://img.shields.io/github/v/tag/goplus/gop.svg?label=release)](https://github.com/goplus/xgo/releases)
+[![Coverage Status](https://codecov.io/gh/goplus/xgo/branch/main/graph/badge.svg)](https://codecov.io/gh/goplus/xgo)
+[![GitHub release](https://img.shields.io/github/v/tag/goplus/xgo.svg?label=release)](https://github.com/goplus/xgo/releases)
 [![Discord](https://img.shields.io/badge/Discord-online-success.svg?logo=discord&logoColor=white)](https://discord.com/invite/mYjWCJDcAr)
 
 </div>
@@ -309,7 +309,7 @@ winget install goplus.gop
 ### on Debian/Ubuntu
 
 ```sh
-sudo bash -c ' echo "deb [trusted=yes] https://pkgs.goplus.org/apt/ /" > /etc/apt/sources.list.d/goplus.list'
+sudo bash -c ' echo "deb [trusted=yes] https://pkgs.xgo.dev/apt/ /" > /etc/apt/sources.list.d/goplus.list'
 sudo apt update
 sudo apt install gop
 ```
@@ -317,7 +317,7 @@ sudo apt install gop
 ### on RedHat/CentOS/Fedora
 
 ```sh
-sudo bash -c 'echo -e "[goplus]\nname=Go+ Repo\nbaseurl=https://pkgs.goplus.org/yum/\nenabled=1\ngpgcheck=0" > /etc/yum.repos.d/goplus.repo'
+sudo bash -c 'echo -e "[goplus]\nname=Go+ Repo\nbaseurl=https://pkgs.xgo.dev/yum/\nenabled=1\ngpgcheck=0" > /etc/yum.repos.d/goplus.repo'
 sudo yum install gop
 ```
 

@@ -14,8 +14,8 @@
  */
 
 import (
-	self "gop/env"
 	"runtime"
+	self "xgo/env"
 )
 
 use "version [flags]"

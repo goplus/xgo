@@ -1071,7 +1071,7 @@ import (
 )
 
 func main() {
-	for _gop_it := osx.EnumLines(func() (_xgo_ret *os.File) {
+	for _xgo_it := osx.EnumLines(func() (_xgo_ret *os.File) {
 		var _xgo_err error
 		_xgo_ret, _xgo_err = os.Open("foo.txt")
 		if _xgo_err != nil {
@@ -1080,9 +1080,9 @@ func main() {
 		}
 		return
 	}()); ; {
-		var _gop_ok bool
-		line, _gop_ok := _gop_it.Next()
-		if !_gop_ok {
+		var _xgo_ok bool
+		line, _xgo_ok := _xgo_it.Next()
+		if !_xgo_ok {
 			break
 		}
 		fmt.Println(line)

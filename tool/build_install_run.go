@@ -129,7 +129,7 @@ func restoreDirAndMod(old string, mod os.FileMode) {
 
 // -----------------------------------------------------------------------------
 
-// If no go.mod and used XGo, use GOPROOT as buildDir.
+// If no go.mod and used XGo, use XGOROOT as buildDir.
 func getBuildDir(conf *Config) string {
 	if conf != nil && conf.XGoDeps != nil && *conf.XGoDeps != 0 {
 		return conf.XGo.Root

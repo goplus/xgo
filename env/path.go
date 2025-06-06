@@ -28,7 +28,7 @@ var (
 	defaultXGoRoot string
 )
 
-// XGOROOT returns the root of the XGo tree. It uses the GOPROOT environment variable,
+// XGOROOT returns the root of the XGo tree. It uses the XGOROOT environment variable,
 // if set at process start, or else the root used during the XGo build.
 func XGOROOT() string {
 	xgoRoot, err := findXgoRoot()

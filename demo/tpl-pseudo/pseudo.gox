@@ -1,14 +1,14 @@
 import (
 	"fmt"
-	"gop/tpl"
-	"gop/tpl/token"
-	"gop/tpl/variant/delay"
 	"os"
 	"reflect"
+	"xgo/tpl"
+	"xgo/tpl/token"
+	"xgo/tpl/variant/delay"
 
-	_ "gop/tpl/variant/builtin"
-	_ "gop/tpl/variant/math"
-	_ "gop/tpl/variant/time"
+	_ "xgo/tpl/variant/builtin"
+	_ "xgo/tpl/variant/math"
+	_ "xgo/tpl/variant/time"
 )
 
 var (

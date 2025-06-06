@@ -18,6 +18,16 @@ jobs:
         pip install --no-input pyyaml
         python .github/workflows/check_goreleaser_config.py
 
+  TestXGoInstaller:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Test XGo installer
+      run: |
+        git config --global user.email "build-robot@xgo.dev"
+        git config --global user.name "build robot"
+        go test -v cmd/make_test.go
+
   Test:
     strategy:
       matrix:
@@ -39,19 +49,13 @@ jobs:
       with:
         go-version: ${{ matrix.go }}
 
-    - name: Test XGo installer
-      run: |
-        git config --global user.email "build-robot@xgo.dev"
-        git config --global user.name "build robot"
-        go test -v cmd/make_test.go
-
     - name: Run testcases
       run: go test -v -coverprofile="coverage.txt" -covermode=atomic ./...
 
     - name: Codecov
       uses: codecov/codecov-action@v5
       with:
-        slug: goplus/gop
+        slug: goplus/xgo
 
   TestTypeAlias:
     strategy:
@@ -75,19 +79,13 @@ jobs:
     - name: Set types alias env
       run: echo "GODEBUG=gotypesalias=1" >> $GITHUB_ENV
 
-    - name: Test XGo installer
-      run: |
-        git config --global user.email "build-robot@xgo.dev"
-        git config --global user.name "build robot"
-        go test -v cmd/make_test.go
-
     - name: Run testcases
       run: go test -v -coverprofile="coverage.txt" -covermode=atomic ./...
 
     - name: Codecov
       uses: codecov/codecov-action@v5
       with:
-        slug: goplus/gop
+        slug: goplus/xgo
 
   FormatCheck:
     runs-on: ubuntu-latest

@@ -54,9 +54,9 @@ namelist = IDENT % ","
 `, "cl/_testgop/domaintpl/in.xgo", 1, 4, "file", func(self interface{}) interface{} {
 		return self
 	}, "stmts", func(self []interface{}) interface{} {
-		return func() (_gop_ret []interface{}) {
+		return func() (_xgo_ret []interface{}) {
 			for _, n := range self {
-				_gop_ret = append(_gop_ret, n.([]interface{})[0])
+				_xgo_ret = append(_xgo_ret, n.([]interface{})[0])
 			}
 			return
 		}()

@@ -2,7 +2,7 @@ import "sort"
 
 vals := [32, 58, 25, 92, 45, 78]
 sort.ints vals
-for v <- vals {
+for v in vals {
 	println v
 }
 
@@ -14,6 +14,6 @@ sort.slice texts, (i, j) => {
 	}
 	return texts[i] < texts[j]
 }
-for v <- texts {
+for v in texts {
 	println v
 }

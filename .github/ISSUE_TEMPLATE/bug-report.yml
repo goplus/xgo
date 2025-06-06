@@ -42,7 +42,7 @@ body:
   - type: input
     id: version
     attributes:
-      label: Gop Version
+      label: XGo Version
       description: Can be a tag or a hash.
     validations:
       required: true

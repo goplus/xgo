@@ -103,6 +103,7 @@ type Cmd_watch struct {
 	xcmd.Command
 	*App
 }
+
 //line cmd/xgo/main_app.gox:6
 func (this *App) MainEntry() {
 //line cmd/xgo/main_app.gox:6:1
@@ -133,6 +134,7 @@ func (this *App) Main() {
 	_xgo_obj17 := &Cmd_watch{App: this}
 	xcmd.Gopt_App_Main(this, _xgo_obj0, _xgo_obj1, _xgo_obj2, _xgo_obj3, _xgo_obj4, _xgo_obj5, _xgo_obj6, _xgo_obj7, _xgo_obj8, _xgo_obj9, _xgo_obj10, _xgo_obj11, _xgo_obj12, _xgo_obj13, _xgo_obj14, _xgo_obj15, _xgo_obj16, _xgo_obj17)
 }
+
 //line cmd/xgo/bug_cmd.gox:20
 func (this *Cmd_bug) Main(_xgo_arg0 string) {
 	this.Command.Main(_xgo_arg0)
@@ -151,6 +153,7 @@ func (this *Cmd_bug) Main(_xgo_arg0 string) {
 func (this *Cmd_bug) Classfname() string {
 	return "bug"
 }
+
 //line cmd/xgo/build_cmd.gox:20
 func (this *Cmd_build) Main(_xgo_arg0 string) {
 	this.Command.Main(_xgo_arg0)
@@ -169,6 +172,7 @@ func (this *Cmd_build) Main(_xgo_arg0 string) {
 func (this *Cmd_build) Classfname() string {
 	return "build"
 }
+
 //line cmd/xgo/clean_cmd.gox:20
 func (this *Cmd_clean) Main(_xgo_arg0 string) {
 	this.Command.Main(_xgo_arg0)
@@ -187,6 +191,7 @@ func (this *Cmd_clean) Main(_xgo_arg0 string) {
 func (this *Cmd_clean) Classfname() string {
 	return "clean"
 }
+
 //line cmd/xgo/doc_cmd.gox:20
 func (this *Cmd_doc) Main(_xgo_arg0 string) {
 	this.Command.Main(_xgo_arg0)
@@ -205,6 +210,7 @@ func (this *Cmd_doc) Main(_xgo_arg0 string) {
 func (this *Cmd_doc) Classfname() string {
 	return "doc"
 }
+
 //line cmd/xgo/env_cmd.gox:20
 func (this *Cmd_env) Main(_xgo_arg0 string) {
 	this.Command.Main(_xgo_arg0)
@@ -223,6 +229,7 @@ func (this *Cmd_env) Main(_xgo_arg0 string) {
 func (this *Cmd_env) Classfname() string {
 	return "env"
 }
+
 //line cmd/xgo/fmt_cmd.gox:20
 func (this *Cmd_fmt) Main(_xgo_arg0 string) {
 	this.Command.Main(_xgo_arg0)
@@ -241,6 +248,7 @@ func (this *Cmd_fmt) Main(_xgo_arg0 string) {
 func (this *Cmd_fmt) Classfname() string {
 	return "fmt"
 }
+
 //line cmd/xgo/get_cmd.gox:20
 func (this *Cmd_get) Main(_xgo_arg0 string) {
 	this.Command.Main(_xgo_arg0)
@@ -259,6 +267,7 @@ func (this *Cmd_get) Main(_xgo_arg0 string) {
 func (this *Cmd_get) Classfname() string {
 	return "get"
 }
+
 //line cmd/xgo/go_cmd.gox:20
 func (this *Cmd_go) Main(_xgo_arg0 string) {
 	this.Command.Main(_xgo_arg0)
@@ -277,6 +286,7 @@ func (this *Cmd_go) Main(_xgo_arg0 string) {
 func (this *Cmd_go) Classfname() string {
 	return "go"
 }
+
 //line cmd/xgo/install_cmd.gox:20
 func (this *Cmd_install) Main(_xgo_arg0 string) {
 	this.Command.Main(_xgo_arg0)
@@ -295,6 +305,7 @@ func (this *Cmd_install) Main(_xgo_arg0 string) {
 func (this *Cmd_install) Classfname() string {
 	return "install"
 }
+
 //line cmd/xgo/mod_cmd.gox:20
 func (this *Cmd_mod) Main(_xgo_arg0 string) {
 	this.Command.Main(_xgo_arg0)
@@ -311,6 +322,7 @@ func (this *Cmd_mod) Main(_xgo_arg0 string) {
 func (this *Cmd_mod) Classfname() string {
 	return "mod"
 }
+
 //line cmd/xgo/mod_download_cmd.gox:20
 func (this *Cmd_mod_download) Main(_xgo_arg0 string) {
 	this.Command.Main(_xgo_arg0)
@@ -336,6 +348,7 @@ func (this *Cmd_mod_download) Main(_xgo_arg0 string) {
 func (this *Cmd_mod_download) Classfname() string {
 	return "mod_download"
 }
+
 //line cmd/xgo/mod_init_cmd.gox:20
 func (this *Cmd_mod_init) Main(_xgo_arg0 string) {
 	this.Command.Main(_xgo_arg0)
@@ -361,6 +374,7 @@ func (this *Cmd_mod_init) Main(_xgo_arg0 string) {
 func (this *Cmd_mod_init) Classfname() string {
 	return "mod_init"
 }
+
 //line cmd/xgo/mod_tidy_cmd.gox:20
 func (this *Cmd_mod_tidy) Main(_xgo_arg0 string) {
 	this.Command.Main(_xgo_arg0)
@@ -379,6 +393,7 @@ func (this *Cmd_mod_tidy) Main(_xgo_arg0 string) {
 func (this *Cmd_mod_tidy) Classfname() string {
 	return "mod_tidy"
 }
+
 //line cmd/xgo/run_cmd.gox:20
 func (this *Cmd_run) Main(_xgo_arg0 string) {
 	this.Command.Main(_xgo_arg0)
@@ -397,6 +412,7 @@ func (this *Cmd_run) Main(_xgo_arg0 string) {
 func (this *Cmd_run) Classfname() string {
 	return "run"
 }
+
 //line cmd/xgo/serve_cmd.gox:20
 func (this *Cmd_serve) Main(_xgo_arg0 string) {
 	this.Command.Main(_xgo_arg0)
@@ -415,6 +431,7 @@ func (this *Cmd_serve) Main(_xgo_arg0 string) {
 func (this *Cmd_serve) Classfname() string {
 	return "serve"
 }
+
 //line cmd/xgo/test_cmd.gox:20
 func (this *Cmd_test) Main(_xgo_arg0 string) {
 	this.Command.Main(_xgo_arg0)
@@ -433,6 +450,7 @@ func (this *Cmd_test) Main(_xgo_arg0 string) {
 func (this *Cmd_test) Classfname() string {
 	return "test"
 }
+
 //line cmd/xgo/version_cmd.gox:21
 func (this *Cmd_version) Main(_xgo_arg0 string) {
 	this.Command.Main(_xgo_arg0)
@@ -449,6 +467,7 @@ func (this *Cmd_version) Main(_xgo_arg0 string) {
 func (this *Cmd_version) Classfname() string {
 	return "version"
 }
+
 //line cmd/xgo/watch_cmd.gox:20
 func (this *Cmd_watch) Main(_xgo_arg0 string) {
 	this.Command.Main(_xgo_arg0)

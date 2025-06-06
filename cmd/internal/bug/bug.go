@@ -36,9 +36,9 @@ import (
 
 // -----------------------------------------------------------------------------
 
-// Cmd - gop bug
+// Cmd - xgo bug
 var Cmd = &base.Command{
-	UsageLine: "gop bug",
+	UsageLine: "xgo bug",
 	Short:     "Start a bug report",
 }
 
@@ -48,11 +48,11 @@ func init() {
 
 func runCmd(_ *base.Command, args []string) {
 	if len(args) > 0 {
-		log.Fatalf("gop: bug takes no arguments")
+		log.Fatalf("xgo: bug takes no arguments")
 	}
 	var buf bytes.Buffer
 	buf.WriteString(bugHeader)
-	printGopVersion(&buf)
+	printXgoVersion(&buf)
 	buf.WriteString("### Does this issue reproduce with the latest release?\n\n\n")
 	printEnvDetails(&buf)
 	buf.WriteString(bugFooter)
@@ -88,41 +88,41 @@ A link on play.xgo.dev is best.
 
 `
 
-func printGopVersion(w io.Writer) {
-	fmt.Fprintf(w, "### What version of gop are you using (`gop version`)?\n\n")
+func printXgoVersion(w io.Writer) {
+	fmt.Fprintf(w, "### What version of xgo are you using (`xgo version`)?\n\n")
 	fmt.Fprintf(w, "<pre>\n")
-	fmt.Fprintf(w, "$ gop version\n")
-	fmt.Fprintf(w, "gop version %s %s/%s\n", env.Version(), runtime.GOOS, runtime.GOARCH)
+	fmt.Fprintf(w, "$ xgo version\n")
+	fmt.Fprintf(w, "xgo version %s %s/%s\n", env.Version(), runtime.GOOS, runtime.GOARCH)
 	fmt.Fprintf(w, "</pre>\n")
 	fmt.Fprintf(w, "\n")
 }
 
 func printEnvDetails(w io.Writer) {
-	fmt.Fprintf(w, "### What operating system and processor architecture are you using (`gop env`)?\n\n")
-	fmt.Fprintf(w, "<details><summary><code>gop env</code> Output</summary><br><pre>\n")
-	fmt.Fprintf(w, "$ gop env\n")
-	printGopEnv(w)
-	printGopDetails(w)
+	fmt.Fprintf(w, "### What operating system and processor architecture are you using (`xgo env`)?\n\n")
+	fmt.Fprintf(w, "<details><summary><code>xgo env</code> Output</summary><br><pre>\n")
+	fmt.Fprintf(w, "$ xgo env\n")
+	printXgoEnv(w)
+	printXgoDetails(w)
 	printOSDetails(w)
 	printCDetails(w)
 	fmt.Fprintf(w, "</pre></details>\n\n")
 }
 
-func printGopEnv(w io.Writer) {
-	cmd := exec.Command("gop", "env")
+func printXgoEnv(w io.Writer) {
+	cmd := exec.Command("xgo", "env")
 	cmd.Env = os.Environ()
 	cmd.Stdout = w
 
 	err := cmd.Run()
 	if err != nil {
-		log.Fatalln("run gop env failed:", err)
+		log.Fatalln("run xgo env failed:", err)
 	}
 }
 
-func printGopDetails(w io.Writer) {
-	gopcmd := filepath.Join(runtime.GOROOT(), "bin/gop")
-	printCmdOut(w, "GOPROOT/bin/gop version: ", gopcmd, "version")
-	printCmdOut(w, "GOPROOT/bin/gop tool compile -V: ", gopcmd, "tool", "compile", "-V")
+func printXgoDetails(w io.Writer) {
+	xgocmd := filepath.Join(runtime.GOROOT(), "bin/xgo")
+	printCmdOut(w, "GOROOT/bin/xgo version: ", xgocmd, "version")
+	printCmdOut(w, "GOROOT/bin/xgo tool compile -V: ", xgocmd, "tool", "compile", "-V")
 }
 
 func printOSDetails(w io.Writer) {
@@ -159,7 +159,7 @@ func printCDetails(w io.Writer) {
 }
 
 // printCmdOut prints the output of running the given command.
-// It ignores failures; 'gop bug' is best effort.
+// It ignores failures; 'xgo bug' is best effort.
 func printCmdOut(w io.Writer, prefix, path string, args ...string) {
 	cmd := exec.Command(path, args...)
 	out, err := cmd.Output()

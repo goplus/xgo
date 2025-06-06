@@ -8,10 +8,10 @@ import (
 )
 
 func main() {
-	for _gop_it := osx.EnumLines(os.Stdin); ; {
-		var _gop_ok bool
-		line, _gop_ok := _gop_it.Next()
-		if !_gop_ok {
+	for _xgo_it := osx.EnumLines(os.Stdin); ; {
+		var _xgo_ok bool
+		line, _xgo_ok := _xgo_it.Next()
+		if !_xgo_ok {
 			break
 		}
 		fmt.Println(line)

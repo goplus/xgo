@@ -1,9 +1,9 @@
 import (
-	"gop/ast"
-	"gop/parser"
-	"gop/token"
 	"math"
 	"os"
+	"xgo/ast"
+	"xgo/parser"
+	"xgo/token"
 )
 
 func calc(e ast.Expr) float64 {

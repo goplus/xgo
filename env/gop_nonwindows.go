@@ -20,5 +20,5 @@
 package env
 
 func isXgoCmd(fname string) bool {
-	return fname == "gop"
+	return fname == "xgo" || fname == "gop"
 }

@@ -210,7 +210,7 @@ issue number with a comma and a space, such as `Fixes #123, #456`. This indicate
 that the commit resolves both referenced issues.
 
 For cross-repository references, use the full `user/repo#number` syntax, such as
-`Fixes goplus/gop#123`.
+`Fixes goplus/xgo#123`.
 
 ### Signed-off-by
 

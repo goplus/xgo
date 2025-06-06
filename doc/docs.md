@@ -1,7 +1,13 @@
 XGo Quick Start
 ======
 
-Our vision is to **enable everyone to create production-level applications**.
+XGo is the first AI-native programming language that integrates software engineering into a unified whole.
+
+```
+XGo := C * Go * Python * JavaScript + Scratch
+```
+
+Our vision is to **enable everyone to become a builder of the world**.
 
 #### Easy to learn
 
@@ -31,7 +37,7 @@ winget install goplus.gop
 ### on Debian/Ubuntu
 
 ```sh
-sudo bash -c ' echo "deb [trusted=yes] https://pkgs.goplus.org/apt/ /" > /etc/apt/sources.list.d/goplus.list'
+sudo bash -c ' echo "deb [trusted=yes] https://pkgs.xgo.dev/apt/ /" > /etc/apt/sources.list.d/goplus.list'
 sudo apt update
 sudo apt install gop
 ```
@@ -39,7 +45,7 @@ sudo apt install gop
 ### on RedHat/CentOS/Fedora
 
 ```sh
-sudo bash -c 'echo -e "[goplus]\nname=Go+ Repo\nbaseurl=https://pkgs.goplus.org/yum/\nenabled=1\ngpgcheck=0" > /etc/yum.repos.d/goplus.repo'
+sudo bash -c 'echo -e "[goplus]\nname=Go+ Repo\nbaseurl=https://pkgs.xgo.dev/yum/\nenabled=1\ngpgcheck=0" > /etc/yum.repos.d/goplus.repo'
 sudo yum install gop
 ```
 
@@ -1328,10 +1334,10 @@ xgo clean   # Clean all XGo auto generated files
 xgo go      # Convert XGo packages into Go packages
 ```
 
-When we use [`igop`](https://github.com/goplus/igop) command, it generates bytecode to execute.
+When we use [`ixgo`](https://github.com/goplus/ixgo) command, it interprets and executes the program.
 
 ```bash
-igop  # Run a XGo program
+ixgo # Run a XGo program
 ```
 
 In bytecode mode, XGo doesn't support `cgo`. However, in Go-code-generation mode, XGo fully supports `cgo`.

@@ -1,8 +1,8 @@
 func f(x float64, t func(float64) float64) float64 {
-    return t(x)
+	return t(x)
 }
 
 echo f(1.0, x => 2 * x)
 echo f(5.0, (x) => {
-    return 2 * x
+	return 2 * x
 })

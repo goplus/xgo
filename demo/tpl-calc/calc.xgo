@@ -1,6 +1,6 @@
 import (
-	"gop/tpl"
 	"os"
+	"xgo/tpl"
 )
 
 cl := tpl`

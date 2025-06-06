@@ -7,6 +7,6 @@ a := [100, 8, 23, 2, 7]
 c.qsort unsafe.Pointer(&a[0]), 5, unsafe.Sizeof(0), (a, b) => {
 	return c.Int(*(*int)(a) - *(*int)(b))
 }
-for v <- a {
+for v in a {
 	c.printf c"%d\n", v
 }

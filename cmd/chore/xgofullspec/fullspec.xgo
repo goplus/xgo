@@ -16,12 +16,12 @@
 
 import (
 	"flag"
-	"gop/parser"
-	"gop/parser/parsertest"
-	"gop/token"
-	"gop/x/xgoprojs"
 	"os"
 	"path/filepath"
+	"xgo/parser"
+	"xgo/parser/parsertest"
+	"xgo/token"
+	"xgo/x/xgoprojs"
 )
 
 func dump(f any) {

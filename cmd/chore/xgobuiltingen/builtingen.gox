@@ -4,10 +4,10 @@ import (
 	"go/format"
 	"go/parser"
 	"go/token"
+	"os"
 	xgoast "xgo/ast"
 	"xgo/ast/gopq"
 	"xgo/parser"
-	"os"
 )
 
 type builtinTI struct {
@@ -27,7 +27,7 @@ func gen() []byte {
 	f.Decls <- &ast.GenDecl{
 		Tok: token.IMPORT,
 		Specs: []ast.Spec{
-			importSpec("github.com/qiniu/x/xgo/osx"),
+			importSpec("github.com/qiniu/x/osx"),
 			importSpec("io"),
 			importSpec("os"),
 			importSpec("reflect"),

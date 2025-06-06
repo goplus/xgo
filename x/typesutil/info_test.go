@@ -1186,19 +1186,19 @@ func OnKey__a(a, b string, v ...int) {
 025: 36: 1 | OnKey               | func main.OnKey__a(a string, b string, v ...int)
 026: 37: 1 | OnKey               | func main.OnKey__a(a string, b string, v ...int)
 == overloads ==
-000: 14: 1 | OnKey               | func main.OnKey(__gop_overload_args__ interface{_()})
-001: 16: 1 | OnKey               | func main.OnKey(__gop_overload_args__ interface{_()})
-002: 18: 1 | OnKey               | func main.OnKey(__gop_overload_args__ interface{_()})
-003: 20: 1 | OnKey               | func main.OnKey(__gop_overload_args__ interface{_()})
-004: 22: 1 | OnKey               | func main.OnKey(__gop_overload_args__ interface{_()})
-005: 24: 1 | OnKey               | func main.OnKey(__gop_overload_args__ interface{_()})
-006: 26: 1 | OnKey               | func main.OnKey(__gop_overload_args__ interface{_()})
-007: 28: 1 | OnKey               | func main.OnKey(__gop_overload_args__ interface{_()})
-008: 30: 1 | OnKey               | func main.OnKey(__gop_overload_args__ interface{_()})
-009: 32: 1 | OnKey               | func main.OnKey(__gop_overload_args__ interface{_()})
-010: 33: 1 | OnKey               | func main.OnKey(__gop_overload_args__ interface{_()})
-011: 36: 1 | OnKey               | func main.OnKey(__gop_overload_args__ interface{_()})
-012: 37: 1 | OnKey               | func main.OnKey(__gop_overload_args__ interface{_()})`)
+000: 14: 1 | OnKey               | func main.OnKey(__xgo_overload_args__ interface{_()})
+001: 16: 1 | OnKey               | func main.OnKey(__xgo_overload_args__ interface{_()})
+002: 18: 1 | OnKey               | func main.OnKey(__xgo_overload_args__ interface{_()})
+003: 20: 1 | OnKey               | func main.OnKey(__xgo_overload_args__ interface{_()})
+004: 22: 1 | OnKey               | func main.OnKey(__xgo_overload_args__ interface{_()})
+005: 24: 1 | OnKey               | func main.OnKey(__xgo_overload_args__ interface{_()})
+006: 26: 1 | OnKey               | func main.OnKey(__xgo_overload_args__ interface{_()})
+007: 28: 1 | OnKey               | func main.OnKey(__xgo_overload_args__ interface{_()})
+008: 30: 1 | OnKey               | func main.OnKey(__xgo_overload_args__ interface{_()})
+009: 32: 1 | OnKey               | func main.OnKey(__xgo_overload_args__ interface{_()})
+010: 33: 1 | OnKey               | func main.OnKey(__xgo_overload_args__ interface{_()})
+011: 36: 1 | OnKey               | func main.OnKey(__xgo_overload_args__ interface{_()})
+012: 37: 1 | OnKey               | func main.OnKey(__xgo_overload_args__ interface{_()})`)
 }
 
 func TestMixedOverload2(t *testing.T) {
@@ -1424,16 +1424,16 @@ func OnKey__a(a, b string, v ...int) {
 030: 33: 1 | n                   | var n *main.N
 031: 33: 3 | onKey               | func (*main.N).OnKey__8(x int, y int)
 == overloads ==
-000: 15: 3 | onKey               | func (main.N).OnKey(__gop_overload_args__ interface{_()})
-001: 17: 3 | onKey               | func (main.N).OnKey(__gop_overload_args__ interface{_()})
-002: 19: 3 | onKey               | func (main.N).OnKey(__gop_overload_args__ interface{_()})
-003: 21: 3 | onKey               | func (main.N).OnKey(__gop_overload_args__ interface{_()})
-004: 23: 3 | onKey               | func (main.N).OnKey(__gop_overload_args__ interface{_()})
-005: 25: 3 | onKey               | func (main.N).OnKey(__gop_overload_args__ interface{_()})
-006: 27: 3 | onKey               | func (main.N).OnKey(__gop_overload_args__ interface{_()})
-007: 29: 3 | onKey               | func (main.N).OnKey(__gop_overload_args__ interface{_()})
-008: 31: 3 | onKey               | func (main.N).OnKey(__gop_overload_args__ interface{_()})
-009: 33: 3 | onKey               | func (main.N).OnKey(__gop_overload_args__ interface{_()})`)
+000: 15: 3 | onKey               | func (main.N).OnKey(__xgo_overload_args__ interface{_()})
+001: 17: 3 | onKey               | func (main.N).OnKey(__xgo_overload_args__ interface{_()})
+002: 19: 3 | onKey               | func (main.N).OnKey(__xgo_overload_args__ interface{_()})
+003: 21: 3 | onKey               | func (main.N).OnKey(__xgo_overload_args__ interface{_()})
+004: 23: 3 | onKey               | func (main.N).OnKey(__xgo_overload_args__ interface{_()})
+005: 25: 3 | onKey               | func (main.N).OnKey(__xgo_overload_args__ interface{_()})
+006: 27: 3 | onKey               | func (main.N).OnKey(__xgo_overload_args__ interface{_()})
+007: 29: 3 | onKey               | func (main.N).OnKey(__xgo_overload_args__ interface{_()})
+008: 31: 3 | onKey               | func (main.N).OnKey(__xgo_overload_args__ interface{_()})
+009: 33: 3 | onKey               | func (main.N).OnKey(__xgo_overload_args__ interface{_()})`)
 }
 
 func TestMixedOverload3(t *testing.T) {
@@ -1480,10 +1480,10 @@ func (p *N) Test__1(n int) {
 005:  6: 1 | n                   | var n main.N
 006:  6: 3 | test                | func (*main.N).Test__1(n int)
 == overloads ==
-000:  2: 1 | Test                | func main.Test(__gop_overload_args__ interface{_()})
-001:  3: 1 | Test                | func main.Test(__gop_overload_args__ interface{_()})
-002:  5: 3 | test                | func (main.N).Test(__gop_overload_args__ interface{_()})
-003:  6: 3 | test                | func (main.N).Test(__gop_overload_args__ interface{_()})`)
+000:  2: 1 | Test                | func main.Test(__xgo_overload_args__ interface{_()})
+001:  3: 1 | Test                | func main.Test(__xgo_overload_args__ interface{_()})
+002:  5: 3 | test                | func (main.N).Test(__xgo_overload_args__ interface{_()})
+003:  6: 3 | test                | func (main.N).Test(__xgo_overload_args__ interface{_()})`)
 }
 
 func TestOverloadNamed(t *testing.T) {
@@ -1524,10 +1524,10 @@ func TestOverloadNamed(t *testing.T) {
 012:  7:14 | bar                 | package bar ("github.com/goplus/xgo/cl/internal/overload/bar")
 013:  7:18 | M                   | type github.com/goplus/xgo/cl/internal/overload/bar.M = map[string]any
 == overloads ==
-000:  4:11 | Var                 | type github.com/goplus/xgo/cl/internal/overload/bar.Var = func(__gop_overload_args__ interface{_()})
-001:  5:11 | Var                 | type github.com/goplus/xgo/cl/internal/overload/bar.Var = func(__gop_overload_args__ interface{_()})
-002:  6:10 | Var                 | type github.com/goplus/xgo/cl/internal/overload/bar.Var = func(__gop_overload_args__ interface{_()})
-003:  7:10 | Var                 | type github.com/goplus/xgo/cl/internal/overload/bar.Var = func(__gop_overload_args__ interface{_()})`
+000:  4:11 | Var                 | type github.com/goplus/xgo/cl/internal/overload/bar.Var = func(__xgo_overload_args__ interface{_()})
+001:  5:11 | Var                 | type github.com/goplus/xgo/cl/internal/overload/bar.Var = func(__xgo_overload_args__ interface{_()})
+002:  6:10 | Var                 | type github.com/goplus/xgo/cl/internal/overload/bar.Var = func(__xgo_overload_args__ interface{_()})
+003:  7:10 | Var                 | type github.com/goplus/xgo/cl/internal/overload/bar.Var = func(__xgo_overload_args__ interface{_()})`
 	} else {
 		expect = `== types ==
 000:  4: 7 | bar.Var             *ast.SelectorExpr              | type    : github.com/goplus/xgo/cl/internal/overload/bar.Var__0[int] | type
@@ -1564,10 +1564,10 @@ func TestOverloadNamed(t *testing.T) {
 012:  7:14 | bar                 | package bar ("github.com/goplus/xgo/cl/internal/overload/bar")
 013:  7:18 | M                   | type github.com/goplus/xgo/cl/internal/overload/bar.M = map[string]any
 == overloads ==
-000:  4:11 | Var                 | type github.com/goplus/xgo/cl/internal/overload/bar.Var = func(__gop_overload_args__ interface{_()})
-001:  5:11 | Var                 | type github.com/goplus/xgo/cl/internal/overload/bar.Var = func(__gop_overload_args__ interface{_()})
-002:  6:10 | Var                 | type github.com/goplus/xgo/cl/internal/overload/bar.Var = func(__gop_overload_args__ interface{_()})
-003:  7:10 | Var                 | type github.com/goplus/xgo/cl/internal/overload/bar.Var = func(__gop_overload_args__ interface{_()})`
+000:  4:11 | Var                 | type github.com/goplus/xgo/cl/internal/overload/bar.Var = func(__xgo_overload_args__ interface{_()})
+001:  5:11 | Var                 | type github.com/goplus/xgo/cl/internal/overload/bar.Var = func(__xgo_overload_args__ interface{_()})
+002:  6:10 | Var                 | type github.com/goplus/xgo/cl/internal/overload/bar.Var = func(__xgo_overload_args__ interface{_()})
+003:  7:10 | Var                 | type github.com/goplus/xgo/cl/internal/overload/bar.Var = func(__xgo_overload_args__ interface{_()})`
 	}
 	testGopInfo(t, `
 import "github.com/goplus/xgo/cl/internal/overload/bar"
@@ -1611,10 +1611,10 @@ func TestMixedOverloadNamed(t *testing.T) {
 006:  5: 6 | Var                 | func main.Gopx_Var_Cast__1[T map[string]any]() *main.Var__1[T]
 007:  5:10 | M                   | type main.M = map[string]any
 == overloads ==
-000:  2: 7 | Var                 | type main.Var = func(__gop_overload_args__ interface{_()})
-001:  3: 7 | Var                 | type main.Var = func(__gop_overload_args__ interface{_()})
-002:  4: 6 | Var                 | type main.Var = func(__gop_overload_args__ interface{_()})
-003:  5: 6 | Var                 | type main.Var = func(__gop_overload_args__ interface{_()})`
+000:  2: 7 | Var                 | type main.Var = func(__xgo_overload_args__ interface{_()})
+001:  3: 7 | Var                 | type main.Var = func(__xgo_overload_args__ interface{_()})
+002:  4: 6 | Var                 | type main.Var = func(__xgo_overload_args__ interface{_()})
+003:  5: 6 | Var                 | type main.Var = func(__xgo_overload_args__ interface{_()})`
 	} else {
 		expect = `== types ==
 000:  2: 7 | Var                 *ast.Ident                     | type    : main.Var__0[int] | type
@@ -1645,10 +1645,10 @@ func TestMixedOverloadNamed(t *testing.T) {
 006:  5: 6 | Var                 | func main.Gopx_Var_Cast__1[T map[string]any]() *main.Var__1[T]
 007:  5:10 | M                   | type main.M = map[string]any
 == overloads ==
-000:  2: 7 | Var                 | type main.Var = func(__gop_overload_args__ interface{_()})
-001:  3: 7 | Var                 | type main.Var = func(__gop_overload_args__ interface{_()})
-002:  4: 6 | Var                 | type main.Var = func(__gop_overload_args__ interface{_()})
-003:  5: 6 | Var                 | type main.Var = func(__gop_overload_args__ interface{_()})`
+000:  2: 7 | Var                 | type main.Var = func(__xgo_overload_args__ interface{_()})
+001:  3: 7 | Var                 | type main.Var = func(__xgo_overload_args__ interface{_()})
+002:  4: 6 | Var                 | type main.Var = func(__xgo_overload_args__ interface{_()})
+003:  5: 6 | Var                 | type main.Var = func(__xgo_overload_args__ interface{_()})`
 	}
 
 	testGopInfo(t, `
@@ -1849,9 +1849,9 @@ func onCloned() {
 010: 15: 9 | info                | type main.info struct{x int; y int}
 011: 19: 2 | say                 | func (*github.com/goplus/xgo/cl/internal/spx.Sprite).Say(msg string, secs ...float64)
 == overloads ==
-000: 13: 2 | clone               | func (github.com/goplus/xgo/cl/internal/spx.Sprite).Clone(__gop_overload_args__ interface{_()})
-001: 14: 2 | clone               | func (github.com/goplus/xgo/cl/internal/spx.Sprite).Clone(__gop_overload_args__ interface{_()})
-002: 15: 2 | clone               | func (github.com/goplus/xgo/cl/internal/spx.Sprite).Clone(__gop_overload_args__ interface{_()})`)
+000: 13: 2 | clone               | func (github.com/goplus/xgo/cl/internal/spx.Sprite).Clone(__xgo_overload_args__ interface{_()})
+001: 14: 2 | clone               | func (github.com/goplus/xgo/cl/internal/spx.Sprite).Clone(__xgo_overload_args__ interface{_()})
+002: 15: 2 | clone               | func (github.com/goplus/xgo/cl/internal/spx.Sprite).Clone(__xgo_overload_args__ interface{_()})`)
 }
 
 func TestScopesInfo(t *testing.T) {
@@ -2222,7 +2222,7 @@ Mul 100,200,300
 004:  6: 6 | MulFloat            | func main.MulFloat(a float64, b float64) float64
 005:  6:15 | a                   | var a float64
 006:  6:18 | b                   | var b float64
-007: 10: 6 | Mul                 | func main.Mul(__gop_overload_args__ interface{_()})
+007: 10: 6 | Mul                 | func main.Mul(__xgo_overload_args__ interface{_()})
 008: 13: 2 | Mul__2              | func main.Mul__2(x int, y int, z int) int
 009: 13: 7 | x                   | var x int
 010: 13:10 | y                   | var y int
@@ -2247,8 +2247,8 @@ Mul 100,200,300
 015: 18: 1 | Mul                 | func main.MulInt(a int, b int) int
 016: 19: 1 | Mul                 | func main.Mul__2(x int, y int, z int) int
 == overloads ==
-000: 18: 1 | Mul                 | func main.Mul(__gop_overload_args__ interface{_()})
-001: 19: 1 | Mul                 | func main.Mul(__gop_overload_args__ interface{_()})`)
+000: 18: 1 | Mul                 | func main.Mul(__xgo_overload_args__ interface{_()})
+001: 19: 1 | Mul                 | func main.Mul(__xgo_overload_args__ interface{_()})`)
 
 	testGopInfo(t, `
 type foo struct {
@@ -2304,7 +2304,7 @@ var d = a.mul(c)
 005:  9: 7 | a                   | var a *main.foo
 006:  9:15 | mulFoo              | func (*main.foo).mulFoo(b *main.foo) *main.foo
 007:  9:22 | b                   | var b *main.foo
-008: 13:12 | mul                 | func (main.foo).mul(__gop_overload_args__ interface{_()})
+008: 13:12 | mul                 | func (main.foo).mul(__xgo_overload_args__ interface{_()})
 009: 18: 5 | a                   | var main.a *main.foo
 010: 18: 8 | b                   | var main.b *main.foo
 011: 19: 5 | c                   | var main.c *main.foo
@@ -2330,8 +2330,8 @@ var d = a.mul(c)
 017: 20:11 | mul                 | func (*main.foo).mulFoo(b *main.foo) *main.foo
 018: 20:15 | c                   | var main.c *main.foo
 == overloads ==
-000: 19:11 | mul                 | func (main.foo).mul(__gop_overload_args__ interface{_()})
-001: 20:11 | mul                 | func (main.foo).mul(__gop_overload_args__ interface{_()})`)
+000: 19:11 | mul                 | func (main.foo).mul(__xgo_overload_args__ interface{_()})
+001: 20:11 | mul                 | func (main.foo).mul(__xgo_overload_args__ interface{_()})`)
 
 }
 
@@ -2406,7 +2406,7 @@ func init() {
 008: 11:20 | i                   | var i int
 009: 11:23 | j                   | var j int
 010: 11:26 | k                   | var k int
-011: 14: 6 | add                 | func main.add(__gop_overload_args__ interface{_()})
+011: 14: 6 | add                 | func main.add(__xgo_overload_args__ interface{_()})
 012: 19: 2 | add__4              | func main.add__4(a string, b string) string
 013: 19: 7 | a                   | var a string
 014: 19:10 | b                   | var b string
@@ -2427,9 +2427,9 @@ func init() {
 012: 26: 2 | add                 | var main.addInt3 func(i int, j int, k int)
 013: 27: 2 | add                 | func main.add__4(a string, b string) string
 == overloads ==
-000: 25: 2 | add                 | func main.add(__gop_overload_args__ interface{_()})
-001: 26: 2 | add                 | func main.add(__gop_overload_args__ interface{_()})
-002: 27: 2 | add                 | func main.add(__gop_overload_args__ interface{_()})`)
+000: 25: 2 | add                 | func main.add(__xgo_overload_args__ interface{_()})
+001: 26: 2 | add                 | func main.add(__xgo_overload_args__ interface{_()})
+002: 27: 2 | add                 | func main.add(__xgo_overload_args__ interface{_()})`)
 
 	testGopInfo(t, `
 func add = (
@@ -2473,7 +2473,7 @@ func init() {
 020: 13: 6 | "hello"             *ast.BasicLit                  | value   : untyped string = "hello" | constant
 021: 13:15 | "world"             *ast.BasicLit                  | value   : untyped string = "world" | constant
 == defs ==
-000:  2: 6 | add                 | func main.add(__gop_overload_args__ interface{_()})
+000:  2: 6 | add                 | func main.add(__xgo_overload_args__ interface{_()})
 001:  3: 2 | add__0              | func main.add__0(a int, b int) int
 002:  3: 7 | a                   | var a int
 003:  3:10 | b                   | var b int
@@ -2493,8 +2493,8 @@ func init() {
 008: 12: 2 | add                 | func main.add__0(a int, b int) int
 009: 13: 2 | add                 | func main.add__1(a string, b string) string
 == overloads ==
-000: 12: 2 | add                 | func main.add(__gop_overload_args__ interface{_()})
-001: 13: 2 | add                 | func main.add(__gop_overload_args__ interface{_()})`)
+000: 12: 2 | add                 | func main.add(__xgo_overload_args__ interface{_()})
+001: 13: 2 | add                 | func main.add(__xgo_overload_args__ interface{_()})`)
 }
 
 func TestGoxOverloadInfo(t *testing.T) {
@@ -2541,7 +2541,7 @@ func add = (
 005:  6: 6 | addString           | func (*main.Rect).addString(a string, b string) string
 006:  6:16 | a                   | var a string
 007:  6:19 | b                   | var b string
-008: 10: 6 | add                 | func (main.Rect).add(__gop_overload_args__ interface{_()})
+008: 10: 6 | add                 | func (main.Rect).add(__xgo_overload_args__ interface{_()})
 009: 12: 2 | add__1              | func (*main.Rect).add__1(a float64, b float64) float64
 010: 12: 7 | a                   | var a float64
 011: 12:10 | b                   | var b float64

@@ -1,12 +1,12 @@
 import (
-	"gop/tpl"
-	"gop/tpl/token"
-	"gop/tpl/variant"
 	"os"
+	"xgo/tpl"
+	"xgo/tpl/token"
+	"xgo/tpl/variant"
 
-	_ "gop/tpl/variant/builtin"
-	_ "gop/tpl/variant/math"
-	_ "gop/tpl/variant/time"
+	_ "xgo/tpl/variant/builtin"
+	_ "xgo/tpl/variant/math"
+	_ "xgo/tpl/variant/time"
 )
 
 cl := tpl`

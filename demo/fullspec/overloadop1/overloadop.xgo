@@ -38,6 +38,7 @@ var c = a + b
 var d = a - b
 var e = -a
 var f = a != b
+
 println f
 a++
 a -> b
