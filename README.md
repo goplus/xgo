@@ -35,10 +35,11 @@ Our vision is to **enable everyone to become a builder of the world**.
 #### Easy to learn
 
 * Simple and easy to understand
-* Smaller syntax set than Python in best practices
+* Smaller syntax set than Go and Python in best practices
 
 #### Ready for large projects
 
+* Integrate C/C++, Go, Python, and JavaScript into a unified ecosystem
 * Derived from Go and easy to build large projects from its good engineering foundation
 
 The XGo programming language is designed for engineering, STEM education, and data science.

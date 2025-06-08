@@ -23,7 +23,7 @@ const (
 
 var script = "all.bash"
 var gopRoot = ""
-var gopBinFiles = []string{"gop", "xgo"}
+var xgoBinFiles = []string{"gop", "xgo"}
 var installer = "cmd/make.go"
 var versionFile = "VERSION"
 var mainVersionFile = "env/version.go"
@@ -89,9 +89,8 @@ func init() {
 
 	if inWindows {
 		script = "all.bat"
-		for index, file := range gopBinFiles {
-			file += ".exe"
-			gopBinFiles[index] = file
+		for index := range xgoBinFiles {
+			xgoBinFiles[index] += ".exe"
 		}
 	}
 }
@@ -117,7 +116,10 @@ func TestAllScript(t *testing.T) {
 
 	goBinPath := detectGoBinPath()
 
-	for _, file := range gopBinFiles {
+	for i, file := range xgoBinFiles {
+		if i == 0 { // skip gop
+			continue
+		}
 		if !checkPathExist(filepath.Join(gopRoot, "bin", file), false) {
 			t.Fatalf("Failed: %s not found in ./bin directory\n", file)
 		}
@@ -128,7 +130,7 @@ func TestAllScript(t *testing.T) {
 
 	cleanGopRunCacheFiles(t)
 
-	cmd = exec.Command(filepath.Join(gopRoot, "bin", gopBinFiles[0]), "version")
+	cmd = exec.Command(filepath.Join(gopRoot, "bin", xgoBinFiles[1]), "version")
 	if output, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("Failed: %v:\nOut: %s\n", err, output)
 	}
@@ -321,7 +323,7 @@ func TestInstallInNonGitRepo(t *testing.T) {
 			t.Fatalf("Failed: %v, output: %s\n", err, output)
 		}
 
-		cmd = exec.Command(filepath.Join(gopRoot, "bin", gopBinFiles[0]), "version")
+		cmd = exec.Command(filepath.Join(gopRoot, "bin", xgoBinFiles[1]), "version")
 		output, err := cmd.CombinedOutput()
 		if err != nil || !strings.Contains(string(output), version) {
 			t.Fatalf("Failed: %v, output: %s\n", err, output)
@@ -340,7 +342,7 @@ func TestHandleMultiFlags(t *testing.T) {
 	goBinPath := detectGoBinPath()
 
 	// Uninstall will be the last action to run, test if all build assets being cleared.
-	for _, file := range gopBinFiles {
+	for _, file := range xgoBinFiles {
 		if checkPathExist(filepath.Join(gopRoot, "bin", file), false) {
 			t.Fatalf("Failed: %s found in ./bin directory\n", file)
 		}
