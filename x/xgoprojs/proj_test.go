@@ -16,7 +16,9 @@
 
 package xgoprojs
 
-import "testing"
+import (
+	"testing"
+)
 
 // -----------------------------------------------------------------------------
 
@@ -36,38 +38,38 @@ func TestIsLocal(t *testing.T) {
 }
 
 func TestParseOne(t *testing.T) {
-	proj, next, err := ParseOne("a.go", "b.go", "abc")
+	proj, next, err := ParseOne("proj.go", "proj_test.go", "abc")
 	if err != nil || len(next) != 1 || next[0] != "abc" {
 		t.Fatal("ParseOne failed:", proj, next, err)
 	}
 }
 
 func TestParseAll_wildcard1(t *testing.T) {
-	projs, err := ParseAll("*.go")
+	projs, err := ParseAll("proj_test.go")
 	if err != nil || len(projs) != 1 {
 		t.Fatal("ParseAll failed:", projs, err)
 	}
-	if proj, ok := projs[0].(*FilesProj); !ok || len(proj.Files) != 1 || proj.Files[0] != "*.go" {
+	if proj, ok := projs[0].(*FilesProj); !ok || len(proj.Files) != 1 || proj.Files[0] != "proj_test.go" {
 		t.Fatal("ParseAll failed:", projs)
 	}
 }
 
 func TestParseAll_wildcard2(t *testing.T) {
-	projs, err := ParseAll("t/*.go")
+	projs, err := ParseAll("../xgoenv/env.go")
 	if err != nil || len(projs) != 1 {
 		t.Fatal("ParseAll failed:", projs, err)
 	}
-	if proj, ok := projs[0].(*FilesProj); !ok || len(proj.Files) != 1 || proj.Files[0] != "t/*.go" {
+	if proj, ok := projs[0].(*FilesProj); !ok || len(proj.Files) != 1 || proj.Files[0] != "../xgoenv/env.go" {
 		t.Fatal("ParseAll failed:", projs)
 	}
 }
 
 func TestParseAll_multiFiles(t *testing.T) {
-	projs, err := ParseAll("a.xgo", "b.go")
+	projs, err := ParseAll("proj.go", "proj_test.go")
 	if err != nil || len(projs) != 1 {
 		t.Fatal("ParseAll failed:", projs, err)
 	}
-	if proj, ok := projs[0].(*FilesProj); !ok || len(proj.Files) != 2 || proj.Files[0] != "a.xgo" {
+	if proj, ok := projs[0].(*FilesProj); !ok || len(proj.Files) != 2 || proj.Files[0] != "proj.go" {
 		t.Fatal("ParseAll failed:", proj)
 	}
 	projs[0].projObj()
@@ -93,7 +95,7 @@ func TestParseAll_multiProjs(t *testing.T) {
 }
 
 func TestParseAllErr(t *testing.T) {
-	_, err := ParseAll("a/...", "./a/...", "/a", "*.go")
+	_, err := ParseAll("a/...", "./a/...", "/a", "proj_test.go")
 	if err != ErrMixedFilesProj {
 		t.Fatal("ParseAll:", err)
 	}
