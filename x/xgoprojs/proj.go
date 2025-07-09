@@ -71,11 +71,14 @@ func ParseOne(args ...string) (proj Proj, next []string, err error) {
 }
 
 func isFile(fname string) bool {
+	n := len(filepath.Ext(fname))
+	if n == 0 {
+		return false
+	}
 	if info, err := os.Stat(fname); err != nil || info.IsDir() {
 		return false
 	}
-	n := len(filepath.Ext(fname))
-	return n > 1
+	return true
 }
 
 func isLocal(ns string) bool {

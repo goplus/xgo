@@ -103,7 +103,7 @@ XGo can choose different Go compilers as its underlying support. Currently known
 
 Currently, XGo defaults to using [go](https://go.dev/) as its underlying support, but in the future, it will be [llgo](https://github.com/goplus/llgo).
 
-LLGo is a Go compiler based on [LLVM](https://llvm.org/) in order to better integrate Go with the C ecosystem including Python. It aims to expand the boundaries of Go/XGo, providing limitless possibilities such as:
+LLGo is a Go compiler based on [LLVM](https://llvm.org/) in order to better integrate Go with the C ecosystem including Python and JavaScript. It aims to expand the boundaries of Go/XGo, providing limitless possibilities such as:
 
 * Game development
 * AI and data science
