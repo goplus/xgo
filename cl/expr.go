@@ -769,12 +769,14 @@ func fnCall(ctx *blockCtx, v *ast.CallExpr, flags gogen.InstrFlags, extra int) e
 }
 
 func compileCallArgs(ctx *blockCtx, pfn *gogen.Element, fn *fnType, v *ast.CallExpr, ellipsis bool, flags gogen.InstrFlags) (err error) {
-	defer func() {
-		r := recover()
-		if r != nil {
-			err = ctx.recoverErr(r, v)
-		}
-	}()
+	if enableRecover {
+		defer func() {
+			r := recover()
+			if r != nil {
+				err = ctx.recoverErr(r, v)
+			}
+		}()
+	}
 
 	vargs := v.Args
 	if fn.typeAsParams && fn.typeparam {
