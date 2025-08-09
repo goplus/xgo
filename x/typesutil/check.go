@@ -23,7 +23,7 @@ import (
 	"strings"
 
 	"github.com/goplus/gogen"
-	"github.com/goplus/mod/xgomod"
+	"github.com/runsys/xmod/xgomod"
 	"github.com/goplus/xgo/ast"
 	"github.com/goplus/xgo/cl"
 	"github.com/goplus/xgo/token"

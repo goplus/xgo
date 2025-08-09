@@ -22,7 +22,8 @@ import (
 
 	"github.com/goplus/gogen"
 	"github.com/goplus/gogen/typeutil"
-	"github.com/goplus/mod/modfile"
+	"github.com/runsys/xmod/modfile"
+	"github.com/runsys/xmod/xgomod"
 	"github.com/goplus/xgo/ast"
 	"github.com/goplus/xgo/cl"
 	"github.com/goplus/xgo/token"
@@ -38,7 +39,7 @@ type Config struct {
 	Fset *token.FileSet
 
 	// LookupClass lookups a class by specified file extension.
-	LookupClass func(ext string) (c *Project, ok bool)
+	LookupClass func(ext string) (c *xgomod.Project, ok bool)
 
 	// An Importer resolves import paths to Packages.
 	Importer types.Importer

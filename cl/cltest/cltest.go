@@ -33,9 +33,9 @@ import (
 
 	"github.com/goplus/gogen"
 	"github.com/goplus/mod"
-	"github.com/goplus/mod/env"
-	"github.com/goplus/mod/modfile"
-	"github.com/goplus/mod/xgomod"
+	"github.com/runsys/xmod/env"
+	"github.com/runsys/xmod/modfile"
+	"github.com/runsys/xmod/xgomod"
 	"github.com/goplus/xgo/cl"
 	"github.com/goplus/xgo/parser"
 	"github.com/goplus/xgo/parser/fsx"

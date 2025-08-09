@@ -304,7 +304,7 @@ Note: Requires go1.19 or later
 ### on Windows
 
 ```sh
-winget install goplus.xgo
+winget install goplus.gop
 ```
 
 ### on Debian/Ubuntu
@@ -312,14 +312,14 @@ winget install goplus.xgo
 ```sh
 sudo bash -c ' echo "deb [trusted=yes] https://pkgs.xgo.dev/apt/ /" > /etc/apt/sources.list.d/goplus.list'
 sudo apt update
-sudo apt install xgo
+sudo apt install gop
 ```
 
 ### on RedHat/CentOS/Fedora
 
 ```sh
 sudo bash -c 'echo -e "[goplus]\nname=XGo Repo\nbaseurl=https://pkgs.xgo.dev/yum/\nenabled=1\ngpgcheck=0" > /etc/yum.repos.d/goplus.repo'
-sudo yum install xgo
+sudo yum install gop
 ```
 
 ### on macOS/Linux (Homebrew)
@@ -327,7 +327,7 @@ sudo yum install xgo
 Install via [brew](https://brew.sh/)
 
 ```sh
-$ brew install xgo
+$ brew install goplus
 ```
 
 ### from source code

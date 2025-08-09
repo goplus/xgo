@@ -24,9 +24,9 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/goplus/mod/modcache"
-	"github.com/goplus/mod/modfetch"
-	"github.com/goplus/mod/xgomod"
+	"github.com/runsys/xmod/modcache"
+	"github.com/runsys/xmod/modfetch"
+	"github.com/runsys/xmod/xgomod"
 	"github.com/qiniu/x/errors"
 )
 

@@ -17,7 +17,7 @@
 package xgoenv
 
 import (
-	modenv "github.com/goplus/mod/env"
+	modenv "github.com/runsys/xmod/env"
 	"github.com/goplus/xgo/env"
 )
 

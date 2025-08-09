@@ -1,0 +1,224 @@
+import (
+	"fmt"
+	"os"
+	"reflect"
+	"xgo/tpl"
+	"xgo/tpl/token"
+	"xgo/tpl/variant/delay"
+
+	_ "xgo/tpl/variant/builtin"
+	_ "xgo/tpl/variant/math"
+	_ "xgo/tpl/variant/time"
+)
+
+var (
+	vars   map[string]any
+	consts map[string]any
+)
+
+func exists(name string) bool {
+	_, ok := vars[name]
+	if !ok {
+		_, ok = consts[name]
+	}
+	return ok
+}
+
+func value(name string) (v any, ok bool) {
+	v, ok = vars[name]
+	if !ok {
+		v, ok = consts[name]
+	}
+	return
+}
+
+func setValue(name string, v any) {
+	oldv, ok := vars[name]
+	if !ok {
+		panic "variable ${name} is undefined"
+	}
+	if reflect.typeOf(oldv) != reflect.typeOf(v) {
+		panic "assignment of ${name}: type mismatch"
+	}
+	vars[name] = v
+}
+
+func chgValue(name string, chg func(oldv any) any) {
+	oldv, ok := vars[name]
+	if !ok {
+		panic "variable ${name} is undefined"
+	}
+	vars[name] = chg(oldv)
+}
+
+if len(os.Args) < 2 {
+	echo "Usage: tpl-pseudo <file>"
+	return
+}
+
+vars = {}
+consts = {}
+
+cl := tpl`
+
+stmts = *stmtEOS => {
+	return delay.stmtList(self)
+}
+
+stmtEOS = stmt ";" => {
+	return self[0]
+}
+
+stmt = varStmt | constStmt | outputStmt | inputStmt | ifStmt | whileStmt | untilStmt | assignStmt
+
+varStmt = "DECLARE" (IDENT % ",") ":" typeExpr => {
+	namelist := self[1].([]any)
+	typeVal := self[3]
+	return delay.rangeOp(namelist, v => {
+		t := v.(*tpl.Token)
+		name := t.Lit
+		if exists(name) {
+			tpl.panic t.Pos, "${name} exists"
+		}
+		vars[name] = typeVal
+	})
+}
+
+constStmt = "CONSTANT" IDENT "<-" expr => {
+	t := self[1].(*tpl.Token)
+	return delay.evalOp(self[3], v => {
+		name := t.Lit
+		if exists(name) {
+			tpl.panic t.Pos, "${name} exists"
+		}
+		consts[name] = v
+	})
+}
+
+assignStmt = IDENT "<-" expr => {
+	t := self[0].(*tpl.Token)
+	return delay.setValue(t.Lit, setValue, self[2])
+}
+
+inputStmt = "INPUT" IDENT => {
+	t := self[1].(*tpl.Token)
+	return delay.chgValue(t.Lit, chgValue, oldv => {
+		v := reflect.new(type(oldv))
+		fmt.scanln(v.Interface())!
+		return v.elem.Interface()
+	})
+}
+
+outputStmt = "OUTPUT" (expr % ",") => {
+	exprlist := self[1].([]any)
+	return delay.list(exprlist, vals => {
+		echo vals...
+	})
+}
+
+ifStmt = "IF" expr "THEN" ";" stmts ?("ELSE" ";" stmts) "ENDIF" => {
+	return delay.ifElse(self[1], self[4], self[5], 2)
+}
+
+whileStmt = "WHILE" expr "DO" ";" stmts "ENDWHILE" => {
+	return delay.while(self[1], self[4])
+}
+
+untilStmt = "REPEAT" ";" stmts "UNTIL" expr => {
+	return delay.repeatUntil(self[2], self[4])
+}
+
+typeExpr = integer | real | string | boolean
+
+integer = "INTEGER" => {
+	return 0
+}
+
+real = "REAL" => {
+	return 0.0
+}
+
+string = "STRING" => {
+	return ""
+}
+
+boolean = "BOOLEAN" => {
+	return false
+}
+
+expr = cmpExpr % and % or => {
+	return tpl.binaryOp(true, self, (op, x, y) => {
+		return delay.logicOp(op.Tok, x, y)
+	})
+}
+
+and = "AND" => {
+	return &tpl.Token{Tok: token.LAND}
+}
+
+or = "OR" => {
+	return &tpl.Token{Tok: token.LOR}
+}
+
+cmpExpr = mathExpr % ("<" | "<=" | ">" | ">=" | "=" | "<>") => {
+	return tpl.binaryOp(false, self, (op, x, y) => {
+		return delay.compare(op.Tok, x, y)
+	})
+}
+
+mathExpr = operand % ("*" | "/" | "%") % ("+" | "-") => {
+	return tpl.binaryOp(true, self, (op, x, y) => {
+		return delay.mathOp(op.Tok, x, y)
+	})
+}
+
+operand = basicLit | parenExpr | unaryExpr | identOrCall
+
+identOrCall = IDENT ?("(" ?(expr % ",") ")") => {
+	t := self[0].(*tpl.Token)
+	if params := self[1]; params != nil {
+		return delay.call(true, t.Lit, params.([]any)[1])
+	}
+	return delay.valueOf(t.Lit, value)
+}
+
+parenExpr = "(" expr ")" => {
+	return self[1]
+}
+
+unaryExpr = ("-" | "+" | "!") operand => {
+	op := self[0].(*tpl.Token)
+	return delay.unaryOp(op.Tok, self[1])
+}
+
+basicLit = intVal | floatVal | stringVal | true | false
+
+true = "true" => {
+	return true
+}
+
+false = "false" => {
+	return false
+}
+
+stringVal = STRING => {
+	return self.(*tpl.Token).Lit.unquote!
+}
+
+floatVal = FLOAT => {
+	return self.(*tpl.Token).Lit.float!
+}
+
+intVal = INT => {
+	return self.(*tpl.Token).Lit.int!
+}
+`!
+
+delay.initUniverse "builtin", "math", "time"
+
+e, err := cl.parse(os.Args[1], nil, nil)
+if err != nil {
+	fprintln os.Stderr, err
+} else {
+	delay.eval e
+}

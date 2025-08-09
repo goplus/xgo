@@ -25,7 +25,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/goplus/mod/xgomod"
+	"github.com/runsys/xmod/xgomod"
 	"github.com/goplus/xgo/cl/outline"
 	"github.com/goplus/xgo/parser"
 	"github.com/goplus/xgo/x/xgoenv"

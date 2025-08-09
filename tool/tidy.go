@@ -20,8 +20,8 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/goplus/mod/env"
-	"github.com/goplus/mod/xgomod"
+	"github.com/runsys/xmod/env"
+	"github.com/runsys/xmod/xgomod"
 	"github.com/qiniu/x/errors"
 )
 

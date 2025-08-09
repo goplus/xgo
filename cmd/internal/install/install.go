@@ -24,7 +24,7 @@ import (
 	"reflect"
 
 	"github.com/goplus/gogen"
-	"github.com/goplus/mod/modfetch"
+	"github.com/runsys/xmod/modfetch"
 	"github.com/goplus/xgo/cl"
 	"github.com/goplus/xgo/cmd/internal/base"
 	"github.com/goplus/xgo/tool"

@@ -25,7 +25,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/goplus/mod/modfile"
+	"github.com/runsys/xmod/modfile"
 	"github.com/goplus/xgo/cl"
 	"github.com/goplus/xgo/parser"
 	"github.com/goplus/xgo/parser/fsx"

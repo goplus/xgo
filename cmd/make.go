@@ -237,6 +237,7 @@ func isGitRepo() bool {
 	if err != nil {
 		return false
 	}
+	return true
 	return checkPathExist(filepath.Join(xgoRoot, trimRight(gitDir)), true)
 }
 

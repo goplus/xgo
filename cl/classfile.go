@@ -26,9 +26,9 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-
+	"github.com/runsys/xmod/xgomod"
 	"github.com/goplus/gogen"
-	"github.com/goplus/mod/modfile"
+	"github.com/runsys/xmod/modfile"
 	"github.com/goplus/xgo/ast"
 	"github.com/goplus/xgo/token"
 	"github.com/qiniu/x/stringutil"
@@ -80,7 +80,7 @@ type gmxProject struct {
 	pkgImps    []gogen.PkgRef
 	pkgPaths   []string
 	autoimps   map[string]pkgImp // auto-import statement in gox.mod
-	gt         *Project
+	gt         *xgomod.Project
 	hasScheds  bool
 	gameIsPtr  bool
 	isTest     bool
@@ -574,14 +574,13 @@ func genWorkClasses(
 	embedded := (sp.feats&spriteEmbedded != 0)
 	sptypes := sp.types
 	for i, spt := range sptypes {
-		src := parent.lookupClassNode(spt)
 		spto := pkg.Ref(spt)
 		objName := objNamePrefix + strconv.Itoa(iobj+i)
 		cb.DefineVarStart(token.NoPos, objName).
-			Val(indexGame, src).Val(recv, src).StructLit(spto.Type(), 2, true, src).
+			Val(indexGame).Val(recv).StructLit(spto.Type(), 2, true).
 			UnaryOp(gotoken.AND).EndInit(1)
 		if embedded {
-			cb.Val(recv, src).MemberRef(spt, src).VarVal(objName, src).Assign(1)
+			cb.Val(recv).MemberRef(spt).VarVal(objName).Assign(1)
 		}
 	}
 	if ilst > 0 {

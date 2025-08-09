@@ -25,8 +25,8 @@ import (
 	"os/exec"
 	"sort"
 
-	"github.com/goplus/mod"
-	"github.com/goplus/mod/modcache"
+	"github.com/runsys/xmod"
+	"github.com/runsys/xmod/modcache"
 	"github.com/goplus/xgo/cmd/internal/base"
 	"github.com/goplus/xgo/env"
 	"github.com/goplus/xgo/x/gocmd"

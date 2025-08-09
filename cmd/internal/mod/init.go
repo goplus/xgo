@@ -22,8 +22,8 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/goplus/mod/modload"
-	"github.com/goplus/mod/xgomod"
+	"github.com/runsys/xmod/modload"
+	"github.com/runsys/xmod/xgomod"
 	"github.com/goplus/xgo/cmd/internal/base"
 	"github.com/goplus/xgo/env"
 )
