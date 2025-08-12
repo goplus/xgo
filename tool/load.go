@@ -277,6 +277,9 @@ func LoadDir(dir string, conf *Config, genTestPkg bool, promptGenGo ...bool) (ou
 		Importer:     imp,
 		LookupClass:  mod.LookupClass,
 	}
+	if len(promptGenGo) > 1 && promptGenGo[1] {
+		clConf.MultiFiles = true
+	}
 
 	for name, pkg := range pkgs {
 		if strings.HasSuffix(name, "_test") {
