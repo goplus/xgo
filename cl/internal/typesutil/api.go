@@ -100,3 +100,9 @@ func NewTypeAndValueForObject(obj types.Object) (ret types.TypeAndValue) {
 	(*TypeAndValue)(unsafe.Pointer(&ret)).mode = mode
 	return
 }
+
+func NewTypeAndValueForBuiltin(obj types.Object) (ret types.TypeAndValue) {
+	ret.Type = obj.Type()
+	(*TypeAndValue)(unsafe.Pointer(&ret)).mode = Builtin
+	return
+}

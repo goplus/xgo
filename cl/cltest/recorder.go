@@ -121,3 +121,6 @@ func (info gopRecorder) Select(e *ast.SelectorExpr, sel *types.Selection) {
 //	*ast.RangeStmt
 func (info gopRecorder) Scope(n ast.Node, scope *types.Scope) {
 }
+
+func (info gopRecorder) Builtin(name string, obj types.Object) {
+}
