@@ -447,7 +447,7 @@ func (s *SendStmt) End() token.Pos {
 
 // -----------------------------------------------------------------------------
 
-// A File node represents a XGo source file.
+// A File node represents an XGo source file.
 //
 // The Comments list contains all comments in the source file in order of
 // appearance, including the comments that are pointed to from other nodes

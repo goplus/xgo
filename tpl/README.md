@@ -96,7 +96,7 @@ Each rule has its built-in matching result:
 
 ### 3. Rewriting Matching Results
 
-The default matching result is called "self" in TPL. You can rewrite this result using a XGo closure `=> { ... }`.
+The default matching result is called "self" in TPL. You can rewrite this result using an XGo closure `=> { ... }`.
 
 This feature is crucial as it allows seamless integration between TPL and XGo. In XGo, you reference TPL through [domain text literal](../doc/domian-text-lit.md), and within TPL, you can call XGo code through result rewriting.
 

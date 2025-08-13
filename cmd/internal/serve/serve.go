@@ -30,7 +30,7 @@ import (
 // gop serve
 var Cmd = &base.Command{
 	UsageLine: "gop serve [flags]",
-	Short:     "Serve as a XGo LangServer",
+	Short:     "Serve as an XGo LangServer",
 }
 
 var (

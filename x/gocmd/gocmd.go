@@ -91,10 +91,10 @@ func appendLdflags(exargs []string, env *XGoEnv) []string {
 // -----------------------------------------------------------------------------
 
 // Name returns name of the go command.
-// It returns value of environment variable `GOP_GOCMD` if not empty.
+// It returns value of environment variable `XGO_GOCMD` if not empty.
 // If not found, it returns `go`.
 func Name() string {
-	goCmd := os.Getenv("GOP_GOCMD")
+	goCmd := os.Getenv("XGO_GOCMD")
 	if goCmd == "" {
 		goCmd = "go"
 	}

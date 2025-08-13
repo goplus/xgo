@@ -41,7 +41,7 @@ import (
 
 // -----------------------------------------------------------------------------
 
-// Importer represents a XGo importer.
+// Importer represents an XGo importer.
 type Importer struct {
 	impFrom *packages.Importer
 	mod     *xgomod.Module
@@ -51,7 +51,7 @@ type Importer struct {
 	Flags GenFlags // can change this for loading XGo modules
 }
 
-// NewImporter creates a XGo Importer.
+// NewImporter creates an XGo Importer.
 func NewImporter(mod *xgomod.Module, xgo *env.XGo, fset *token.FileSet) *Importer {
 	const (
 		defaultFlags = GenFlagPrompt | GenFlagPrintError

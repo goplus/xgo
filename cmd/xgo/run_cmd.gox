@@ -19,7 +19,7 @@ import (
 
 use "run [flags] package [arguments...]"
 
-short "Compile and run a XGo program"
+short "Compile and run an XGo program"
 
 flagOff
 

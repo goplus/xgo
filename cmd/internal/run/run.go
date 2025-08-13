@@ -34,7 +34,7 @@ import (
 // gop run
 var Cmd = &base.Command{
 	UsageLine: "gop run [-nc -asm -quiet -debug -prof] package [arguments...]",
-	Short:     "Run a XGo program",
+	Short:     "Run an XGo program",
 }
 
 var (

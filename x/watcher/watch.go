@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Package watcher monitors code changes in a XGo workspace.
+// Package watcher monitors code changes in an XGo workspace.
 package watcher
 
 import (

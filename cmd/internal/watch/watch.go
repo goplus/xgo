@@ -31,7 +31,7 @@ import (
 // gop watch
 var Cmd = &base.Command{
 	UsageLine: "gop watch [-v -gentest] [dir]",
-	Short:     "Monitor code changes in a XGo workspace to generate Go files",
+	Short:     "Monitor code changes in an XGo workspace to generate Go files",
 }
 
 var (

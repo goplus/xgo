@@ -894,13 +894,14 @@ scanAgain:
 		case '^':
 			t.Tok = s.switch2(token.XOR, token.XOR_ASSIGN)
 		case '<':
-			if s.ch == '-' { // <-
+			switch s.ch {
+			case '-': // <-
 				s.next()
 				t.Tok = token.ARROW
-			} else if s.ch == '>' { // <>
+			case '>': // <>
 				s.next()
 				t.Tok = token.BIDIARROW
-			} else { // <= << <<=
+			default: // <= << <<=
 				t.Tok = s.switch4(token.LT, token.LE, '<', token.SHL, token.SHL_ASSIGN)
 			}
 		case '>':

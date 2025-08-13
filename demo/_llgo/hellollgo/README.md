@@ -18,10 +18,10 @@ c.fprintf c.Stderr, c"Hi, %7.1f\n", 3.14
 
 In this example we call two C standard functions `printf` and `fprintf`, pass a C variable `stderr` and two C strings in the form of `c"xxx"`.
 
-To run this demo, you need to set the `GOP_GOCMD` environment variable first.
+To run this demo, you need to set the `XGO_GOCMD` environment variable first.
 
 ```sh
-export GOP_GOCMD=llgo  # default is `go`
+export XGO_GOCMD=llgo  # default is `go`
 ```
 
 Then execute `xgo run .` to see the output of this example:

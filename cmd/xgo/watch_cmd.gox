@@ -19,7 +19,7 @@ import (
 
 use "watch [flags] [dir]"
 
-short "Monitor code changes in a XGo workspace to generate Go files"
+short "Monitor code changes in an XGo workspace to generate Go files"
 
 flagOff
 

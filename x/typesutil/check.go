@@ -72,7 +72,7 @@ type Config struct {
 	// If WorkingDir is not set, os.Getwd() is used.
 	WorkingDir string
 
-	// Mod represents a XGo module (optional).
+	// Mod represents an XGo module (optional).
 	Mod *xgomod.Module
 
 	// If IgnoreFuncBodies is set, skip compiling function bodies (optional).

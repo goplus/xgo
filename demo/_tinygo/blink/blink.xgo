@@ -1,0 +1,14 @@
+import (
+	"machine"
+	"time"
+)
+
+led := machine.LED
+led.configure {Mode: machine.PinOutput}
+for {
+	led.low
+	time.sleep 1s
+
+	led.high
+	time.sleep 1s
+}

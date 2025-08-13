@@ -54,7 +54,7 @@ var (
 	tplToken    = reflect.TypeOf(tpltoken.Token(0))
 )
 
-// FprintNode prints a XGo AST node.
+// FprintNode prints an XGo AST node.
 func FprintNode(w io.Writer, lead string, v any, prefix, indent string) {
 	val := reflect.ValueOf(v)
 	switch val.Kind() {
@@ -120,7 +120,7 @@ func FprintNode(w io.Writer, lead string, v any, prefix, indent string) {
 	}
 }
 
-// Fprint prints a XGo package.
+// Fprint prints an XGo package.
 func Fprint(w io.Writer, pkg *ast.Package) {
 	fmt.Fprintf(w, "package %s\n", pkg.Name)
 	paths := sortedKeys(pkg.Files)
@@ -134,7 +134,7 @@ func Fprint(w io.Writer, pkg *ast.Package) {
 	}
 }
 
-// Expect asserts a XGo AST package equals output or not.
+// Expect asserts an XGo AST package equals output or not.
 func Expect(t *testing.T, pkg *ast.Package, expected string) {
 	b := bytes.NewBuffer(nil)
 	Fprint(b, pkg)
@@ -153,7 +153,7 @@ func ExpectEx(t *testing.T, outfile string, pkg *ast.Package, expected []byte) {
 	}
 }
 
-// ExpectNode asserts a XGo AST node equals output or not.
+// ExpectNode asserts an XGo AST node equals output or not.
 func ExpectNode(t *testing.T, node any, expected string) {
 	b := bytes.NewBuffer(nil)
 	FprintNode(b, "", node, "", "  ")

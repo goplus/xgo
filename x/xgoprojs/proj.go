@@ -18,6 +18,7 @@ package xgoprojs
 
 import (
 	"errors"
+	"os"
 	"path/filepath"
 	"syscall"
 )
@@ -63,8 +64,7 @@ func ParseOne(args ...string) (proj Proj, next []string, err error) {
 			n++
 		}
 		return &FilesProj{Files: args[:n]}, args[n:], nil
-	}
-	if isLocal(arg) {
+	} else if isLocal(arg) {
 		return &DirProj{Dir: arg}, args[1:], nil
 	}
 	return &PkgPathProj{Path: arg}, args[1:], nil
@@ -72,7 +72,13 @@ func ParseOne(args ...string) (proj Proj, next []string, err error) {
 
 func isFile(fname string) bool {
 	n := len(filepath.Ext(fname))
-	return n > 1
+	if n == 0 {
+		return false
+	}
+	if info, err := os.Stat(fname); err != nil || info.IsDir() {
+		return false
+	}
+	return true
 }
 
 func isLocal(ns string) bool {

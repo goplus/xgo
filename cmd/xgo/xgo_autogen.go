@@ -400,7 +400,7 @@ func (this *Cmd_run) Main(_xgo_arg0 string) {
 //line cmd/xgo/run_cmd.gox:20:1
 	this.Use("run [flags] package [arguments...]")
 //line cmd/xgo/run_cmd.gox:22:1
-	this.Short("Compile and run a XGo program")
+	this.Short("Compile and run an XGo program")
 //line cmd/xgo/run_cmd.gox:24:1
 	this.FlagOff()
 //line cmd/xgo/run_cmd.gox:26:1
@@ -419,7 +419,7 @@ func (this *Cmd_serve) Main(_xgo_arg0 string) {
 //line cmd/xgo/serve_cmd.gox:20:1
 	this.Use("serve [flags]")
 //line cmd/xgo/serve_cmd.gox:22:1
-	this.Short("Serve as a XGo LangServer")
+	this.Short("Serve as an XGo LangServer")
 //line cmd/xgo/serve_cmd.gox:24:1
 	this.FlagOff()
 //line cmd/xgo/serve_cmd.gox:26:1
@@ -474,7 +474,7 @@ func (this *Cmd_watch) Main(_xgo_arg0 string) {
 //line cmd/xgo/watch_cmd.gox:20:1
 	this.Use("watch [flags] [dir]")
 //line cmd/xgo/watch_cmd.gox:22:1
-	this.Short("Monitor code changes in a XGo workspace to generate Go files")
+	this.Short("Monitor code changes in an XGo workspace to generate Go files")
 //line cmd/xgo/watch_cmd.gox:24:1
 	this.FlagOff()
 //line cmd/xgo/watch_cmd.gox:26:1

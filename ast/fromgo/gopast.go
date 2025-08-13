@@ -215,7 +215,7 @@ func gopIdent(v *ast.Ident) *gopast.Ident {
 	}
 }
 
-// CheckIdent checks if a XGo ast.Ident is converted from a Go ast.Ident or not.
+// CheckIdent checks if an XGo ast.Ident is converted from a Go ast.Ident or not.
 // If it is, CheckIdent returns the original Go ast.Ident object.
 func CheckIdent(v *gopast.Ident) (id *ast.Ident, ok bool) {
 	if o := v.Obj; o != nil && o.Kind == 0 && o.Data != nil {
@@ -342,7 +342,7 @@ const (
 	KeepCgo
 )
 
-// ASTFile converts a Go ast.File into a XGo ast.File object.
+// ASTFile converts a Go ast.File into an XGo ast.File object.
 func ASTFile(f *ast.File, mode int) *gopast.File {
 	if (mode & KeepFuncBody) != 0 {
 		log.Panicln("ASTFile: doesn't support keeping func body now")

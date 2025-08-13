@@ -13,7 +13,7 @@ func p(a interface{}) {
 }
 ```
 
-And we have a XGo source file named `b.xgo`:
+And we have an XGo source file named `b.xgo`:
 
 ```go
 func sayMix() {
@@ -23,7 +23,7 @@ func sayMix() {
 p "world"
 ```
 
-You can see that Go calls a XGo function named `sayMix`, and XGo calls a Go function named `p`. As you are used to in Go programming, this kind of circular reference is allowed.
+You can see that Go calls an XGo function named `sayMix`, and XGo calls a Go function named `p`. As you are used to in Go programming, this kind of circular reference is allowed.
 
 Run `xgo run .` to see the output of this example:
 

@@ -503,7 +503,7 @@ const (
 	testingGoFile  = "_test"
 )
 
-// NewPackage creates a XGo package instance.
+// NewPackage creates an XGo package instance.
 func NewPackage(pkgPath string, pkg *ast.Package, conf *Config) (p *gogen.Package, err error) {
 	relBaseDir := conf.RelativeBase
 	fset := conf.Fset

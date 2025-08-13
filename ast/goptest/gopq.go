@@ -29,7 +29,7 @@ const (
 
 // -----------------------------------------------------------------------------
 
-// New creates a nodeset object that represents a XGo dom tree.
+// New creates a nodeset object that represents an XGo dom tree.
 func New(script string) (gopq.NodeSet, error) {
 	fset := token.NewFileSet()
 	fs := memfs.SingleFile("/foo", "bar.xgo", script)

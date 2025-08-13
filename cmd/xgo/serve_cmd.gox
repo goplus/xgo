@@ -19,7 +19,7 @@ import (
 
 use "serve [flags]"
 
-short "Serve as a XGo LangServer"
+short "Serve as an XGo LangServer"
 
 flagOff
 

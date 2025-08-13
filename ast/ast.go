@@ -1097,7 +1097,7 @@ func (*FuncDecl) declNode() {}
 // ----------------------------------------------------------------------------
 
 // A Package node represents a set of source files
-// collectively building a XGo package.
+// collectively building an XGo package.
 type Package struct {
 	Name    string               // package name
 	Imports map[string]*Object   // map of package id -> package object

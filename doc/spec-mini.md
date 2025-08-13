@@ -239,11 +239,22 @@ hex_exponent      = ( "p" | "P" ) [ "+" | "-" ] decimal_digits .
 
 ### Rational literals
 
-TODO
+Rational literals in XGo come in two forms:
+
+* **Rational integers**: An integer followed by the suffix `r`.
+* **Fractions**: A numerator, division operator `/`, denominator, followed by the suffix `r`
+
+```
+rational_lit   = rational_int | rational_frac .
+rational_int   = int_lit "r" .
+rational_frac  = int_lit "/" int_lit "r" .
+```
+
+Examples:
 
 ```sh
-1r       # bigint 1
-2/3r     # bigrat 2/3
+1r       # Rational integer 1
+2/3r     # Fraction 2/3
 ```
 
 ### Imaginary literals
@@ -394,9 +405,9 @@ iota
 
 There are _boolean constants_, _rune constants_, _integer constants_, _floating-point constants_, _complex constants_, and _string constants_. Rune, integer, floating-point, and complex constants are collectively called _numeric constants_.
 
-A constant value is represented by a [rune](#rune-literals), [integer](#integer-literals), [floating-point](#floating-point-literals), [imaginary](#imaginary-literals), [boolean](#boolean-literals) or [string](#string-literals) literal, an identifier denoting a constant, a [constant expression](), a [conversion](#conversions) with a result that is a constant, or the result value of some built-in functions such as `min` or `max` applied to constant arguments, `unsafe.Sizeof` applied to [certain values](), `cap` or `len` applied to [some expressions](), `real` and `imag` applied to a complex constant and complex applied to numeric constants. The boolean truth values are represented by the predeclared constants `true` and `false`. The predeclared identifier `iota` denotes an integer constant.
+A constant value is represented by a [rune](#rune-literals), [integer](#integer-literals), [floating-point](#floating-point-literals), [imaginary](#imaginary-literals), [boolean](#boolean-literals) or [string](#string-literals) literal, an identifier denoting a constant, a [constant expression](#constant-expressions), a [conversion](#conversions) with a result that is a constant, or the result value of some built-in functions such as `min` or `max` applied to constant arguments, `unsafe.Sizeof` applied to [certain values](), `cap` or `len` applied to [some expressions](), `real` and `imag` applied to a complex constant and complex applied to numeric constants. The boolean truth values are represented by the predeclared constants `true` and `false`. The predeclared identifier `iota` denotes an integer constant.
 
-Not all literals are constants. For example (TODO: check this):
+Not all literals are constants. For example:
 
 ```sh
 nil
@@ -404,7 +415,7 @@ nil
 2/3r
 ```
 
-In general, complex constants are a form of [constant expression]() and are discussed in that section.
+In general, complex constants are a form of [constant expression](#constant-expressions) and are discussed in that section.
 
 Numeric constants represent exact values of arbitrary precision and do not overflow. Consequently, there are no constants denoting the IEEE-754 negative zero, infinity, and not-a-number values.
 

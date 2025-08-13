@@ -6,7 +6,7 @@
 <h1>The XGo Programming Language</h1>
 
 
-[xgo.dev](https://xgo.dev) | [Docs](doc/docs.md) | [XGo vs. Go](doc/goplus-vs-go.md) | [Tutorials](https://tutorial.xgo.dev) | [Playground](https://play.xgo.dev) | [XGo REPL (iXGo)](https://repl.xgo.dev) | [Contributing & compiler design](doc/contributing.md)
+[xgo.dev](https://xgo.dev) | [Docs](doc/docs.md) | [XGo vs. Go](doc/xgo-vs-go.md) | [Tutorials](https://tutorial.xgo.dev) | [Playground](https://play.xgo.dev) | [XGo REPL (iXGo)](https://repl.xgo.dev) | [Contributing & compiler design](doc/contributing.md)
 </div>
 
 <div align="center">
@@ -57,7 +57,7 @@ For more details, see [Quick Start](doc/docs.md).
 * Smallest but Turing-complete syntax set in best practices (see [The XGo Mini Specification](doc/spec-mini.md)).
 * Fully compatible with [Go](https://github.com/golang/go) and can mix Go/XGo code in the same package (see [The XGo Full Specification](doc/spec.md) and [Go/XGo Hybrid Programming](doc/docs.md#gogo-hybrid-programming)).
 * Integrating with the C ecosystem including Python/JavaScript and providing limitless possibilities based on [LLGo](https://github.com/goplus/llgo) (see [Importing C/C++ and Python libraries](#importing-cc-and-python-libraries)).
-* Does not support DSL (Domain-Specific Languages), but supports SDF (Specific Domain Friendliness) (see [XGo Classfiles](#xgo-classfiles) and [Domain Text Literal](doc/domian-text-lit.md)).
+* Does not support DSL (Domain-Specific Languages), but supports SDF (Specific Domain Friendliness) (see [XGo Classfiles](#xgo-classfiles) and [Domain Text Literals](doc/domian-text-lit.md)).
 
 
 ## How XGo simplifies Go's expressions
@@ -103,7 +103,7 @@ XGo can choose different Go compilers as its underlying support. Currently known
 
 Currently, XGo defaults to using [go](https://go.dev/) as its underlying support, but in the future, it will be [llgo](https://github.com/goplus/llgo).
 
-LLGo is a Go compiler based on [LLVM](https://llvm.org/) in order to better integrate Go with the C ecosystem including Python. It aims to expand the boundaries of Go/XGo, providing limitless possibilities such as:
+LLGo is a Go compiler based on [LLVM](https://llvm.org/) in order to better integrate Go with the C ecosystem including Python and JavaScript. It aims to expand the boundaries of Go/XGo, providing limitless possibilities such as:
 
 * Game development
 * AI and data science
@@ -111,7 +111,7 @@ LLGo is a Go compiler based on [LLVM](https://llvm.org/) in order to better inte
 * Embedded development
 * ...
 
-If you wish to use [llgo](https://github.com/goplus/llgo), specify the `-llgo` flag when initializing a XGo module:
+If you wish to use [llgo](https://github.com/goplus/llgo), specify the `-llgo` flag when initializing an XGo module:
 
 ```sh
 xgo mod init -llgo YourModulePath
@@ -189,12 +189,12 @@ XGo introduces `classfile` and `class framework` to abstract domain knowledge.
 
 Sound a bit abstract? Let's see some XGo class frameworks.
 
-* STEM Education: [spx: A XGo 2D Game Engine](https://github.com/goplus/spx)
-* AI Programming: [mcp: A XGo implementation of the Model Context Protocol (MCP)](https://github.com/goplus/mcp)
-* AI Programming: [mcptest: A XGo MCP Test Framework](https://github.com/goplus/mcp/tree/main/mtest)
+* STEM Education: [spx: An XGo 2D Game Engine](https://github.com/goplus/spx)
+* AI Programming: [mcp: An XGo implementation of the Model Context Protocol (MCP)](https://github.com/goplus/mcp)
+* AI Programming: [mcptest: An XGo MCP Test Framework](https://github.com/goplus/mcp/tree/main/mtest)
 * Web Programming: [yap: Yet Another HTTP Web Framework](https://github.com/goplus/yap)
-* Web Programming: [yaptest: A XGo HTTP Test Framework](https://github.com/goplus/yap/tree/main/ytest)
-* Web Programming: [ydb: A XGo Database Framework](https://github.com/goplus/yap/tree/main/ydb)
+* Web Programming: [yaptest: An XGo HTTP Test Framework](https://github.com/goplus/yap/tree/main/ytest)
+* Web Programming: [ydb: An XGo Database Framework](https://github.com/goplus/yap/tree/main/ydb)
 * CLI Programming: [cobra: A Commander for modern XGo CLI interactions](https://github.com/goplus/cobra)
 * CLI Programming: [gsh: An alternative to write shell scripts](https://github.com/qiniu/x/tree/main/gsh)
 * Unit Test: [test: Unit Test](doc/classfile.md#class-framework-unit-test)
@@ -244,7 +244,7 @@ Execute `xgo run .` and visit http://localhost:8080/p/123, you will get:
 See [yap: Yet Another HTTP Web Framework](https://github.com/goplus/yap) for more details.
 
 
-### spx: A XGo 2D Game Engine
+### spx: An XGo 2D Game Engine
 
 ![Screen Shot1](https://github.com/goplus/spx/blob/main/tutorial/01-Weather/1.jpg) ![Screen Shot2](https://github.com/goplus/spx/blob/main/tutorial/01-Weather/2.jpg)
 
@@ -279,7 +279,7 @@ Yes, Jaime recieves the message `1` and says `I come from England.`. Then he bro
 
 The following procedures are very similar. In this way you can implement dialogues between multiple actors.
 
-See [spx: A XGo 2D Game Engine](https://github.com/goplus/spx) for more details.
+See [spx: An XGo 2D Game Engine](https://github.com/goplus/spx) for more details.
 
 
 ### gsh: XGo DevOps Tools
@@ -304,7 +304,7 @@ Note: Requires go1.19 or later
 ### on Windows
 
 ```sh
-winget install goplus.gop
+winget install goplus.xgo
 ```
 
 ### on Debian/Ubuntu
@@ -312,14 +312,14 @@ winget install goplus.gop
 ```sh
 sudo bash -c ' echo "deb [trusted=yes] https://pkgs.xgo.dev/apt/ /" > /etc/apt/sources.list.d/goplus.list'
 sudo apt update
-sudo apt install gop
+sudo apt install xgo
 ```
 
 ### on RedHat/CentOS/Fedora
 
 ```sh
-sudo bash -c 'echo -e "[goplus]\nname=Go+ Repo\nbaseurl=https://pkgs.xgo.dev/yum/\nenabled=1\ngpgcheck=0" > /etc/yum.repos.d/goplus.repo'
-sudo yum install gop
+sudo bash -c 'echo -e "[goplus]\nname=XGo Repo\nbaseurl=https://pkgs.xgo.dev/yum/\nenabled=1\ngpgcheck=0" > /etc/yum.repos.d/goplus.repo'
+sudo yum install xgo
 ```
 
 ### on macOS/Linux (Homebrew)
@@ -327,7 +327,7 @@ sudo yum install gop
 Install via [brew](https://brew.sh/)
 
 ```sh
-$ brew install goplus
+$ brew install xgo
 ```
 
 ### from source code
@@ -346,7 +346,7 @@ all.bat
 
 ### 2D Games powered by XGo
 
-* [A XGo 2D Game Engine for STEM education](https://github.com/goplus/spx)
+* [An XGo 2D Game Engine for STEM education](https://github.com/goplus/spx)
 * [Aircraft War](https://github.com/goplus/AircraftWar)
 * [Flappy Bird](https://github.com/goplus/FlappyCalf)
 * [Maze Play](https://github.com/goplus/MazePlay)

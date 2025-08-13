@@ -17,12 +17,12 @@ Abstract domain knowledge for it.
 
 XGo introduces `classfile` and `class framework` to abstract domain knowledge.
 
-* STEM Education: [spx: A XGo 2D Game Engine](https://github.com/goplus/spx)
-* AI Programming: [mcp: A XGo implementation of the Model Context Protocol (MCP)](https://github.com/goplus/mcp)
-* AI Programming: [mcptest: A XGo MCP Test Framework](https://github.com/goplus/mcp/tree/main/mtest)
+* STEM Education: [spx: An XGo 2D Game Engine](https://github.com/goplus/spx)
+* AI Programming: [mcp: An XGo implementation of the Model Context Protocol (MCP)](https://github.com/goplus/mcp)
+* AI Programming: [mcptest: An XGo MCP Test Framework](https://github.com/goplus/mcp/tree/main/mtest)
 * Web Programming: [yap: Yet Another HTTP Web Framework](https://github.com/goplus/yap)
-* Web Programming: [yaptest: A XGo HTTP Test Framework](https://github.com/goplus/yap/tree/main/ytest)
-* Web Programming: [ydb: A XGo Database Framework](https://github.com/goplus/yap/tree/main/ydb)
+* Web Programming: [yaptest: An XGo HTTP Test Framework](https://github.com/goplus/yap/tree/main/ytest)
+* Web Programming: [ydb: An XGo Database Framework](https://github.com/goplus/yap/tree/main/ydb)
 * CLI Programming: [cobra: A Commander for modern XGo CLI interactions](https://github.com/goplus/cobra)
 * CLI Programming: [gsh: An alternative to write shell scripts](https://github.com/qiniu/x/tree/main/gsh)
 * Unit Test: [class framework: Unit Test](#class-framework-unit-test)
@@ -285,7 +285,7 @@ The directive `testServer` creates the web server by [net/http/httptest](https:/
 For more details, see [yaptest - XGo HTTP Test Framework](https://github.com/goplus/yap/blob/main/ytest).
 
 
-### spx: A XGo 2D Game Engine for STEM education
+### spx: An XGo 2D Game Engine for STEM education
 
 This class framework has the file suffix `.spx`. It is the earliest class framework in the world.
 

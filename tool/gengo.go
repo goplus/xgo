@@ -48,12 +48,12 @@ const (
 
 // -----------------------------------------------------------------------------
 
-// GenGo generates xgo_autogen.go for a XGo package directory.
+// GenGo generates xgo_autogen.go for an XGo package directory.
 func GenGo(dir string, conf *Config, genTestPkg bool) (string, bool, error) {
 	return GenGoEx(dir, conf, genTestPkg, 0)
 }
 
-// GenGoEx generates xgo_autogen.go for a XGo package directory.
+// GenGoEx generates xgo_autogen.go for an XGo package directory.
 func GenGoEx(dir string, conf *Config, genTestPkg bool, flags GenFlags) (string, bool, error) {
 	recursively := strings.HasSuffix(dir, "/...")
 	if recursively {
@@ -211,7 +211,7 @@ const (
 	modReadonly = 0555
 )
 
-// GenGoPkgPath generates xgo_autogen.go for a XGo package.
+// GenGoPkgPath generates xgo_autogen.go for an XGo package.
 func GenGoPkgPath(workDir, pkgPath string, conf *Config, allowExtern bool) (localDir string, recursively bool, err error) {
 	return GenGoPkgPathEx(workDir, pkgPath, conf, allowExtern, 0)
 }
@@ -229,7 +229,7 @@ func remotePkgPath(pkgPath string, conf *Config, recursively bool, flags GenFlag
 	return
 }
 
-// GenGoPkgPathEx generates xgo_autogen.go for a XGo package.
+// GenGoPkgPathEx generates xgo_autogen.go for an XGo package.
 func GenGoPkgPathEx(workDir, pkgPath string, conf *Config, allowExtern bool, flags GenFlags) (localDir string, recursively bool, err error) {
 	recursively = strings.HasSuffix(pkgPath, "/...")
 	if recursively {

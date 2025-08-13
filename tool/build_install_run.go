@@ -33,7 +33,7 @@ func genFlags(flags []GenFlags) GenFlags {
 
 // -----------------------------------------------------------------------------
 
-// InstallDir installs a XGo package directory.
+// InstallDir installs an XGo package directory.
 func InstallDir(dir string, conf *Config, install *gocmd.InstallConfig, flags ...GenFlags) (err error) {
 	_, _, err = GenGoEx(dir, conf, false, genFlags(flags))
 	if err != nil {
@@ -42,7 +42,7 @@ func InstallDir(dir string, conf *Config, install *gocmd.InstallConfig, flags ..
 	return gocmd.Install(dir, install)
 }
 
-// InstallPkgPath installs a XGo package.
+// InstallPkgPath installs an XGo package.
 func InstallPkgPath(workDir, pkgPath string, conf *Config, install *gocmd.InstallConfig, flags ...GenFlags) (err error) {
 	localDir, recursively, err := GenGoPkgPathEx(workDir, pkgPath, conf, true, genFlags(flags))
 	if err != nil {
@@ -83,7 +83,7 @@ func chdir(dir string) string {
 
 // -----------------------------------------------------------------------------
 
-// BuildDir builds a XGo package directory.
+// BuildDir builds an XGo package directory.
 func BuildDir(dir string, conf *Config, build *gocmd.BuildConfig, flags ...GenFlags) (err error) {
 	_, _, err = GenGoEx(dir, conf, false, genFlags(flags))
 	if err != nil {
@@ -92,7 +92,7 @@ func BuildDir(dir string, conf *Config, build *gocmd.BuildConfig, flags ...GenFl
 	return gocmd.Build(dir, build)
 }
 
-// BuildPkgPath builds a XGo package.
+// BuildPkgPath builds an XGo package.
 func BuildPkgPath(workDir, pkgPath string, conf *Config, build *gocmd.BuildConfig, flags ...GenFlags) (err error) {
 	localDir, recursively, err := GenGoPkgPathEx(workDir, pkgPath, conf, false, genFlags(flags))
 	if err != nil {
@@ -137,7 +137,7 @@ func getBuildDir(conf *Config) string {
 	return ""
 }
 
-// RunDir runs an application from a XGo package directory.
+// RunDir runs an application from an XGo package directory.
 func RunDir(dir string, args []string, conf *Config, run *gocmd.RunConfig, flags ...GenFlags) (err error) {
 	_, _, err = GenGoEx(dir, conf, false, genFlags(flags))
 	if err != nil {
@@ -146,7 +146,7 @@ func RunDir(dir string, args []string, conf *Config, run *gocmd.RunConfig, flags
 	return gocmd.RunDir(getBuildDir(conf), dir, args, run)
 }
 
-// RunPkgPath runs an application from a XGo package.
+// RunPkgPath runs an application from an XGo package.
 func RunPkgPath(pkgPath string, args []string, chDir bool, conf *Config, run *gocmd.RunConfig, flags ...GenFlags) (err error) {
 	localDir, recursively, err := GenGoPkgPathEx("", pkgPath, conf, true, genFlags(flags))
 	if err != nil {
@@ -174,7 +174,7 @@ func RunFiles(autogen string, files []string, args []string, conf *Config, run *
 
 // -----------------------------------------------------------------------------
 
-// TestDir tests a XGo package directory.
+// TestDir tests an XGo package directory.
 func TestDir(dir string, conf *Config, test *gocmd.TestConfig, flags ...GenFlags) (err error) {
 	_, _, err = GenGoEx(dir, conf, true, genFlags(flags))
 	if err != nil {
@@ -183,7 +183,7 @@ func TestDir(dir string, conf *Config, test *gocmd.TestConfig, flags ...GenFlags
 	return gocmd.Test(dir, test)
 }
 
-// TestPkgPath tests a XGo package.
+// TestPkgPath tests an XGo package.
 func TestPkgPath(workDir, pkgPath string, conf *Config, test *gocmd.TestConfig, flags ...GenFlags) (err error) {
 	localDir, recursively, err := GenGoPkgPathEx(workDir, pkgPath, conf, false, genFlags(flags))
 	if err != nil {

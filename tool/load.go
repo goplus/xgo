@@ -173,8 +173,8 @@ func NewDefaultConf(dir string, flags ConfFlags, tags ...string) (conf *Config, 
 
 func (conf *Config) NewGoCmdConf() *gocmd.Config {
 	if cl := conf.Mod.Opt.Compiler; cl != nil {
-		if os.Getenv("GOP_GOCMD") == "" {
-			os.Setenv("GOP_GOCMD", cl.Name)
+		if os.Getenv("XGO_GOCMD") == "" {
+			os.Setenv("XGO_GOCMD", cl.Name)
 		}
 	}
 	return &gocmd.Config{
@@ -193,7 +193,7 @@ func (conf *Config) UpdateCache(verbose ...bool) {
 	}
 }
 
-// LoadMod loads a XGo module from a specified directory.
+// LoadMod loads an XGo module from a specified directory.
 func LoadMod(dir string) (mod *xgomod.Module, err error) {
 	mod, err = xgomod.Load(dir)
 	if err != nil && !xgomod.IsNotFound(err) {
@@ -351,7 +351,7 @@ func relativeBaseOf(mod *xgomod.Module) string {
 
 // -----------------------------------------------------------------------------
 
-// LoadFiles loads a XGo package from specified files.
+// LoadFiles loads an XGo package from specified files.
 func LoadFiles(dir string, files []string, conf *Config) (out *gogen.Package, err error) {
 	if conf == nil {
 		conf = new(Config)

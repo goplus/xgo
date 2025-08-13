@@ -101,7 +101,7 @@ func compileIdent(ctx *blockCtx, ident *ast.Ident, flags int) (pkg gogen.PkgRef,
 		}
 	}
 
-	if ctx.isClass { // in a XGo class file
+	if ctx.isClass { // in an XGo class file
 		if recv = classRecv(cb); recv != nil {
 			cb.Val(recv)
 			chkFlag := flags
@@ -214,7 +214,7 @@ func compileMatrixLit(ctx *blockCtx, v *ast.MatrixLit) {
 
 func compileEnvExpr(ctx *blockCtx, v *ast.EnvExpr) {
 	cb := ctx.cb
-	if ctx.isClass { // in a XGo class file
+	if ctx.isClass { // in an XGo class file
 		if recv := classRecv(cb); recv != nil {
 			if xgoMember(cb, recv, "Gop_Env", v) == nil {
 				name := v.Name

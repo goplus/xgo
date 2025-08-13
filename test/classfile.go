@@ -29,7 +29,7 @@ const (
 
 type testingT = testing.T
 
-// Case represents a XGo testcase.
+// Case represents an XGo testcase.
 type Case struct {
 	t *testingT
 }
@@ -56,7 +56,7 @@ func Gopt_Case_TestMain(c interface{ initCase(t *testing.T) }, t *testing.T) {
 
 // -----------------------------------------------------------------------------
 
-// App represents a XGo testing main application.
+// App represents an XGo testing main application.
 type App struct {
 	m *testing.M
 }
@@ -68,7 +68,7 @@ func (p *App) initApp(m *testing.M) {
 // M returns the *testing.M object.
 func (p App) M() *testing.M { return p.m }
 
-// Gopt_App_TestMain is required by XGo compiler as the entry of a XGo testing project.
+// Gopt_App_TestMain is required by XGo compiler as the entry of an XGo testing project.
 func Gopt_App_TestMain(app interface{ initApp(m *testing.M) }, m *testing.M) {
 	app.initApp(m)
 	if me, ok := app.(interface{ MainEntry() }); ok {

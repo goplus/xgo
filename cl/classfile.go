@@ -385,7 +385,7 @@ func getStringConst(spx gogen.PkgRef, name string) string {
 }
 
 func setBodyHandler(ctx *blockCtx) {
-	if proj := ctx.proj; proj != nil { // in a XGo class file
+	if proj := ctx.proj; proj != nil { // in an XGo class file
 		if scheds := proj.getScheds(ctx.cb); scheds != nil {
 			ctx.cb.SetBodyHandler(func(body *goast.BlockStmt, kind int) {
 				idx := 0
@@ -574,13 +574,14 @@ func genWorkClasses(
 	embedded := (sp.feats&spriteEmbedded != 0)
 	sptypes := sp.types
 	for i, spt := range sptypes {
+		src := parent.lookupClassNode(spt)
 		spto := pkg.Ref(spt)
 		objName := objNamePrefix + strconv.Itoa(iobj+i)
 		cb.DefineVarStart(token.NoPos, objName).
-			Val(indexGame).Val(recv).StructLit(spto.Type(), 2, true).
+			Val(indexGame, src).Val(recv, src).StructLit(spto.Type(), 2, true, src).
 			UnaryOp(gotoken.AND).EndInit(1)
 		if embedded {
-			cb.Val(recv).MemberRef(spt).VarVal(objName).Assign(1)
+			cb.Val(recv, src).MemberRef(spt, src).VarVal(objName, src).Assign(1)
 		}
 	}
 	if ilst > 0 {

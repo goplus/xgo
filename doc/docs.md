@@ -46,7 +46,7 @@ sudo apt install gop
 ### on RedHat/CentOS/Fedora
 
 ```sh
-sudo bash -c 'echo -e "[goplus]\nname=Go+ Repo\nbaseurl=https://pkgs.xgo.dev/yum/\nenabled=1\ngpgcheck=0" > /etc/yum.repos.d/goplus.repo'
+sudo bash -c 'echo -e "[goplus]\nname=XGo Repo\nbaseurl=https://pkgs.xgo.dev/yum/\nenabled=1\ngpgcheck=0" > /etc/yum.repos.d/goplus.repo'
 sudo yum install gop
 ```
 
@@ -62,7 +62,7 @@ $ brew install goplus
 
 ```bash
 git clone https://github.com/goplus/xgo.git
-cd gop
+cd xgo
 
 # On mac/linux run:
 ./all.bash
@@ -1080,7 +1080,7 @@ func p(a interface{}) {
 }
 ```
 
-And we have a XGo source file named `b.xgo`:
+And we have an XGo source file named `b.xgo`:
 
 ```go
 func sayMix() {
@@ -1090,7 +1090,7 @@ func sayMix() {
 p "world"
 ```
 
-You can see that Go calls a XGo function named `sayMix`, and XGo calls a Go function named `p`. As you are used to in Go programming, this kind of circular reference is allowed.
+You can see that Go calls an XGo function named `sayMix`, and XGo calls a Go function named `p`. As you are used to in Go programming, this kind of circular reference is allowed.
 
 Run `xgo run .` to see the output of this example:
 
@@ -1104,7 +1104,7 @@ Hello, world
 
 ### Run XGo in watch mode
 
-The `xgo` command can run in watch mode so that everytime a XGo file is changed it is transpiled to a Go file:
+The `xgo` command can run in watch mode so that everytime an XGo file is changed it is transpiled to a Go file:
 
 ```
 xgo watch [-gentest] [dir]
@@ -1126,15 +1126,15 @@ c.printf c"Hello, llgo!\n"
 c.fprintf c.Stderr, c"Hi, %6.1f\n", 3.14
 ```
 
-Here `import "c"` is used to import libc. In this example we call two C standard functions `printf` and `fprintf`, passing a C variable `stderr` and two C strings in the form of `c"xxx"` (a XGo syntax to represent C-style strings).
+Here `import "c"` is used to import libc. In this example we call two C standard functions `printf` and `fprintf`, passing a C variable `stderr` and two C strings in the form of `c"xxx"` (an XGo syntax to represent C-style strings).
 
-To run this demo, you need to set the `GOP_GOCMD` environment variable first.
+To run this demo, you need to set the `XGO_GOCMD` environment variable first.
 
 ```sh
-export GOP_GOCMD=llgo  # default is `go`
+export XGO_GOCMD=llgo  # default is `go`
 ```
 
-Then execute `gop run .` to see the output of this example:
+Then execute `xgo run .` to see the output of this example:
 
 ```
 Hello, llgo!
@@ -1277,11 +1277,11 @@ x := strings.NewReplacer("?", "!").Replace("hello, world???")
 fmt.Println "x:", x
 ```
 
-**And all XGo packages can also be imported in Go programs. What you need to do is just using `gop` command instead of `go`.**
+**And all XGo packages can also be imported in Go programs. What you need to do is just using `xgo` command instead of `go`.**
 
 First, let's make a directory named `14-Using-goplus-in-Go`.
 
-Then write a XGo package named [foo](https://github.com/goplus/tutorial/tree/main/14-Using-goplus-in-Go/foo) in it:
+Then write an XGo package named [foo](https://github.com/goplus/tutorial/tree/main/14-Using-goplus-in-Go/foo) in it:
 
 ```go
 package foo
@@ -1326,7 +1326,7 @@ XGo supports bytecode backend and Go code generation.
 When we use `xgo` command, it generates Go code to covert XGo package into Go packages.
 
 ```bash
-xgo run     # Run a XGo program
+xgo run     # Run an XGo program
 xgo install # Build XGo files and install target to GOBIN
 xgo build   # Build XGo files
 xgo test    # Test XGo packages
@@ -1338,7 +1338,7 @@ xgo go      # Convert XGo packages into Go packages
 When we use [`ixgo`](https://github.com/goplus/ixgo) command, it interprets and executes the program.
 
 ```bash
-ixgo # Run a XGo program
+ixgo # Run an XGo program
 ```
 
 In bytecode mode, XGo doesn't support `cgo`. However, in Go-code-generation mode, XGo fully supports `cgo`.

@@ -54,7 +54,8 @@ type Scanner struct {
 	rdOffset   int  // reading offset (position after current character)
 	lineOffset int  // current line offset
 	nParen     int
-	unitVal    string
+	peekLit    string
+	peekTok    token.Token
 	insertSemi bool // insert a semicolon before next newline
 
 	// public state - ok to modify
@@ -511,11 +512,11 @@ func (s *Scanner) scanNumber() (token.Token, string) {
 		case "r":
 			tok = token.RAT
 		default:
-			s.unitVal = id
+			s.peekTok, s.peekLit = token.UNIT, id
 		}
 	}
 
-	lit := string(s.src[offs : s.offset-len(s.unitVal)])
+	lit := string(s.src[offs : s.offset-len(s.peekLit)])
 	if tok == token.INT && invalid >= 0 {
 		s.errorf(invalid, "invalid digit %q in %s", lit[invalid-offs], litname(prefix))
 	}
@@ -825,20 +826,21 @@ func (s *Scanner) tokSEMICOLON() token.Token {
 // and thus relative to the file set.
 func (s *Scanner) Scan() (pos token.Pos, tok token.Token, lit string) {
 scanAgain:
+	insertSemi := false
+	if s.peekTok != 0 {
+		insertSemi = true
+		pos = s.file.Pos(s.offset - len(s.peekLit))
+		tok, lit = s.peekTok, s.peekLit
+		s.peekTok, s.peekLit = 0, ""
+		goto done
+	}
+
 	s.skipWhitespace()
 
 	// current token start
 	pos = s.file.Pos(s.offset)
 
 	// determine token value
-	insertSemi := false
-	if s.unitVal != "" { // number with unit
-		insertSemi = true
-		pos -= token.Pos(len(s.unitVal))
-		tok, lit = token.UNIT, s.unitVal
-		s.unitVal = ""
-		goto done
-	}
 	switch ch := s.ch; {
 	case isLetter(ch):
 		lit = s.scanIdentifier()
@@ -899,7 +901,6 @@ scanAgain:
 			tok = s.switch2(token.COLON, token.DEFINE)
 		case '.':
 			// fractions starting with a '.' are handled by outer switch
-			tok = token.PERIOD
 			if s.ch == '.' && s.peek() == '.' {
 				s.next()
 				s.next() // consume last '.'
@@ -907,6 +908,11 @@ scanAgain:
 					insertSemi = true
 				}
 				tok = token.ELLIPSIS
+			} else {
+				tok = token.PERIOD
+				if ch := ('a' - 'A') | s.ch; 'a' <= ch && ch <= 'z' {
+					s.peekTok, s.peekLit = token.IDENT, s.scanIdentifier()
+				}
 			}
 		case ',':
 			tok = token.COMMA
@@ -990,13 +996,14 @@ scanAgain:
 		case '^':
 			tok = s.switch2(token.XOR, token.XOR_ASSIGN)
 		case '<':
-			if s.ch == '-' { // <-
+			switch s.ch {
+			case '-': // <-
 				s.next()
 				tok = token.ARROW
-			} else if s.ch == '>' { // <>
+			case '>': // <>
 				s.next()
 				tok = token.BIDIARROW
-			} else { // < <= << <<=
+			default: // < <= << <<=
 				tok = s.switch4(token.LSS, token.LEQ, '<', token.SHL, token.SHL_ASSIGN)
 			}
 		case '>':

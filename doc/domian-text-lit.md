@@ -1,4 +1,4 @@
-Domain Text Literal
+Domain Text Literals
 =====
 
 The journey of **Domain Text Literals** in XGo began with a proposal in early 2024 when a community member suggested adding JSX syntax support to XGo:
@@ -20,7 +20,7 @@ What distinguishes these domain languages is that they aren't Turing-complete. T
 
 Rather than competing with general-purpose languages, these domain languages typically complement them. Most mainstream programming languages either officially support or have community-built libraries to interact with these domain languages.
 
-This complementary relationship led to the term "**Domain Text Literal**" rather than "**Domain-Specific Language**", emphasizing their role as specialized text formats that can be embedded within general-purpose code.
+This complementary relationship led to the term "**Domain Text Literals**" rather than "**Domain-Specific Languages**", emphasizing their role as specialized text formats that can be embedded within general-purpose code.
 
 ## XGo's Approach to Domain Text Literals
 
