@@ -21,7 +21,7 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/goplus/mod/env"
+	"github.com/runsys/xmod/env"
 	"github.com/goplus/xgo/x/xgoenv"
 )
 

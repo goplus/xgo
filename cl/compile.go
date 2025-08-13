@@ -27,7 +27,8 @@ import (
 	"strings"
 
 	"github.com/goplus/gogen"
-	"github.com/goplus/mod/modfile"
+	"github.com/runsys/xmod/modfile"
+	"github.com/runsys/xmod/xgomod"
 	"github.com/goplus/xgo/ast"
 	"github.com/goplus/xgo/ast/fromgo"
 	"github.com/goplus/xgo/cl/internal/typesalias"
@@ -168,7 +169,7 @@ type Recorder interface {
 
 // -----------------------------------------------------------------------------
 
-type Project = modfile.Project
+type Project = xgomod.Project
 type Class = modfile.Class
 
 // Config of loading XGo packages.
@@ -183,8 +184,8 @@ type Config struct {
 	RelativeBase string
 
 	// LookupClass lookups a class by specified file extension (required).
-	// See (*github.com/goplus/mod/gopmod.Module).LookupClass.
-	LookupClass func(ext string) (c *Project, ok bool)
+	// See (*github.com/runsys/xmod/gopmod.Module).LookupClass.
+	LookupClass func(ext string) (c *xgomod.Project, ok bool)
 
 	// An Importer resolves import paths to Packages (optional).
 	Importer types.Importer

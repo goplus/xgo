@@ -21,9 +21,9 @@ import (
 	"log"
 	"os"
 
-	"github.com/goplus/mod/modcache"
-	"github.com/goplus/mod/modfetch"
-	"github.com/goplus/mod/modload"
+	"github.com/runsys/xmod/modcache"
+	"github.com/runsys/xmod/modfetch"
+	"github.com/runsys/xmod/modload"
 	"github.com/goplus/xgo/cmd/internal/base"
 	"github.com/goplus/xgo/tool"
 )

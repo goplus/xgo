@@ -24,8 +24,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/goplus/mod/gopmod"
-	"github.com/goplus/mod/modfetch"
+	"github.com/runsys/xmod/gopmod"
+	"github.com/runsys/xmod/modfetch"
 	"github.com/goplus/xgo/parser"
 
 	astmod "github.com/goplus/xgo/ast/mod"

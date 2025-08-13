@@ -26,9 +26,9 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-
+	"github.com/runsys/xmod/xgomod"
 	"github.com/goplus/gogen"
-	"github.com/goplus/mod/modfile"
+	"github.com/runsys/xmod/modfile"
 	"github.com/goplus/xgo/ast"
 	"github.com/goplus/xgo/token"
 	"github.com/qiniu/x/stringutil"
@@ -80,7 +80,7 @@ type gmxProject struct {
 	pkgImps    []gogen.PkgRef
 	pkgPaths   []string
 	autoimps   map[string]pkgImp // auto-import statement in gox.mod
-	gt         *Project
+	gt         *xgomod.Project
 	hasScheds  bool
 	gameIsPtr  bool
 	isTest     bool

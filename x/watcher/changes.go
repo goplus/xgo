@@ -24,7 +24,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/goplus/mod/xgomod"
+	"github.com/runsys/xmod/xgomod"
 )
 
 // -----------------------------------------------------------------------------------------

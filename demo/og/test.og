@@ -1,0 +1,10 @@
+DECLARE n, i, sum : INTEGER
+OUTPUT "please input n:"
+INPUT n
+i <- 1
+sum <- 0
+WHILE i <= n DO
+    sum <- sum + i
+    i <- i + 1
+ENDWHILE
+OUTPUT sum

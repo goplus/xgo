@@ -33,10 +33,10 @@ import (
 
 	"github.com/goplus/gogen/packages"
 	"github.com/goplus/gogen/packages/cache"
-	"github.com/goplus/mod/env"
-	"github.com/goplus/mod/modfetch"
-	"github.com/goplus/mod/modfile"
-	"github.com/goplus/mod/xgomod"
+	"github.com/runsys/xmod/env"
+	"github.com/runsys/xmod/modfetch"
+	"github.com/runsys/xmod/modfile"
+	"github.com/runsys/xmod/xgomod"
 )
 
 // -----------------------------------------------------------------------------
