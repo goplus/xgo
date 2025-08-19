@@ -1,0 +1,13 @@
+func F() (a int8, b int16, err error) {
+	a = 1
+	return
+}
+
+func F2() (err error) {
+	c, d := F()!
+	_ = c
+	_ = d
+	return
+}
+
+F2()
