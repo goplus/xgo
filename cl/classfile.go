@@ -85,6 +85,7 @@ type gmxProject struct {
 	gameIsPtr  bool
 	isTest     bool
 	hasMain_   bool
+	file       string
 }
 
 func (p *gmxProject) embed(flds []*types.Var, pkg *gogen.Package) []*types.Var {
@@ -463,13 +464,14 @@ func gmxCheckProjs(pkg *gogen.Package, ctx *pkgCtx) (*gmxProject, bool) {
 func gmxProjMain(pkg *gogen.Package, parent *pkgCtx, proj *gmxProject) {
 	base := proj.game                      // project base class
 	classType := proj.getGameClass(parent) // project class
+	goFile := parent.genGoFile(proj.file, false)
 	ld := getTypeLoader(parent, parent.syms, token.NoPos, classType)
 	if ld.typ == nil { // no project class, use default
 		ld.typ = func() {
 			if debugLoad {
 				log.Println("==> Load > NewType", classType)
 			}
-			old, _ := pkg.SetCurFile(defaultGoFile, true)
+			old, _ := pkg.SetCurFile(goFile, true)
 			defer pkg.RestoreCurFile(old)
 
 			baseType := base.Type()
@@ -486,7 +488,7 @@ func gmxProjMain(pkg *gogen.Package, parent *pkgCtx, proj *gmxProject) {
 				if debugLoad {
 					log.Println("==> Load > InitType", classType)
 				}
-				old, _ := pkg.SetCurFile(defaultGoFile, true)
+				old, _ := pkg.SetCurFile(goFile, true)
 				defer pkg.RestoreCurFile(old)
 
 				decl.InitType(pkg, types.NewStruct(flds, nil))
@@ -495,7 +497,7 @@ func gmxProjMain(pkg *gogen.Package, parent *pkgCtx, proj *gmxProject) {
 		}
 	}
 	ld.methods = append(ld.methods, func() {
-		old, _ := pkg.SetCurFile(defaultGoFile, true)
+		old, _ := pkg.SetCurFile(goFile, true)
 		defer pkg.RestoreCurFile(old)
 		doInitType(ld)
 
@@ -504,7 +506,7 @@ func gmxProjMain(pkg *gogen.Package, parent *pkgCtx, proj *gmxProject) {
 		fn := pkg.NewFunc(recv, "Main", nil, nil, false)
 
 		parent.inits = append(parent.inits, func() {
-			old, _ := pkg.SetCurFile(defaultGoFile, true)
+			old, _ := pkg.SetCurFile(goFile, true)
 			defer pkg.RestoreCurFile(old)
 
 			cb := fn.BodyStart(pkg).Typ(base.Type()).MemberVal("Main")

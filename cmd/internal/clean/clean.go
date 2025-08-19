@@ -27,6 +27,7 @@ import (
 )
 
 const (
+	autoGenFilePrefix   = "xgo_autogen_"
 	autoGenFileSuffix   = "_autogen.go"
 	autoGenGopTestFile  = "gop_autogen_test.go"
 	autoGen2GopTestFile = "gop_autogen2_test.go"
@@ -55,7 +56,7 @@ func cleanAGFiles(dir string, execAct bool) {
 			}
 			continue
 		}
-		if strings.HasSuffix(fname, autoGenFileSuffix) {
+		if strings.HasSuffix(fname, autoGenFileSuffix) || strings.HasPrefix(fname, autoGenFilePrefix) {
 			file := filepath.Join(dir, fname)
 			fmt.Printf("Cleaning %s ...\n", file)
 			if execAct {

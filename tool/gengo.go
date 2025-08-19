@@ -24,6 +24,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/goplus/gogen"
 	"github.com/goplus/mod/modcache"
 	"github.com/goplus/mod/modfetch"
 	"github.com/goplus/mod/xgomod"
@@ -35,6 +36,7 @@ const (
 	autoGenFile      = "xgo_autogen.go"
 	autoGenTestFile  = "xgo_autogen_test.go"
 	autoGen2TestFile = "xgo_autogen2_test.go"
+	autoGenPrefix    = "xgo_autogen_"
 )
 
 type GenFlags int
@@ -42,6 +44,7 @@ type GenFlags int
 const (
 	GenFlagCheckOnly GenFlags = 1 << iota
 	GenFlagSingleFile
+	GenFlagMultiFiles
 	GenFlagPrintError
 	GenFlagPrompt
 )
@@ -166,7 +169,7 @@ func genGoSingleFile(file string, extn int, conf *Config, flags GenFlags) (err e
 }
 
 func genGoIn(dir string, conf *Config, genTestPkg bool, flags GenFlags, gen ...*bool) (err error) {
-	out, test, err := LoadDir(dir, conf, genTestPkg, (flags&GenFlagPrompt) != 0)
+	out, test, err := LoadDir(dir, conf, genTestPkg, (flags&GenFlagPrompt) != 0, (flags&GenFlagMultiFiles) != 0)
 	if err != nil {
 		if NotFound(err) { // no XGo source files
 			return nil
@@ -177,10 +180,18 @@ func genGoIn(dir string, conf *Config, genTestPkg bool, flags GenFlags, gen ...*
 		return nil
 	}
 	os.MkdirAll(dir, 0755)
-	file := filepath.Join(dir, autoGenFile)
-	err = out.WriteFile(file)
-	if err != nil {
-		return errors.NewWith(err, `out.WriteFile(file)`, -2, "(*gogen.Package).WriteFile", out, file)
+
+	if flags&GenFlagMultiFiles != 0 {
+		err = writeMultiFiles(out, dir)
+		if err != nil {
+			return errors.NewWith(err, `writeMultiFiles(out, dir)`, -2, "(*gogen.Package).WriteFile", out, dir)
+		}
+	} else {
+		file := filepath.Join(dir, autoGenFile)
+		err = out.WriteFile(file)
+		if err != nil {
+			return errors.NewWith(err, `out.WriteFile(file)`, -2, "(*gogen.Package).WriteFile", out, file)
+		}
 	}
 	if gen != nil { // say `xgo_autogen.go generated`
 		*gen[0] = true
@@ -202,6 +213,29 @@ func genGoIn(dir string, conf *Config, genTestPkg bool, flags GenFlags, gen ...*
 		err = nil
 	}
 	return
+}
+
+func writeMultiFiles(pkg *gogen.Package, dir string) error {
+	names := make(map[string]string)
+	pkg.ForEachFile(func(fname string, file *gogen.File) {
+		if fname == "" {
+			names[fname] = autoGenFile
+		} else {
+			_, name := filepath.Split(fname)
+			name = name[:len(name)-len(filepath.Ext(name))]
+			if strings.HasSuffix(name, "_test") {
+				return
+			}
+			names[fname] = autoGenPrefix + name + ".go"
+		}
+	})
+	for fname, file := range names {
+		err := pkg.WriteFile(filepath.Join(dir, file), fname)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // -----------------------------------------------------------------------------
