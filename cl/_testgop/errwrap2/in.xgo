@@ -4,7 +4,7 @@ func F() (a int8, b int16, err error) {
 }
 
 func F2() (err error) {
-	c, d := F()!
+	c, d := F()?
 	_ = c
 	_ = d
 	return
