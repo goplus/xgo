@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-
 	"github.com/goplus/xgo/tpl/encoding/json"
 )
 
