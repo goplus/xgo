@@ -300,6 +300,8 @@ func compileAssignStmt(ctx *blockCtx, expr *ast.AssignStmt) {
 		inFlags = clCallWithTwoValue
 	}
 	if tok == token.DEFINE {
+		stk := ctx.cb.InternalStack()
+		base := stk.Len()
 		names := make([]string, len(expr.Lhs))
 		for i, lhs := range expr.Lhs {
 			if v, ok := lhs.(*ast.Ident); ok {
@@ -332,7 +334,7 @@ func compileAssignStmt(ctx *blockCtx, expr *ast.AssignStmt) {
 		for _, rhs := range expr.Rhs {
 			compileExpr(ctx, rhs, inFlags)
 		}
-		ctx.cb.EndInit(len(expr.Rhs))
+		ctx.cb.EndInit(stk.Len() - base)
 		return
 	}
 	for _, lhs := range expr.Lhs {
