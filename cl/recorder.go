@@ -32,13 +32,16 @@ type goxRecorder struct {
 	types     map[ast.Expr]types.TypeAndValue
 	referDefs map[*ast.Ident]ast.Node
 	referUses map[string][]*ast.Ident
+	builtin   map[*ast.Ident]struct{}
 }
 
 func newRecorder(rec Recorder) *goxRecorder {
 	types := make(map[ast.Expr]types.TypeAndValue)
 	referDefs := make(map[*ast.Ident]ast.Node)
 	referUses := make(map[string][]*ast.Ident)
-	return &goxRecorder{rec, types, referDefs, referUses}
+	builtin := make(map[*ast.Ident]struct{})
+	return &goxRecorder{Recorder: rec, types: types, referDefs: referDefs,
+		referUses: referUses, builtin: builtin}
 }
 
 // Refer uses maps identifiers to name for ast.OverloadFuncDecl.
@@ -127,23 +130,22 @@ func (p *goxRecorder) Member(id ast.Node, obj types.Object) {
 			p.Type(v, tv)
 		}
 	case *ast.Ident: // it's in a classfile and impossible converted from Go
-		p.Use(v, obj)
-		p.Type(v, typesutil.NewTypeAndValueForObject(obj))
+		p.recordIdent(v, obj)
 	}
 }
 
 func (p *goxRecorder) Call(id ast.Node, obj types.Object) {
 	switch v := id.(type) {
 	case *ast.Ident:
-		p.Use(v, obj)
-		p.Type(v, typesutil.NewTypeAndValueForObject(obj))
+		p.recordIdent(v, obj)
 	case *ast.SelectorExpr:
 		p.Use(v.Sel, obj)
 		p.Type(v, typesutil.NewTypeAndValueForObject(obj))
 	case *ast.CallExpr:
 		switch id := v.Fun.(type) {
 		case *ast.Ident:
-			p.Use(id, obj)
+			p.recordIdent(id, obj)
+			return
 		case *ast.SelectorExpr:
 			p.Use(id.Sel, obj)
 		}
@@ -253,8 +255,34 @@ func (rec *goxRecorder) recordType(typ ast.Expr, t types.Type) {
 }
 
 func (rec *goxRecorder) recordIdent(ident *ast.Ident, obj types.Object) {
+	if _, ok := rec.builtin[ident]; ok {
+		return
+	}
+	if o, ok := isBuiltinFunc(ident, obj); ok {
+		rec.builtin[ident] = struct{}{}
+		rec.Use(ident, o)
+		rec.Type(ident, typesutil.NewTypeAndValueForBuiltin(o))
+		return
+	}
 	rec.Use(ident, obj)
 	rec.Type(ident, typesutil.NewTypeAndValueForObject(obj))
+}
+
+func isBuiltinFunc(ident *ast.Ident, obj types.Object) (types.Object, bool) {
+	if pkg := obj.Pkg(); pkg == nil || (pkg.Path() == "" && pkg.Name() == "") {
+		if o := Universe.Lookup(ident.Name); o != nil && o.(*Builtin).IsFunc() {
+			return o, true
+		}
+		switch ident.Name {
+		case "append", "cap", "clear", "close", "complex", "copy",
+			"delete", "imag", "len", "make", "max", "min", "new",
+			"panic", "real", "recover":
+			if o := types.Universe.Lookup(ident.Name); o != nil {
+				return o, true
+			}
+		}
+	}
+	return nil, false
 }
 
 func (rec *goxRecorder) recordExpr(ctx *blockCtx, expr ast.Expr, _ bool) {
