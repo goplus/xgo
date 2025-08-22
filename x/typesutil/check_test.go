@@ -300,23 +300,54 @@ func TestCheckError2(t *testing.T) {
 	var checkerErrs errors.List
 	fset := token.NewFileSet()
 	checkFilesWithErrorHandler(fset, "main.xgo", `
-type GG struct {
+type Foo struct {
 	B bool
 }
 
-doublejump := 2
-gotdoublejump := false
-jumping := false
-gg := &GG{B: true}
-if doublejump == 2 && !gotdoublejump {
-	println("Double jump activated!")
-} else if doublejump == 1 && gotdoublejump {
-	if !jumping {
-		jumping = true
+bar := 2
+gotbar := false
+boolBar := false
+gg := &Foo{B: true}
+if bar == 2 && !gotbar {
+	println("wow!")
+} else if bar == 1 && gotbar {
+	if !boolBar {
+		boolBar = true
 		for i := 0; i < 20; i++ {
 			if gg.P {
-				println("Double jump!")
+				println("wow 2!")
 			}
+		}
+	}
+}
+`, "", "", "", "", func(err error) {
+		checkerErrs.Add(err)
+	})
+
+	if len(checkerErrs) > 1 {
+		t.Fatal("too many errors")
+	}
+}
+
+func TestCheckError3(t *testing.T) {
+	var checkerErrs errors.List
+	fset := token.NewFileSet()
+	checkFilesWithErrorHandler(fset, "main.xgo", `
+type Foo struct {
+	B []string
+}
+
+bar := 2
+gotbar := false
+boolBar := false
+gg := &Foo{B: []string{"hello", "world"}}
+if bar == 2 && !gotbar {
+	println("Double jump activated!")
+} else if bar == 1 && gotbar {
+	if !boolBar {
+		boolBar = true
+		for item := range gg.P {
+			println("i am item", item)
 		}
 	}
 }
