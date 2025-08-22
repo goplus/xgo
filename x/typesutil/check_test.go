@@ -15,6 +15,7 @@ import (
 	"github.com/goplus/xgo/parser"
 	"github.com/goplus/xgo/token"
 	"github.com/goplus/xgo/x/typesutil"
+	"github.com/qiniu/x/errors"
 )
 
 func init() {
@@ -57,15 +58,26 @@ func checkFiles(fset *token.FileSet, file string, src any, goxfile string, goxsr
 	if err != nil {
 		return nil, nil, err
 	}
-	return checkInfo(fset, files, gofiles)
+	return checkInfo(fset, files, gofiles, nil)
 }
 
-func checkInfo(fset *token.FileSet, files []*ast.File, gofiles []*goast.File) (*typesutil.Info, *types.Info, error) {
+func checkFilesWithErrorHandler(fset *token.FileSet, file string, src any, goxfile string, goxsrc any, gofile string, gosrc any, handleErr func(error)) (*typesutil.Info, *types.Info, error) {
+	files, gofiles, err := loadFiles(fset, file, src, goxfile, goxsrc, gofile, gosrc)
+	if err != nil {
+		return nil, nil, err
+	}
+	return checkInfo(fset, files, gofiles, handleErr)
+}
+
+func checkInfo(fset *token.FileSet, files []*ast.File, gofiles []*goast.File, handleErr func(error)) (*typesutil.Info, *types.Info, error) {
 	conf := &types.Config{}
 	conf.Importer = importer.Default()
-	conf.Error = func(err error) {
-		log.Println(err)
+	if handleErr == nil {
+		handleErr = func(err error) {
+			log.Println(err)
+		}
 	}
+	conf.Error = handleErr
 	chkOpts := &typesutil.Config{
 		Types: types.NewPackage("main", "main"),
 		Fset:  fset,
@@ -281,5 +293,38 @@ func init() {
 				t.Fatal("bad overload", o)
 			}
 		}
+	}
+}
+
+func TestCheckError2(t *testing.T) {
+	var checkerErrs errors.List
+	fset := token.NewFileSet()
+	checkFilesWithErrorHandler(fset, "main.xgo", `
+type GG struct {
+	B bool
+}
+
+doublejump := 2
+gotdoublejump := false
+jumping := false
+gg := &GG{B: true}
+if doublejump == 2 && !gotdoublejump {
+	println("Double jump activated!")
+} else if doublejump == 1 && gotdoublejump {
+	if !jumping {
+		jumping = true
+		for i := 0; i < 20; i++ {
+			if gg.P {
+				println("Double jump!")
+			}
+		}
+	}
+}
+`, "", "", "", "", func(err error) {
+		checkerErrs.Add(err)
+	})
+
+	if len(checkerErrs) > 1 {
+		t.Fatal("too many errors")
 	}
 }
