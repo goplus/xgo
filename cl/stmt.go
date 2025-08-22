@@ -399,7 +399,7 @@ func compileRangeStmt(ctx *blockCtx, v *ast.RangeStmt) {
 		return
 	}
 	cb := ctx.cb
-	defer cb.End()
+	defer cb.End(v)
 	defer func() {
 		r := recover()
 		if r != nil {
@@ -470,7 +470,7 @@ func compileForPhraseStmt(ctx *blockCtx, v *ast.ForPhraseStmt) {
 		return
 	}
 	cb := ctx.cb
-	defer cb.End()
+	defer cb.End(v)
 	defer func() {
 		r := recover()
 		if r != nil {
@@ -623,7 +623,7 @@ func toForStmt(forPos token.Pos, value ast.Expr, body *ast.BlockStmt, re *ast.Ra
 // end
 func compileForStmt(ctx *blockCtx, v *ast.ForStmt) {
 	cb := ctx.cb
-	defer cb.End()
+	defer cb.End(v)
 	defer func() {
 		r := recover()
 		if r != nil {
@@ -664,7 +664,7 @@ func compileForStmt(ctx *blockCtx, v *ast.ForStmt) {
 // end
 func compileIfStmt(ctx *blockCtx, v *ast.IfStmt) {
 	cb := ctx.cb
-	defer cb.End()
+	defer cb.End(v)
 	defer func() {
 		r := recover()
 		if r != nil {
@@ -711,7 +711,7 @@ func compileIfStmt(ctx *blockCtx, v *ast.IfStmt) {
 // end
 func compileTypeSwitchStmt(ctx *blockCtx, v *ast.TypeSwitchStmt) {
 	var cb = ctx.cb
-	defer cb.End()
+	defer cb.End(v)
 	defer func() {
 		r := recover()
 		if r != nil {
@@ -811,7 +811,7 @@ func compileTypeSwitchStmt(ctx *blockCtx, v *ast.TypeSwitchStmt) {
 // end
 func compileSwitchStmt(ctx *blockCtx, v *ast.SwitchStmt) {
 	cb := ctx.cb
-	defer cb.End()
+	defer cb.End(v)
 	defer func() {
 		r := recover()
 		if r != nil {
@@ -918,7 +918,7 @@ func hasFallthrough(body []ast.Stmt) ([]ast.Stmt, bool) {
 // end
 func compileSelectStmt(ctx *blockCtx, v *ast.SelectStmt) {
 	cb := ctx.cb
-	defer cb.End()
+	defer cb.End(v)
 	defer func() {
 		r := recover()
 		if r != nil {
