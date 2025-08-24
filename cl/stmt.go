@@ -399,6 +399,14 @@ func compileRangeStmt(ctx *blockCtx, v *ast.RangeStmt) {
 		return
 	}
 	cb := ctx.cb
+	defer cb.End(v)
+	defer func() {
+		r := recover()
+		if r != nil {
+			ctx.handleRecover(r, v)
+			cb.ResetStmt()
+		}
+	}()
 	comments, once := cb.BackupComments()
 	defineNames := make([]*ast.Ident, 0, 2)
 	if v.Tok == token.DEFINE {
@@ -454,7 +462,6 @@ func compileRangeStmt(ctx *blockCtx, v *ast.RangeStmt) {
 	cb.End(v.Body)
 	cb.SetComments(comments, once)
 	setBodyHandler(ctx)
-	cb.End(v)
 }
 
 func compileForPhraseStmt(ctx *blockCtx, v *ast.ForPhraseStmt) {
@@ -463,6 +470,14 @@ func compileForPhraseStmt(ctx *blockCtx, v *ast.ForPhraseStmt) {
 		return
 	}
 	cb := ctx.cb
+	defer cb.End(v)
+	defer func() {
+		r := recover()
+		if r != nil {
+			ctx.handleRecover(r, v)
+			cb.ResetStmt()
+		}
+	}()
 	comments, once := cb.BackupComments()
 	names := make([]string, 1, 2)
 	defineNames := make([]*ast.Ident, 0, 2)
@@ -505,7 +520,6 @@ func compileForPhraseStmt(ctx *blockCtx, v *ast.ForPhraseStmt) {
 		cb.SetComments(comments, once)
 	}
 	setBodyHandler(ctx)
-	cb.End()
 }
 
 func toForStmt(forPos token.Pos, value ast.Expr, body *ast.BlockStmt, re *ast.RangeExpr, tok token.Token, fp *ast.ForPhrase) *ast.ForStmt {
@@ -609,6 +623,14 @@ func toForStmt(forPos token.Pos, value ast.Expr, body *ast.BlockStmt, re *ast.Ra
 // end
 func compileForStmt(ctx *blockCtx, v *ast.ForStmt) {
 	cb := ctx.cb
+	defer cb.End(v)
+	defer func() {
+		r := recover()
+		if r != nil {
+			ctx.handleRecover(r, v)
+			cb.ResetStmt()
+		}
+	}()
 	comments, once := cb.BackupComments()
 	cb.For(v)
 	if rec := ctx.recorder(); rec != nil {
@@ -633,7 +655,6 @@ func compileForStmt(ctx *blockCtx, v *ast.ForStmt) {
 	}
 	cb.SetComments(comments, once)
 	setBodyHandler(ctx)
-	cb.End(v)
 }
 
 // if init; cond then
@@ -643,6 +664,14 @@ func compileForStmt(ctx *blockCtx, v *ast.ForStmt) {
 // end
 func compileIfStmt(ctx *blockCtx, v *ast.IfStmt) {
 	cb := ctx.cb
+	defer cb.End(v)
+	defer func() {
+		r := recover()
+		if r != nil {
+			ctx.handleRecover(r, v)
+			cb.ResetStmt()
+		}
+	}()
 	comments, once := cb.BackupComments()
 	cb.If(v)
 	if v.Init != nil {
@@ -666,7 +695,6 @@ func compileIfStmt(ctx *blockCtx, v *ast.IfStmt) {
 	if rec := ctx.recorder(); rec != nil {
 		rec.Scope(v.Body, cb.Scope())
 	}
-	cb.End(v)
 }
 
 // typeSwitch(name) init; expr typeAssertThen()
@@ -683,6 +711,14 @@ func compileIfStmt(ctx *blockCtx, v *ast.IfStmt) {
 // end
 func compileTypeSwitchStmt(ctx *blockCtx, v *ast.TypeSwitchStmt) {
 	var cb = ctx.cb
+	defer cb.End(v)
+	defer func() {
+		r := recover()
+		if r != nil {
+			ctx.handleRecover(r, v)
+			cb.ResetStmt()
+		}
+	}()
 	comments, once := cb.BackupComments()
 	var name string
 	var ta *ast.TypeAssertExpr
@@ -759,7 +795,6 @@ func compileTypeSwitchStmt(ctx *blockCtx, v *ast.TypeSwitchStmt) {
 		cb.End(c)
 	}
 	cb.SetComments(comments, once)
-	cb.End(v)
 }
 
 // switch init; tag then
@@ -776,6 +811,14 @@ func compileTypeSwitchStmt(ctx *blockCtx, v *ast.TypeSwitchStmt) {
 // end
 func compileSwitchStmt(ctx *blockCtx, v *ast.SwitchStmt) {
 	cb := ctx.cb
+	defer cb.End(v)
+	defer func() {
+		r := recover()
+		if r != nil {
+			ctx.handleRecover(r, v)
+			cb.ResetStmt()
+		}
+	}()
 	comments, once := cb.BackupComments()
 	cb.Switch(v)
 	if v.Init != nil {
@@ -844,7 +887,6 @@ func compileSwitchStmt(ctx *blockCtx, v *ast.SwitchStmt) {
 		cb.End(c)
 	}
 	cb.SetComments(comments, once)
-	cb.End(v)
 }
 
 func hasFallthrough(body []ast.Stmt) ([]ast.Stmt, bool) {
@@ -876,6 +918,14 @@ func hasFallthrough(body []ast.Stmt) ([]ast.Stmt, bool) {
 // end
 func compileSelectStmt(ctx *blockCtx, v *ast.SelectStmt) {
 	cb := ctx.cb
+	defer cb.End(v)
+	defer func() {
+		r := recover()
+		if r != nil {
+			ctx.handleRecover(r, v)
+			cb.ResetStmt()
+		}
+	}()
 	comments, once := cb.BackupComments()
 	cb.Select(v)
 	for _, stmt := range v.Body.List {
@@ -896,7 +946,6 @@ func compileSelectStmt(ctx *blockCtx, v *ast.SelectStmt) {
 		cb.End(c)
 	}
 	cb.SetComments(comments, once)
-	cb.End(v)
 }
 
 func compileBranchStmt(ctx *blockCtx, v *ast.BranchStmt) {

@@ -15,6 +15,7 @@ import (
 	"github.com/goplus/xgo/parser"
 	"github.com/goplus/xgo/token"
 	"github.com/goplus/xgo/x/typesutil"
+	"github.com/qiniu/x/errors"
 )
 
 func init() {
@@ -57,15 +58,26 @@ func checkFiles(fset *token.FileSet, file string, src any, goxfile string, goxsr
 	if err != nil {
 		return nil, nil, err
 	}
-	return checkInfo(fset, files, gofiles)
+	return checkInfo(fset, files, gofiles, nil)
 }
 
-func checkInfo(fset *token.FileSet, files []*ast.File, gofiles []*goast.File) (*typesutil.Info, *types.Info, error) {
+func checkFilesWithErrorHandler(fset *token.FileSet, file string, src any, goxfile string, goxsrc any, gofile string, gosrc any, handleErr func(error)) (*typesutil.Info, *types.Info, error) {
+	files, gofiles, err := loadFiles(fset, file, src, goxfile, goxsrc, gofile, gosrc)
+	if err != nil {
+		return nil, nil, err
+	}
+	return checkInfo(fset, files, gofiles, handleErr)
+}
+
+func checkInfo(fset *token.FileSet, files []*ast.File, gofiles []*goast.File, handleErr func(error)) (*typesutil.Info, *types.Info, error) {
 	conf := &types.Config{}
 	conf.Importer = importer.Default()
-	conf.Error = func(err error) {
-		log.Println(err)
+	if handleErr == nil {
+		handleErr = func(err error) {
+			log.Println(err)
+		}
 	}
+	conf.Error = handleErr
 	chkOpts := &typesutil.Config{
 		Types: types.NewPackage("main", "main"),
 		Fset:  fset,
@@ -281,5 +293,69 @@ func init() {
 				t.Fatal("bad overload", o)
 			}
 		}
+	}
+}
+
+func TestCheckError2(t *testing.T) {
+	var checkerErrs errors.List
+	fset := token.NewFileSet()
+	checkFilesWithErrorHandler(fset, "main.xgo", `
+type Foo struct {
+	B bool
+}
+
+bar := 2
+gotbar := false
+boolBar := false
+gg := &Foo{B: true}
+if bar == 2 && !gotbar {
+	println("wow!")
+} else if bar == 1 && gotbar {
+	if !boolBar {
+		boolBar = true
+		for i := 0; i < 20; i++ {
+			if gg.P {
+				println("wow 2!")
+			}
+		}
+	}
+}
+`, "", "", "", "", func(err error) {
+		checkerErrs.Add(err)
+	})
+
+	if len(checkerErrs) > 1 {
+		t.Fatal("too many errors")
+	}
+}
+
+func TestCheckError3(t *testing.T) {
+	var checkerErrs errors.List
+	fset := token.NewFileSet()
+	checkFilesWithErrorHandler(fset, "main.xgo", `
+type Foo struct {
+	B []string
+}
+
+bar := 2
+gotbar := false
+boolBar := false
+gg := &Foo{B: []string{"hello", "world"}}
+if bar == 2 && !gotbar {
+	println("Double jump activated!")
+} else if bar == 1 && gotbar {
+	if !boolBar {
+		boolBar = true
+		for item := range gg.P {
+			println("i am item", item)
+		}
+	}
+}
+`, "", "", "", "", func(err error) {
+		checkerErrs.Add(err)
+	})
+
+	if len(checkerErrs) > 1 {
+		t.Fatal("too many errors")
 	}
 }
