@@ -313,6 +313,9 @@ func (p *LambdaExpr2) Pos() token.Pos {
 
 // End - position of first character immediately after the node.
 func (p *LambdaExpr2) End() token.Pos {
+	if p.Body == nil {
+		return p.Rarrow + 2
+	}
 	return p.Body.End()
 }
 
