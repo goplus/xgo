@@ -463,7 +463,7 @@ func gmxCheckProjs(pkg *gogen.Package, ctx *pkgCtx) (*gmxProject, bool) {
 func gmxProjMain(pkg *gogen.Package, parent *pkgCtx, proj *gmxProject) {
 	base := proj.game                      // project base class
 	classType := proj.getGameClass(parent) // project class
-	ld := getTypeLoader(parent, parent.syms, token.NoPos, classType)
+	ld := getTypeLoader(parent, parent.syms, token.NoPos, token.NoPos, classType)
 	if ld.typ == nil { // no project class, use default
 		ld.typ = func() {
 			if debugLoad {
