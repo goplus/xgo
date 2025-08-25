@@ -111,7 +111,7 @@ func compileStmts(ctx *blockCtx, body []ast.Stmt) {
 	for _, stmt := range body {
 		if v, ok := stmt.(*ast.LabeledStmt); ok {
 			expr := v.Label
-			ctx.cb.NewLabel(expr.Pos(), expr.Name)
+			ctx.cb.NewLabel(expr.Pos(), expr.End(), expr.Name)
 		}
 	}
 	for _, stmt := range body {
@@ -224,7 +224,7 @@ func compileReturnStmt(ctx *blockCtx, expr *ast.ReturnStmt) {
 				sig, ok := rtyp.(*types.Signature)
 				if !ok {
 					panic(ctx.newCodeErrorf(
-						ret.Pos(), "cannot use lambda expression as type %v in return statement", rtyp))
+						ret.Pos(), ret.End(), "cannot use lambda expression as type %v in return statement", rtyp))
 				}
 				compileLambda(ctx, v, sig)
 			case *ast.SliceLit:
@@ -287,7 +287,7 @@ func compileSendStmt(ctx *blockCtx, expr *ast.SendStmt) {
 
 normal:
 	if len(vals) != 1 || expr.Ellipsis != 0 {
-		panic(ctx.newCodeError(vals[0].End(), "can't send multiple values to a channel"))
+		panic(ctx.newCodeError(vals[0].Pos(), vals[0].End(), "can't send multiple values to a channel"))
 	}
 	compileExpr(ctx, vals[0])
 	ctx.cb.Send()
@@ -351,7 +351,7 @@ func compileAssignStmt(ctx *blockCtx, expr *ast.AssignStmt) {
 				}
 				compileLambda(ctx, e, sig)
 			} else {
-				panic(ctx.newCodeErrorf(e.Pos(), "lambda unsupport multiple assignment"))
+				panic(ctx.newCodeErrorf(e.Pos(), e.End(), "lambda unsupport multiple assignment"))
 			}
 		case *ast.SliceLit:
 			var typ types.Type
@@ -763,13 +763,14 @@ func compileTypeSwitchStmt(ctx *blockCtx, v *ast.TypeSwitchStmt) {
 				if T == nil && t == nil || T != nil && t != nil && types.Identical(T, t) {
 					haserr = true
 					pos := citem.Pos()
+					end := citem.End()
 					if T == types.Typ[types.UntypedNil] {
 						ctx.handleErrorf(
-							pos, "multiple nil cases in type switch (first at %v)",
+							pos, end, "multiple nil cases in type switch (first at %v)",
 							ctx.Position(other.Pos()))
 					} else {
 						ctx.handleErrorf(
-							pos, "duplicate case %s in type switch\n\tprevious case at %v",
+							pos, end, "duplicate case %s in type switch\n\tprevious case at %v",
 							T, ctx.Position(other.Pos()))
 					}
 				}
@@ -781,7 +782,7 @@ func compileTypeSwitchStmt(ctx *blockCtx, v *ast.TypeSwitchStmt) {
 		if c.List == nil {
 			if firstDefault != nil {
 				ctx.handleErrorf(
-					c.Pos(), "multiple defaults in type switch (first at %v)", ctx.Position(firstDefault.Pos()))
+					c.Pos(), c.End(), "multiple defaults in type switch (first at %v)", ctx.Position(firstDefault.Pos()))
 			} else {
 				firstDefault = c
 			}
@@ -854,10 +855,10 @@ func compileSwitchStmt(ctx *blockCtx, v *ast.SwitchStmt) {
 						haserr = true
 						src := ctx.LoadExpr(v.Src)
 						if lit, ok := v.Src.(*ast.BasicLit); ok {
-							ctx.handleErrorf(lit.Pos(), "duplicate case %s in switch\n\tprevious case at %v",
+							ctx.handleErrorf(lit.Pos(), lit.End(), "duplicate case %s in switch\n\tprevious case at %v",
 								src, ctx.Position(vt.pos))
 						} else {
-							ctx.handleErrorf(v.Src.Pos(), "duplicate case %s (value %#v) in switch\n\tprevious case at %v",
+							ctx.handleErrorf(v.Src.Pos(), v.Src.End(), "duplicate case %s (value %#v) in switch\n\tprevious case at %v",
 								src, val, ctx.Position(vt.pos))
 						}
 					}
@@ -869,7 +870,7 @@ func compileSwitchStmt(ctx *blockCtx, v *ast.SwitchStmt) {
 		}
 		if c.List == nil {
 			if firstDefault != nil {
-				ctx.handleErrorf(c.Pos(), "multiple defaults in switch (first at %v)", ctx.Position(firstDefault.Pos()))
+				ctx.handleErrorf(c.Pos(), c.End(), "multiple defaults in switch (first at %v)", ctx.Position(firstDefault.Pos()))
 			} else {
 				firstDefault = c
 			}
@@ -967,7 +968,7 @@ func compileBranchStmt(ctx *blockCtx, v *ast.BranchStmt) {
 	case token.CONTINUE:
 		ctx.cb.Continue(getLabel(ctx, label))
 	case token.FALLTHROUGH:
-		ctx.handleErrorf(v.Pos(), "fallthrough statement out of place")
+		ctx.handleErrorf(v.Pos(), v.End(), "fallthrough statement out of place")
 	default:
 		panic("unknown branch statement")
 	}
@@ -978,7 +979,7 @@ func getLabel(ctx *blockCtx, label *ast.Ident) *gogen.Label {
 		if l, ok := ctx.cb.LookupLabel(label.Name); ok {
 			return l
 		}
-		ctx.handleErrorf(label.Pos(), "label %v is not defined", label.Name)
+		ctx.handleErrorf(label.Pos(), label.End(), "label %v is not defined", label.Name)
 	}
 	return nil
 }

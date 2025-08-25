@@ -85,7 +85,7 @@ func compileIdent(ctx *blockCtx, ident *ast.Ident, flags int) (pkg gogen.PkgRef,
 	name := ident.Name
 	if name == "_" {
 		if fvalue {
-			panic(ctx.newCodeError(ident.Pos(), "cannot use _ as value"))
+			panic(ctx.newCodeError(ident.Pos(), ident.End(), "cannot use _ as value"))
 		}
 		cb.VarRef(nil)
 		return
@@ -146,7 +146,7 @@ func compileIdent(ctx *blockCtx, ident *ast.Ident, flags int) (pkg gogen.PkgRef,
 	// universe object
 	if obj := ctx.pkg.Builtin().TryRef(name); obj != nil {
 		if (flags&clIdentAllowBuiltin) == 0 && isBuiltin(o) && !strings.HasPrefix(o.Name(), "print") {
-			panic(ctx.newCodeErrorf(ident.Pos(), "use of builtin %s not in function call", name))
+			panic(ctx.newCodeErrorf(ident.Pos(), ident.End(), "use of builtin %s not in function call", name))
 		}
 		oldo, o = o, obj
 	} else if o == nil {
@@ -162,9 +162,9 @@ func compileIdent(ctx *blockCtx, ident *ast.Ident, flags int) (pkg gogen.PkgRef,
 		}
 		if (clIdentGoto & flags) != 0 {
 			l := ident.Obj.Data.(*ast.Ident)
-			panic(ctx.newCodeErrorf(l.Pos(), "label %v is not defined", l.Name))
+			panic(ctx.newCodeErrorf(l.Pos(), l.End(), "label %v is not defined", l.Name))
 		}
-		panic(ctx.newCodeErrorf(ident.Pos(), "undefined: %s", name))
+		panic(ctx.newCodeErrorf(ident.Pos(), ident.End(), "undefined: %s", name))
 	}
 
 find:
@@ -224,7 +224,7 @@ func compileEnvExpr(ctx *blockCtx, v *ast.EnvExpr) {
 		}
 	}
 	invalidVal(cb)
-	ctx.handleErrorf(v.Pos(), "operator $%v undefined", v.Name)
+	ctx.handleErrorf(v.Pos(), v.End(), "operator $%v undefined", v.Name)
 }
 
 func classRecv(cb *gogen.CodeBuilder) *types.Var {
@@ -272,7 +272,7 @@ func compileExprLHS(ctx *blockCtx, expr ast.Expr) {
 	case *ast.StarExpr:
 		compileStarExprLHS(ctx, v)
 	default:
-		panic(ctx.newCodeErrorf(v.Pos(), "compileExprLHS failed: unknown - %T", expr))
+		panic(ctx.newCodeErrorf(v.Pos(), v.End(), "compileExprLHS failed: unknown - %T", expr))
 	}
 	if rec := ctx.recorder(); rec != nil {
 		rec.recordExpr(ctx, expr, true)
@@ -395,7 +395,7 @@ func compileExpr(ctx *blockCtx, expr ast.Expr, inFlags ...int) {
 	case *ast.DomainTextLit:
 		compileDomainTextLit(ctx, v)
 	default:
-		panic(ctx.newCodeErrorf(v.Pos(), "compileExpr failed: unknown - %T", v))
+		panic(ctx.newCodeErrorf(v.Pos(), v.End(), "compileExpr failed: unknown - %T", v))
 	}
 	if rec := ctx.recorder(); rec != nil {
 		rec.recordExpr(ctx, expr, false)
@@ -492,9 +492,9 @@ func compileSelectorExpr(ctx *blockCtx, v *ast.SelectorExpr, flags int) {
 				return
 			}
 			if token.IsExported(v.Sel.Name) {
-				panic(ctx.newCodeErrorf(x.Pos(), "undefined: %s.%s", x.Name, v.Sel.Name))
+				panic(ctx.newCodeErrorf(x.Pos(), x.End(), "undefined: %s.%s", x.Name, v.Sel.Name))
 			}
-			panic(ctx.newCodeErrorf(x.Pos(), "cannot refer to unexported name %s.%s", x.Name, v.Sel.Name))
+			panic(ctx.newCodeErrorf(x.Pos(), x.End(), "cannot refer to unexported name %s.%s", x.Name, v.Sel.Name))
 		}
 	default:
 		compileExpr(ctx, v.X)
@@ -540,7 +540,7 @@ func lookupPkgRef(ctx *blockCtx, pkg gogen.PkgRef, x *ast.Ident, pkgKind int) (o
 			if o2, alias2 := pkgRef(at, x.Name); o2 != nil {
 				if o != nil {
 					panic(ctx.newCodeErrorf(
-						x.Pos(), "confliction: %s declared both in \"%s\" and \"%s\"",
+						x.Pos(), x.End(), "confliction: %s declared both in \"%s\" and \"%s\"",
 						x.Name, at.Types.Path(), pkg.Types.Path()))
 				}
 				pkg, o, alias = at, o2, alias2
@@ -788,13 +788,13 @@ func compileCallArgs(ctx *blockCtx, pfn *gogen.Element, fn *fnType, v *ast.CallE
 			typ := arg.Type
 			t, ok := typ.(*gogen.TypeType)
 			if !ok {
-				return ctx.newCodeErrorf(vargs[i].Pos(), "%v not type", ctx.LoadExpr(vargs[i]))
+				return ctx.newCodeErrorf(vargs[i].Pos(), vargs[i].End(), "%v not type", ctx.LoadExpr(vargs[i]))
 			}
 			targs = append(targs, t.Type())
 		}
 		ret, err := types.Instantiate(nil, fn.sig, targs, true)
 		if err != nil {
-			return ctx.newCodeError(v.Pos(), err.Error())
+			return ctx.newCodeError(v.Pos(), v.End(), err.Error())
 		}
 		fn.init(1, ret.(*types.Signature), false)
 		vargs = vargs[n:]
@@ -913,7 +913,7 @@ retry:
 	if toNode != nil {
 		to = " to " + ctx.LoadExpr(toNode)
 	}
-	return nil, ctx.newCodeErrorf(lambda.Pos(), "cannot use lambda literal as type %v in %v%v", ftyp, flag, to)
+	return nil, ctx.newCodeErrorf(lambda.Pos(), lambda.End(), "cannot use lambda literal as type %v in %v%v", ftyp, flag, to)
 }
 
 func sigParamLen(typ types.Type) int {
@@ -957,7 +957,7 @@ func compileLambda(ctx *blockCtx, lambda ast.Expr, sig *types.Signature) {
 	}
 }
 
-func makeLambdaParams(ctx *blockCtx, pos token.Pos, lhs []*ast.Ident, in *types.Tuple) (*types.Tuple, error) {
+func makeLambdaParams(ctx *blockCtx, pos, end token.Pos, lhs []*ast.Ident, in *types.Tuple) (*types.Tuple, error) {
 	pkg := ctx.pkg
 	n := len(lhs)
 	if nin := in.Len(); n != nin {
@@ -970,7 +970,7 @@ func makeLambdaParams(ctx *blockCtx, pos token.Pos, lhs []*ast.Ident, in *types.
 			has[i] = v.Name
 		}
 		return nil, ctx.newCodeErrorf(
-			pos, "too %s arguments in lambda expression\n\thave (%s)\n\twant %v", fewOrMany, strings.Join(has, ", "), in)
+			pos, end, "too %s arguments in lambda expression\n\thave (%s)\n\twant %v", fewOrMany, strings.Join(has, ", "), in)
 	}
 	if n == 0 {
 		return nil, nil
@@ -1000,7 +1000,7 @@ func makeLambdaResults(pkg *gogen.Package, out *types.Tuple) *types.Tuple {
 
 func compileLambdaExpr(ctx *blockCtx, v *ast.LambdaExpr, sig *types.Signature) error {
 	pkg := ctx.pkg
-	params, err := makeLambdaParams(ctx, v.Pos(), v.Lhs, sig.Params())
+	params, err := makeLambdaParams(ctx, v.Pos(), v.End(), v.Lhs, sig.Params())
 	if err != nil {
 		return err
 	}
@@ -1021,7 +1021,7 @@ func compileLambdaExpr(ctx *blockCtx, v *ast.LambdaExpr, sig *types.Signature) e
 
 func compileLambdaExpr2(ctx *blockCtx, v *ast.LambdaExpr2, sig *types.Signature) error {
 	pkg := ctx.pkg
-	params, err := makeLambdaParams(ctx, v.Pos(), v.Lhs, sig.Params())
+	params, err := makeLambdaParams(ctx, v.Pos(), v.End(), v.Lhs, sig.Params())
 	if err != nil {
 		return err
 	}
@@ -1130,7 +1130,7 @@ func compileStringLitEx(ctx *blockCtx, cb *gogen.CodeBuilder, lit *ast.BasicLit)
 				if _, err := cb.Member("string", gogen.MemberFlagAutoProperty); err != nil {
 					if _, e2 := cb.Member("error", gogen.MemberFlagAutoProperty); e2 != nil {
 						if e, ok := err.(*gogen.CodeError); ok {
-							err = ctx.newCodeErrorf(v.Pos(), "%s.string%s", ctx.LoadExpr(v), e.Msg)
+							err = ctx.newCodeErrorf(v.Pos(), v.End(), "%s.string%s", ctx.LoadExpr(v), e.Msg)
 						}
 						ctx.handleErr(err)
 					}
@@ -1318,7 +1318,7 @@ func unparen(x ast.Expr) ast.Expr {
 func compileStructLit(ctx *blockCtx, elts []ast.Expr, t *types.Struct, typ types.Type, src *ast.CompositeLit) error {
 	for idx, elt := range elts {
 		if idx >= t.NumFields() {
-			return ctx.newCodeErrorf(elt.Pos(), "too many values in %v{...}", typ)
+			return ctx.newCodeErrorf(elt.Pos(), elt.End(), "too many values in %v{...}", typ)
 		}
 		err := compileCompositeLitElt(ctx, elt, t.Field(idx).Type(), clLambaField, nil)
 		if err != nil {
@@ -1338,7 +1338,7 @@ func compileStructLitInKeyVal(ctx *blockCtx, elts []ast.Expr, t *types.Struct, t
 			ctx.cb.Val(idx)
 		} else {
 			src := ctx.LoadExpr(name)
-			return ctx.newCodeErrorf(name.Pos(), "%s undefined (type %v has no field or method %s)", src, typ, name.Name)
+			return ctx.newCodeErrorf(name.Pos(), name.End(), "%s undefined (type %v has no field or method %s)", src, typ, name.Name)
 		}
 		if rec := ctx.recorder(); rec != nil {
 			rec.Use(name, t.Field(idx))
@@ -1449,14 +1449,14 @@ func compileCompositeLitEx(ctx *blockCtx, v *ast.CompositeLit, expected types.Ty
 			ctx.cb.ArrayLitEx(typ, n<<kind, kind == compositeLitKeyVal, v)
 		case *types.Map:
 			if kind == compositeLitVal && n > 0 {
-				return ctx.newCodeError(v.Pos(), "missing key in map literal")
+				return ctx.newCodeError(v.Pos(), v.End(), "missing key in map literal")
 			}
 			if err := compileMapLitEx(ctx, typ, n, v); err != nil {
 				return err
 			}
 		default:
 			if kind == compositeLitVal && n > 0 {
-				return ctx.newCodeErrorf(v.Pos(), "invalid composite literal type %v", typ)
+				return ctx.newCodeErrorf(v.Pos(), v.End(), "invalid composite literal type %v", typ)
 			}
 			if err := compileMapLitEx(ctx, nil, n, v); err != nil {
 				return err
@@ -1476,7 +1476,7 @@ func compileCompositeLitEx(ctx *blockCtx, v *ast.CompositeLit, expected types.Ty
 func compileMapLitEx(ctx *blockCtx, typ types.Type, n int, v *ast.CompositeLit) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
-			err = ctx.newCodeError(v.Pos(), "invalid map literal")
+			err = ctx.newCodeError(v.Pos(), v.End(), "invalid map literal")
 		}
 	}()
 	err = ctx.cb.MapLitEx(typ, n<<1, v)
