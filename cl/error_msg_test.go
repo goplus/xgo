@@ -44,7 +44,7 @@ func TestErrTplLit(t *testing.T) {
 }
 
 func TestErrSendStmt(t *testing.T) {
-	codeErrorTest(t, `bar.xgo:3:8: can't send multiple values to a channel`, `
+	codeErrorTest(t, `bar.xgo:3:7: can't send multiple values to a channel`, `
 	var a chan int
 	a <- 1, 2
 `)
