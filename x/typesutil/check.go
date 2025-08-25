@@ -237,7 +237,7 @@ func convErr(fset *token.FileSet, e error) (ret types.Error, ok bool) {
 	switch v := e.(type) {
 	case *gogen.CodeError:
 		ret.Pos, ret.Msg = v.Pos, v.Msg
-		typesutil.SetErrorGo116(&ret, 0, v.Pos, v.Pos)
+		typesutil.SetErrorGo116(&ret, 0, v.Pos, v.End)
 	case *gogen.MatchError:
 		end := token.NoPos
 		if v.Src != nil {
@@ -247,10 +247,10 @@ func convErr(fset *token.FileSet, e error) (ret types.Error, ok bool) {
 		typesutil.SetErrorGo116(&ret, 0, ret.Pos, end)
 	case *gogen.ImportError:
 		ret.Pos, ret.Msg = v.Pos, v.Err.Error()
-		typesutil.SetErrorGo116(&ret, 0, v.Pos, v.Pos)
+		typesutil.SetErrorGo116(&ret, 0, v.Pos, v.End)
 	case *gogen.BoundTypeError:
 		ret.Pos, ret.Msg = v.Pos, v.Error()
-		typesutil.SetErrorGo116(&ret, 0, v.Pos, v.Pos)
+		typesutil.SetErrorGo116(&ret, 0, v.Pos, v.End)
 	default:
 		return
 	}
