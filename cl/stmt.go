@@ -111,7 +111,7 @@ func compileStmts(ctx *blockCtx, body []ast.Stmt) {
 	for _, stmt := range body {
 		if v, ok := stmt.(*ast.LabeledStmt); ok {
 			expr := v.Label
-			ctx.cb.NewLabel(expr.Pos(), expr.Name)
+			ctx.cb.NewLabel(expr.Pos(), expr.End(), expr.Name)
 		}
 	}
 	for _, stmt := range body {
