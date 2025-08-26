@@ -77,6 +77,25 @@ func SetErrorGo116(ret *types.Error, code int, start, end token.Pos) {
 	e.go116end = end
 }
 
+// GetErrorGo116 extracts the go116 fields from types.Error
+func GetErrorGo116(err *types.Error) (code int, start, end token.Pos, ok bool) {
+	defer func() {
+		if recover() != nil {
+			code = 0
+			start = token.NoPos
+			end = token.NoPos
+			ok = false
+		}
+	}()
+
+	e := (*Error)(unsafe.Pointer(err))
+	code = e.go116code
+	start = e.go116start
+	end = e.go116end
+	ok = true
+	return
+}
+
 // -----------------------------------------------------------------------------
 
 func init() {
