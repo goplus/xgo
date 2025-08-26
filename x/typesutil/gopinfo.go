@@ -347,6 +347,7 @@ type Error struct {
 	Pos, End token.Pos      // error position
 	Msg      string         // error message
 	Soft     bool           // if set, error is "soft"
+	Code     Code           // error code
 }
 
 // Error returns an error string formatted as follows:

@@ -263,7 +263,12 @@ func convErr(fset *token.FileSet, e error) (ret Error, ok bool) {
 
 func convGoErr(e error) (ret Error, ok bool) {
 	if v, ok := e.(types.Error); ok {
-		ret.Pos, ret.End, ret.Msg = v.Pos, v.Pos, v.Msg
+		ret.Pos, ret.Msg = v.Pos, v.Msg
+		code, _, end, ok := typesutil.GetErrorGo116(&v)
+		if ok {
+			ret.Code = Code(code)
+			ret.End = end
+		}
 	}
 	return ret, true
 }
