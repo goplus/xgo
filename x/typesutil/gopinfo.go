@@ -17,11 +17,13 @@
 package typesutil
 
 import (
+	"fmt"
 	"go/types"
 
 	"github.com/goplus/gogen"
 	"github.com/goplus/xgo/ast"
 	"github.com/goplus/xgo/cl"
+	"github.com/goplus/xgo/token"
 	"github.com/qiniu/x/log"
 )
 
@@ -335,3 +337,20 @@ func (info xgoRecorder) Scope(n ast.Node, scope *types.Scope) {
 }
 
 // -----------------------------------------------------------------------------
+
+// An Error describes a type-checking error; it implements the error interface.
+// A "soft" error is an error that still permits a valid interpretation of a
+// package (such as "unused variable"); "hard" errors may lead to unpredictable
+// behavior if ignored.
+type Error struct {
+	Fset     *token.FileSet // file set for interpretation of Pos
+	Pos, End token.Pos      // error position
+	Msg      string         // error message
+	Soft     bool           // if set, error is "soft"
+}
+
+// Error returns an error string formatted as follows:
+// filename:line:column: message
+func (err Error) Error() string {
+	return fmt.Sprintf("%s: %s", err.Fset.Position(err.Pos), err.Msg)
+}

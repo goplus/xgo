@@ -104,6 +104,14 @@ func (p *Checker) Files(goFiles []*goast.File, xgoFiles []*ast.File) (err error)
 	fset := opts.Fset
 	conf := p.conf
 	if len(xgoFiles) == 0 {
+		onErr := p.conf.Error
+		if onErr != nil {
+			p.conf.Error = func(err error) {
+				if e, ok := convGoErr(err); ok {
+					onErr(e)
+				}
+			}
+		}
 		checker := types.NewChecker(conf, fset, pkgTypes, p.goInfo)
 		return checker.Files(goFiles)
 	}
@@ -233,28 +241,30 @@ func DeleteObjects(scope *types.Scope, files []*goast.File) objMapT {
 	return objMap
 }
 
-func convErr(fset *token.FileSet, e error) (ret types.Error, ok bool) {
+func convErr(fset *token.FileSet, e error) (ret Error, ok bool) {
 	switch v := e.(type) {
 	case *gogen.CodeError:
-		ret.Pos, ret.Msg = v.Pos, v.Msg
-		typesutil.SetErrorGo116(&ret, 0, v.Pos, v.End)
+		ret.Pos, ret.End, ret.Msg = v.Pos, v.End, v.Msg
 	case *gogen.MatchError:
-		end := token.NoPos
 		if v.Src != nil {
-			ret.Pos, end = v.Src.Pos(), v.Src.End()
+			ret.Pos, ret.End = v.Src.Pos(), v.Src.End()
 		}
 		ret.Msg = v.Message("")
-		typesutil.SetErrorGo116(&ret, 0, ret.Pos, end)
 	case *gogen.ImportError:
-		ret.Pos, ret.Msg = v.Pos, v.Err.Error()
-		typesutil.SetErrorGo116(&ret, 0, v.Pos, v.End)
+		ret.Pos, ret.End, ret.Msg = v.Pos, v.End, v.Err.Error()
 	case *gogen.BoundTypeError:
-		ret.Pos, ret.Msg = v.Pos, v.Error()
-		typesutil.SetErrorGo116(&ret, 0, v.Pos, v.End)
+		ret.Pos, ret.End, ret.Msg = v.Pos, v.End, v.Error()
 	default:
 		return
 	}
 	ret.Fset, ok = fset, true
+	return
+}
+
+func convGoErr(e error) (ret Error, ok bool) {
+	if v, ok := e.(types.Error); ok {
+		ret.Pos, ret.End, ret.Msg = v.Pos, v.Pos, v.Msg
+	}
 	return
 }
 
