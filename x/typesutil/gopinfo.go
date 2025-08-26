@@ -346,8 +346,8 @@ type Error struct {
 	Fset     *token.FileSet // file set for interpretation of Pos
 	Pos, End token.Pos      // error position
 	Msg      string         // error message
-	Soft     bool           // if set, error is "soft"
 	Code     Code           // error code
+	Soft     bool           // if set, error is "soft"
 }
 
 // Error returns an error string formatted as follows:
