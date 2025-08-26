@@ -265,7 +265,7 @@ func convGoErr(e error) (ret Error, ok bool) {
 	if v, ok := e.(types.Error); ok {
 		ret.Pos, ret.End, ret.Msg = v.Pos, v.Pos, v.Msg
 	}
-	return
+	return ret, true
 }
 
 func scopeDelete(objMap map[types.Object]types.Object, scope *types.Scope, name string) {
