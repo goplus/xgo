@@ -830,7 +830,9 @@ func preloadGopFile(p *gogen.Package, ctx *blockCtx, file string, f *ast.File, c
 							}
 						}
 					} else { // embed work classes for project class
-						flds = proj.embed(flds, p)
+						flds = proj.embed(func(name string) bool {
+							return chk.chkRedecl(ctx, name, pos, end)
+						}, flds, p)
 					}
 				}
 				rec := ctx.recorder()
