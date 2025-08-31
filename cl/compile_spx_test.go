@@ -107,6 +107,17 @@ Greem.t4spx:1:1: cannot use  (type *Greem) as type github.com/goplus/xgo/cl/inte
 	}, map[string]string{
 		"/foo/Game.t4gmx": `println backdropName!`,
 	})
+
+	gopSpxErrorTestEx(t, `Game.t5gmx:4:2: Kai redeclared
+	Game.t5gmx:1:1 other declaration of Kai
+Kai.t5spx:1:1: cannot use  (type *Kai) as type github.com/goplus/xgo/cl/internal/spx4.Sprite in argument to `, `
+
+var (
+	Kai Kai
+)
+`, `
+println "hi"
+`, "Game.t5gmx", "Kai.t5spx")
 }
 
 func TestSpxBasic(t *testing.T) {
