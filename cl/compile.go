@@ -816,14 +816,14 @@ func preloadGopFile(p *gogen.Package, ctx *blockCtx, file string, f *ast.File, c
 				if baseTypeName != "" { // base class (not normal classfile)
 					flds = append(flds, types.NewField(pos, pkg, baseTypeName, baseType, true))
 					tags = append(tags, "")
-					chk.chkRedecl(ctx, baseTypeName, pos, end)
+					chk.chkRedecl(ctx, baseTypeName, pos, end, FieldKindClass)
 					if sp != nil { // for work class
 						if !goxTestFile && gameClass != "" { // has project class
 							typ := toType(ctx, &ast.Ident{Name: gameClass})
 							getUnderlying(ctx, typ) // ensure type is loaded
 							typ = types.NewPointer(typ)
 							name := getTypeName(typ)
-							if !chk.chkRedecl(ctx, name, pos, end) {
+							if !chk.chkRedecl(ctx, name, pos, end, FieldKindClass) {
 								fld := types.NewField(pos, pkg, name, typ, true)
 								flds = append(flds, fld)
 								tags = append(tags, "")
@@ -831,7 +831,7 @@ func preloadGopFile(p *gogen.Package, ctx *blockCtx, file string, f *ast.File, c
 						}
 					} else { // embed work classes for project class
 						flds = proj.embed(func(name string) bool {
-							return chk.chkRedecl(ctx, name, pos, end)
+							return chk.chkRedecl(ctx, name, pos, end, FieldKindClass)
 						}, flds, p)
 					}
 				}
@@ -843,7 +843,7 @@ func preloadGopFile(p *gogen.Package, ctx *blockCtx, file string, f *ast.File, c
 						tag := toFieldTag(spec.Tag)
 						if len(spec.Names) == 0 {
 							name := parseTypeEmbedName(spec.Type)
-							if chk.chkRedecl(ctx, name.Name, spec.Type.Pos(), spec.Type.End()) {
+							if chk.chkRedecl(ctx, name.Name, spec.Type.Pos(), spec.Type.End(), FieldKindUser) {
 								continue
 							}
 							fld := types.NewField(spec.Type.Pos(), pkg, name.Name, typ, true)
@@ -854,7 +854,7 @@ func preloadGopFile(p *gogen.Package, ctx *blockCtx, file string, f *ast.File, c
 							tags = append(tags, tag)
 						} else {
 							for _, name := range spec.Names {
-								if chk.chkRedecl(ctx, name.Name, name.Pos(), name.End()) {
+								if chk.chkRedecl(ctx, name.Name, name.Pos(), name.End(), FieldKindUser) {
 									continue
 								}
 								fld := types.NewField(name.Pos(), pkg, name.Name, typ, false)
