@@ -316,11 +316,11 @@ func (p *checkRedecl) chkRedecl(ctx *blockCtx, name string, pos, end token.Pos, 
 		switch existing.kind {
 		case FieldKindClass:
 			ctx.handleErrorf(
-				pos, end, "field %s conflicts with class name. rename the field to resolve the naming conflict.",
+				pos, end, "%s conflicts with class name.\n\trename the field to resolve the naming conflict.",
 				name)
 		case FieldKindUser:
 			ctx.handleErrorf(
-				pos, end, "field %s redeclared at %v. rename one of the fields to resolve the naming conflict.",
+				pos, end, "%s redeclared at %v.\n\trename one of the fields to resolve the naming conflict.",
 				name, ctx.Position(existing.pos))
 		}
 		return true
