@@ -88,17 +88,17 @@ var (
 println "hi"
 `, "Game.t4gmx", "Kai.t4spx")
 
-	gopSpxErrorTestMap(t, `Kai.t4spx:4:3: userScore redeclared
-	Kai.t4spx:3:3 other declaration of userScore
+	gopSpxErrorTestMap(t, `Kai.t4spx:4:2: userScore redeclared
+	Kai.t4spx:3:2 other declaration of userScore
 Greem.t4spx:1:1: cannot use  (type *Greem) as type github.com/goplus/xgo/cl/internal/spx4.Sprite in argument to `, map[string][]string{
 		"/foo": {"Game.t4gmx", "Kai.t4spx", "Greem.t4spx"},
 	}, map[string]string{
 		"/foo/Game.t4gmx": `println "hi"`,
 		"/foo/Kai.t4spx": `var (
-		Kai Kai
-		userScore int
-		userScore string
-	)`,
+	Kai Kai
+	userScore int
+	userScore string
+)`,
 		"/foo/Greem.t4spx": ``,
 	})
 
