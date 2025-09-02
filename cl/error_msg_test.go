@@ -915,12 +915,12 @@ n, err := fmt.println
 }
 
 func TestFiledsNameRedecl(t *testing.T) {
-	codeErrorTest(t, `bar.xgo:6:2: Id redeclared at bar.xgo:5:2.
-	rename one of the fields to resolve the naming conflict.
-bar.xgo:7:2: Id redeclared at bar.xgo:5:2.
-	rename one of the fields to resolve the naming conflict.
-bar.xgo:9:2: name redeclared at bar.xgo:8:2.
-	rename one of the fields to resolve the naming conflict.`, `
+	codeErrorTest(t, `bar.xgo:6:2: Id redeclared
+	bar.xgo:5:2 other declaration of Id
+bar.xgo:7:2: Id redeclared
+	bar.xgo:5:2 other declaration of Id
+bar.xgo:9:2: name redeclared
+	bar.xgo:8:2 other declaration of name`, `
 type Id struct {
 }
 type A struct {
@@ -959,8 +959,8 @@ import (
 
 func TestErrClassFileGopx(t *testing.T) {
 	codeErrorTestEx(t, "main", "Rect.gox",
-		`Rect.gox:5:2: A redeclared at Rect.gox:3:2.
-	rename one of the fields to resolve the naming conflict.`, `
+		`Rect.gox:5:2: A redeclared
+	Rect.gox:3:2 other declaration of A`, `
 var (
 	A
 	i int

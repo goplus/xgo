@@ -49,8 +49,8 @@ func gopSpxErrorTestMap(t *testing.T, msg string, dirs map[string][]string, file
 }
 
 func TestSpxError(t *testing.T) {
-	gopSpxErrorTestEx(t, `Game.tgmx:6:2: userScore redeclared at Game.tgmx:5:2.
-	rename one of the fields to resolve the naming conflict.`, `
+	gopSpxErrorTestEx(t, `Game.tgmx:6:2: userScore redeclared
+	Game.tgmx:5:2 other declaration of userScore`, `
 import "bytes"
 var (
 	Kai Kai
@@ -61,8 +61,8 @@ var (
 println "hi"
 	`, "Game.tgmx", "Kai.tspx")
 
-	gopSpxErrorTestEx(t, `Kai.tspx:4:2: id redeclared at Kai.tspx:3:2.
-	rename one of the fields to resolve the naming conflict.`, `
+	gopSpxErrorTestEx(t, `Kai.tspx:4:2: id redeclared
+	Kai.tspx:3:2 other declaration of id`, `
 var (
 	Kai Kai
 	userScore int
@@ -75,8 +75,8 @@ var (
 println "hi"
 	`, "Game.tgmx", "Kai.tspx")
 
-	gopSpxErrorTestEx(t, `Game.t4gmx:6:2: userScore redeclared at Game.t4gmx:5:2.
-	rename one of the fields to resolve the naming conflict.
+	gopSpxErrorTestEx(t, `Game.t4gmx:6:2: userScore redeclared
+	Game.t4gmx:5:2 other declaration of userScore
 Kai.t4spx:1:1: cannot use  (type *Kai) as type github.com/goplus/xgo/cl/internal/spx4.Sprite in argument to `, `
 import "bytes"
 var (
@@ -88,8 +88,8 @@ var (
 println "hi"
 	`, "Game.t4gmx", "Kai.t4spx")
 
-	gopSpxErrorTestMap(t, `Kai.t4spx:4:3: userScore redeclared at Kai.t4spx:3:3.
-	rename one of the fields to resolve the naming conflict.
+	gopSpxErrorTestMap(t, `Kai.t4spx:4:3: userScore redeclared
+	Kai.t4spx:3:3 other declaration of userScore
 Greem.t4spx:1:1: cannot use  (type *Greem) as type github.com/goplus/xgo/cl/internal/spx4.Sprite in argument to `, map[string][]string{
 		"/foo": {"Game.t4gmx", "Kai.t4spx", "Greem.t4spx"},
 	}, map[string]string{
