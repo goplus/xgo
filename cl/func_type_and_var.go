@@ -320,8 +320,8 @@ func (p *checkRedecl) chkRedecl(ctx *blockCtx, name string, pos, end token.Pos, 
 				name)
 		case FieldKindUser:
 			ctx.handleErrorf(
-				pos, end, "%s redeclared at %v.\n\trename one of the fields to resolve the naming conflict.",
-				name, ctx.Position(existing.pos))
+				pos, end, "%v redeclared\n\t%v other declaration of %v",
+				name, ctx.Position(existing.pos), name)
 		}
 		return true
 	}
