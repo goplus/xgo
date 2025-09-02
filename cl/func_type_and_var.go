@@ -286,27 +286,51 @@ func lookupType(ctx *blockCtx, name string) (types.Object, types.Object) {
 	return o, o
 }
 
+type fieldKind int
+
+const (
+	fieldKindUser fieldKind = iota
+	fieldKindClass
+)
+
+type fieldElem struct {
+	pos  token.Pos
+	end  token.Pos
+	kind fieldKind
+}
+
 type checkRedecl struct {
-	// ctx *blockCtx
-	names map[string]token.Pos
+	names map[string]fieldElem
 }
 
 func newCheckRedecl() *checkRedecl {
-	p := &checkRedecl{names: make(map[string]token.Pos)}
-	return p
+	return &checkRedecl{names: make(map[string]fieldElem)}
 }
 
-func (p *checkRedecl) chkRedecl(ctx *blockCtx, name string, pos, end token.Pos) bool {
+func (p *checkRedecl) chkRedecl(ctx *blockCtx, name string, pos, end token.Pos, kind fieldKind) bool {
 	if name == "_" {
 		return false
 	}
-	if opos, ok := p.names[name]; ok {
-		ctx.handleErrorf(
-			pos, end, "%v redeclared\n\t%v other declaration of %v",
-			name, ctx.Position(opos), name)
+
+	if existing, ok := p.names[name]; ok {
+		switch existing.kind {
+		case fieldKindClass:
+			ctx.handleErrorf(
+				pos, end, "%s conflicts with class name.\n\trename the field to resolve the naming conflict.",
+				name)
+		case fieldKindUser:
+			ctx.handleErrorf(
+				pos, end, "%v redeclared\n\t%v other declaration of %v",
+				name, ctx.Position(existing.pos), name)
+		}
 		return true
 	}
-	p.names[name] = pos
+
+	p.names[name] = fieldElem{
+		pos:  pos,
+		end:  end,
+		kind: kind,
+	}
 	return false
 }
 
@@ -321,7 +345,7 @@ func toStructType(ctx *blockCtx, v *ast.StructType) *types.Struct {
 		typ := toType(ctx, field.Type)
 		if len(field.Names) == 0 { // embedded
 			name := getTypeName(typ)
-			if chk.chkRedecl(ctx, name, field.Type.Pos(), field.Type.End()) {
+			if chk.chkRedecl(ctx, name, field.Type.Pos(), field.Type.End(), fieldKindUser) {
 				continue
 			}
 			if t, ok := typ.(*types.Named); ok { // #1196: embedded type should ensure loaded
@@ -337,7 +361,7 @@ func toStructType(ctx *blockCtx, v *ast.StructType) *types.Struct {
 			continue
 		}
 		for _, name := range field.Names {
-			if chk.chkRedecl(ctx, name.Name, name.Pos(), name.End()) {
+			if chk.chkRedecl(ctx, name.Name, name.Pos(), name.End(), fieldKindUser) {
 				continue
 			}
 			fld := types.NewField(name.NamePos, pkg, name.Name, typ, false)

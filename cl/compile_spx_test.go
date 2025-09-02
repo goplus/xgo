@@ -108,8 +108,8 @@ Greem.t4spx:1:1: cannot use  (type *Greem) as type github.com/goplus/xgo/cl/inte
 		"/foo/Game.t4gmx": `println backdropName!`,
 	})
 
-	gopSpxErrorTestEx(t, `Game.t5gmx:4:2: Kai redeclared
-	Game.t5gmx:1:1 other declaration of Kai
+	gopSpxErrorTestEx(t, `Game.t5gmx:4:2: Kai conflicts with class name.
+	rename the field to resolve the naming conflict.
 Kai.t5spx:1:1: cannot use  (type *Kai) as type github.com/goplus/xgo/cl/internal/spx4.Sprite in argument to `, `
 
 var (
