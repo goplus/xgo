@@ -57,9 +57,9 @@ var (
 	userScore int
 	userScore string
 )
-	`, `
+`, `
 println "hi"
-	`, "Game.tgmx", "Kai.tspx")
+`, "Game.tgmx", "Kai.tspx")
 
 	gopSpxErrorTestEx(t, `Kai.tspx:4:2: id redeclared
 	Kai.tspx:3:2 other declaration of id`, `
@@ -67,13 +67,13 @@ var (
 	Kai Kai
 	userScore int
 )
-	`, `
+`, `
 var (
 	id int
 	id string
 )
 println "hi"
-	`, "Game.tgmx", "Kai.tspx")
+`, "Game.tgmx", "Kai.tspx")
 
 	gopSpxErrorTestEx(t, `Game.t4gmx:6:2: userScore redeclared
 	Game.t4gmx:5:2 other declaration of userScore
@@ -84,9 +84,9 @@ var (
 	userScore int
 	userScore string
 )
-	`, `
+`, `
 println "hi"
-	`, "Game.t4gmx", "Kai.t4spx")
+`, "Game.t4gmx", "Kai.t4spx")
 
 	gopSpxErrorTestMap(t, `Kai.t4spx:4:3: userScore redeclared
 	Kai.t4spx:3:3 other declaration of userScore
