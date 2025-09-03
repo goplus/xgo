@@ -334,7 +334,7 @@ $ brew install xgo
 
 ```bash
 git clone https://github.com/goplus/xgo.git
-cd gop
+cd xgo
 
 # On mac/linux run:
 ./all.bash
