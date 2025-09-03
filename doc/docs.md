@@ -32,7 +32,7 @@ Note: Requires go1.19 or later
 ### on Windows
 
 ```sh
-winget install goplus.gop
+winget install goplus.xgo
 ```
 
 ### on Debian/Ubuntu
@@ -40,14 +40,14 @@ winget install goplus.gop
 ```sh
 sudo bash -c ' echo "deb [trusted=yes] https://pkgs.xgo.dev/apt/ /" > /etc/apt/sources.list.d/goplus.list'
 sudo apt update
-sudo apt install gop
+sudo apt install xgo
 ```
 
 ### on RedHat/CentOS/Fedora
 
 ```sh
 sudo bash -c 'echo -e "[goplus]\nname=XGo Repo\nbaseurl=https://pkgs.xgo.dev/yum/\nenabled=1\ngpgcheck=0" > /etc/yum.repos.d/goplus.repo'
-sudo yum install gop
+sudo yum install xgo
 ```
 
 ### on macOS/Linux (Homebrew)
@@ -55,7 +55,7 @@ sudo yum install gop
 Install via [brew](https://brew.sh/)
 
 ```sh
-$ brew install goplus
+$ brew install xgo
 ```
 
 ### from source code
