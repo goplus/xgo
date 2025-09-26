@@ -343,7 +343,7 @@ _ = At[int]
 
 func TestTypeParamsErrInferFunc(t *testing.T) {
 	var expect string
-	if go1point == 24 {
+	if go1point >= 24 {
 		expect = `b.xgo:2:5: cannot infer T2 (declared at /foo/a.go:4:21)`
 	} else {
 		expect = `b.xgo:2:5: cannot infer T2 (/foo/a.go:4:21)`
