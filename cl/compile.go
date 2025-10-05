@@ -533,8 +533,8 @@ func embeddedFieldCast(o *types.Struct, tn *types.Named, pv *gogen.Element, visi
 					}
 					return true
 				}
-				if o, ok := ftn.Underlying().(*types.Struct); ok {
-					if embeddedFieldCast(o, tn, pv, visited) {
+				if fldStruct, ok := ftn.Underlying().(*types.Struct); ok {
+					if embeddedFieldCast(fldStruct, tn, pv, visited) {
 						return true
 					}
 				}
