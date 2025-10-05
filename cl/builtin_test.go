@@ -39,6 +39,12 @@ func getGoxConf() *gogen.Config {
 	return &gogen.Config{Fset: fset, Importer: imp}
 }
 
+func TestEmbeddedFieldCast(t *testing.T) {
+	var o = new(types.Struct)
+	embeddedFieldCast(o, nil, nil, visitedT{o: none{}})
+	embeddedFieldCast(o, nil, nil, visitedT{})
+}
+
 func TestNonClosure(t *testing.T) {
 	tn := types.NewTypeName(0, nil, "a", nil)
 	if !nonClosure(types.NewNamed(tn, types.Typ[types.Int], nil)) {
