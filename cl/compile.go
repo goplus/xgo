@@ -19,6 +19,8 @@ package cl
 
 import (
 	"fmt"
+	goast "go/ast"
+	gotoken "go/token"
 	"go/types"
 	"log"
 	"reflect"
@@ -497,6 +499,66 @@ func (p *pkgCtx) lookupClassNode(name string) ast.Node {
 	return nil
 }
 
+type visitedT = map[*types.Struct]none
+
+// see https://github.com/goplus/xgo/issues/2439
+func embeddedFieldCast(o *types.Struct, tn *types.Named, pv *gogen.Element, visited visitedT) bool {
+	if _, ok := visited[o]; ok {
+		return false
+	}
+	visited[o] = none{}
+	for i, n := 0, o.NumFields(); i < n; i++ {
+		if fld := o.Field(i); fld.Embedded() {
+			var ptr bool
+			var ftn *types.Named
+			switch ft := fld.Type().(type) {
+			case *types.Named:
+				ftn = ft
+			case *types.Pointer:
+				if ft, ok := ft.Elem().(*types.Named); ok {
+					ftn, ptr = ft, true
+				}
+			}
+			if ftn != nil {
+				if ftn == tn {
+					pv.Val = &goast.SelectorExpr{
+						X:   pv.Val,
+						Sel: goast.NewIdent(fld.Name()),
+					}
+					if !ptr {
+						pv.Val = &goast.UnaryExpr{
+							Op: gotoken.AND,
+							X:  pv.Val,
+						}
+					}
+					return true
+				}
+				if fldStruct, ok := ftn.Underlying().(*types.Struct); ok {
+					if embeddedFieldCast(fldStruct, tn, pv, visited) {
+						return true
+					}
+				}
+			}
+		}
+	}
+	return false
+}
+
+func implicitCast(pkg *gogen.Package, V, T types.Type, pv *gogen.Element) bool {
+	if pv != nil {
+		if t, ok := T.(*types.Pointer); ok {
+			if tn, ok := t.Elem().(*types.Named); ok {
+				if v, ok := V.(*types.Pointer); ok {
+					if o, ok := v.Elem().Underlying().(*types.Struct); ok {
+						return embeddedFieldCast(o, tn, pv, visitedT{})
+					}
+				}
+			}
+		}
+	}
+	return false
+}
+
 const (
 	defaultGoFile  = ""
 	skippingGoFile = "_skip"
@@ -532,6 +594,7 @@ func NewPackage(pkgPath string, pkg *ast.Package, conf *Config) (p *gogen.Packag
 		NoSkipConstant:  conf.NoSkipConstant,
 		PkgPathIox:      osxPkgPath,
 		DbgPositioner:   interp,
+		CanImplicitCast: implicitCast,
 	}
 	var rec *goxRecorder
 	if conf.Recorder != nil {
