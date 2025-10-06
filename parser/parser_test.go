@@ -373,6 +373,12 @@ func TestErrForIn(t *testing.T) {
 `, `/foo/bar.xgo:1:15: expected 'in', found i`, ``)
 }
 
+func TestErrKwargExpr(t *testing.T) {
+	testErrCode(t, `
+f a=1, 13
+`, `/foo/bar.xgo:2:8: positional argument follows keyword argument`, ``)
+}
+
 func TestNumberUnitLit(t *testing.T) {
 	var p parser
 	p.checkExpr(&ast.NumberUnitLit{})
