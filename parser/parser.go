@@ -45,6 +45,19 @@ const (
 	msgTupleNotSupported = "tuple is not supported"
 )
 
+// Parser flags control parsing behavior using bitwise operations:
+//
+//	flagInLHS - parsing left-hand side expression (identifiers not resolved)
+//	flagAllowCmd - allow command-style function calls without parentheses
+//	flagAllowTuple - allow tuple expressions in this context
+//	flagAllowRangeExpr - allow range expressions (first:last or first:last:step)
+const (
+	flagInLHS = 1 << iota
+	flagAllowCmd
+	flagAllowTuple
+	flagAllowRangeExpr
+)
+
 // The parser structure holds the parser's internal state.
 type parser struct {
 	file    *token.File
@@ -711,24 +724,27 @@ func (p *parser) parseIdentList() (list []*ast.Ident) {
 // ----------------------------------------------------------------------------
 // Common productions
 
-// If lhs is set, result list elements which are identifiers are not resolved.
-func (p *parser) parseExprList(lhs, allowCmd bool) (list []ast.Expr) {
+// If flagInLHS is set in flags, result list elements which are identifiers are
+// not resolved.
+// flags support flagInLHS, flagAllowCmd
+func (p *parser) parseExprList(flags int) (list []ast.Expr) {
 	if p.trace {
 		defer un(trace(p, "ExpressionList"))
 	}
 
-	list = append(list, p.checkExpr(p.parseExpr(lhs, allowCmd, false)))
+	list = append(list, p.checkExpr(p.parseExpr(flags)))
 	for p.tok == token.COMMA {
 		p.next()
-		list = append(list, p.checkExpr(p.parseExpr(lhs, false, false)))
+		list = append(list, p.checkExpr(p.parseExpr(flags&flagInLHS))) // clear all but flagInLHS
 	}
 	return
 }
 
-func (p *parser) parseLHSList(allowCmd bool) []ast.Expr {
+// flags support flagAllowCmd
+func (p *parser) parseLHSList(flags int) []ast.Expr {
 	old := p.inRHS
 	p.inRHS = false
-	list := p.parseExprList(true, allowCmd)
+	list := p.parseExprList(flags | flagInLHS)
 	switch p.tok {
 	case token.DEFINE:
 		// lhs of a short variable declaration
@@ -756,7 +772,7 @@ func (p *parser) parseLHSList(allowCmd bool) []ast.Expr {
 func (p *parser) parseRHSList() []ast.Expr {
 	old := p.inRHS
 	p.inRHS = true
-	list := p.parseExprList(false, false)
+	list := p.parseExprList(0)
 	p.inRHS = old
 	return list
 }
@@ -1584,7 +1600,7 @@ func (p *parser) parseStmtList() (list []ast.Stmt) {
 	}
 
 	for p.tok != token.CASE && p.tok != token.DEFAULT && p.tok != token.RBRACE && p.tok != token.EOF {
-		list = append(list, p.parseStmt(true))
+		list = append(list, p.parseStmt(flagAllowCmd))
 	}
 
 	return
@@ -1771,7 +1787,8 @@ func parseTplRetProc(file *token.File, src []byte, offset int) (tplast.Node, sca
 // parseOperand may return an expression or a raw type (incl. array
 // types of the form [...]T. Callers must verify the result.
 // If lhs is set and the result is an identifier, it is not resolved.
-func (p *parser) parseOperand(lhs, allowTuple, allowCmd bool) (x ast.Expr, isTuple bool) {
+// flags support flagInLHS, flagAllowTuple, flagAllowCmd
+func (p *parser) parseOperand(flags int) (x ast.Expr, isTuple bool) {
 	if p.trace {
 		defer un(trace(p, "Operand"))
 	}
@@ -1800,7 +1817,7 @@ func (p *parser) parseOperand(lhs, allowTuple, allowCmd bool) (x ast.Expr, isTup
 			p.next()
 		} else {
 			x = ident
-			if !lhs {
+			if flags&flagInLHS == 0 { // not inLHS
 				p.resolve(x)
 			}
 		}
@@ -1835,6 +1852,7 @@ func (p *parser) parseOperand(lhs, allowTuple, allowCmd bool) (x ast.Expr, isTup
 	case token.LPAREN:
 		lparen := p.pos
 		p.next()
+		allowTuple := flags&flagAllowTuple != 0
 		if allowTuple && p.tok == token.RPAREN { // () => expr
 			p.next()
 			return &tupleExpr{opening: lparen, closing: p.pos}, true
@@ -1869,7 +1887,7 @@ func (p *parser) parseOperand(lhs, allowTuple, allowCmd bool) (x ast.Expr, isTup
 		return p.parseFuncTypeOrLit(), false
 
 	case token.LBRACE:
-		if !lhs { // rhs: mapLit - {k1: v1, k2: v2, ...}
+		if flags&flagInLHS == 0 { // in RHS: mapLit - {k1: v1, k2: v2, ...}
 			return p.parseLiteralValueOrMapComprehension(), false
 		}
 
@@ -1878,7 +1896,7 @@ func (p *parser) parseOperand(lhs, allowTuple, allowCmd bool) (x ast.Expr, isTup
 		p.next()
 		pos, tok := p.pos, p.tok
 		p.unget(oldpos, token.MAP, oldlit)
-		if tok == token.LBRACK && (!allowCmd || oldpos+3 == pos) {
+		if tok == token.LBRACK && (flags&flagAllowCmd == 0 || oldpos+3 == pos) {
 			break
 		}
 		fallthrough
@@ -1887,7 +1905,7 @@ func (p *parser) parseOperand(lhs, allowTuple, allowCmd bool) (x ast.Expr, isTup
 		// XGo: allow goto() as a function
 		p.tok = token.IDENT
 		x = p.parseIdent()
-		if !lhs {
+		if flags&flagInLHS == 0 { // in RHS
 			p.resolve(x)
 		}
 		return
@@ -2080,7 +2098,11 @@ func (p *parser) parseCallOrConversion(fun ast.Expr, isCmd bool) *ast.CallExpr {
 	var list []ast.Expr
 	var ellipsis token.Pos
 	for p.tok != endTok && p.tok != token.EOF && !ellipsis.IsValid() {
-		expr, isTuple := p.parseRHSOrTypeEx(isCmd && len(list) == 0)
+		flags := 0
+		if isCmd && len(list) == 0 {
+			flags = flagAllowTuple
+		}
+		expr, isTuple := p.parseRHSOrTypeEx(flags)
 		if isTuple {
 			t := expr.(*tupleExpr)
 			if p.tok != token.SEMICOLON && p.tok != token.RBRACE && p.tok != token.EOF {
@@ -2118,7 +2140,8 @@ func (p *parser) parseCallOrConversion(fun ast.Expr, isCmd bool) *ast.CallExpr {
 		Fun: fun, Lparen: lparen, Args: list, Ellipsis: ellipsis, Rparen: rparen, NoParenEnd: noParenEnd}
 }
 
-func (p *parser) parseValue(keyOk bool) ast.Expr {
+// flags support flagInLHS (keyOk = true)
+func (p *parser) parseValue(flags int) ast.Expr {
 	if p.trace {
 		defer un(trace(p, "Element"))
 	}
@@ -2143,8 +2166,8 @@ func (p *parser) parseValue(keyOk bool) ast.Expr {
 	// undeclared; or b) it is a struct field. In the former case, the type
 	// checker can do a top-level lookup, and in the latter case it will do
 	// a separate field lookup.
-	x := p.checkExpr(p.parseExpr(keyOk, false, false))
-	if keyOk {
+	x := p.checkExpr(p.parseExpr(flags))
+	if flags&flagInLHS != 0 { // keyOk
 		if p.tok == token.COLON {
 			// Try to resolve the key but don't collect it
 			// as unresolved identifier if it fails so that
@@ -2165,11 +2188,11 @@ func (p *parser) parseElement() ast.Expr {
 		defer un(trace(p, "Element"))
 	}
 
-	x := p.parseValue(true)
+	x := p.parseValue(flagInLHS)
 	if p.tok == token.COLON {
 		colon := p.pos
 		p.next()
-		x = &ast.KeyValueExpr{Key: x, Colon: colon, Value: p.parseValue(false)}
+		x = &ast.KeyValueExpr{Key: x, Colon: colon, Value: p.parseValue(0)}
 	}
 
 	return x
@@ -2340,16 +2363,19 @@ func (p *parser) checkExprOrType(x ast.Expr) ast.Expr {
 }
 
 // If lhs is set and the result is an identifier, it is not resolved.
-func (p *parser) parsePrimaryExpr(iden *ast.Ident, lhs, allowTuple, allowCmd bool) (x ast.Expr, isTuple bool) {
+// flags support flagInLHS, flagAllowTuple, flagAllowCmd
+func (p *parser) parsePrimaryExpr(iden *ast.Ident, flags int) (x ast.Expr, isTuple bool) {
 	if p.trace {
 		defer un(trace(p, "PrimaryExpr"))
 	}
 
 	if iden != nil {
 		x = iden
-	} else if x, isTuple = p.parseOperand(lhs, allowTuple, allowCmd); isTuple {
+	} else if x, isTuple = p.parseOperand(flags); isTuple {
 		return
 	}
+	lhs := flags&flagInLHS != 0
+	allowCmd := flags&flagAllowCmd != 0
 L:
 	for {
 		switch p.tok {
@@ -2465,21 +2491,23 @@ func (p *parser) checkCmd() bool {
 }
 
 // parseErrWrapExpr: expr! expr? expr?:defval
-func (p *parser) parseErrWrapExpr(lhs, allowTuple, allowCmd bool) (x ast.Expr, isTuple bool) {
-	if x, isTuple = p.parsePrimaryExpr(nil, lhs, allowTuple, allowCmd); isTuple {
+// flags support flagInLHS, flagAllowTuple, flagAllowCmd
+func (p *parser) parseErrWrapExpr(flags int) (x ast.Expr, isTuple bool) {
+	if x, isTuple = p.parsePrimaryExpr(nil, flags); isTuple {
 		return
 	}
 	if expr, ok := x.(*ast.ErrWrapExpr); ok {
 		if p.tok == token.COLON {
 			p.next()
-			expr.Default, _ = p.parseUnaryExpr(false, false, false)
+			expr.Default, _ = p.parseUnaryExpr(0)
 		}
 	}
 	return
 }
 
 // If lhs is set and the result is an identifier, it is not resolved.
-func (p *parser) parseUnaryExpr(lhs, allowTuple, allowCmd bool) (ast.Expr, bool) {
+// flags support flagInLHS, flagAllowTuple, flagAllowCmd
+func (p *parser) parseUnaryExpr(flags int) (ast.Expr, bool) {
 	if p.trace {
 		defer un(trace(p, "UnaryExpr"))
 	}
@@ -2488,7 +2516,7 @@ func (p *parser) parseUnaryExpr(lhs, allowTuple, allowCmd bool) (ast.Expr, bool)
 	case token.ADD, token.SUB, token.NOT, token.XOR, token.AND:
 		pos, op := p.pos, p.tok
 		p.next()
-		x, _ := p.parseUnaryExpr(false, false, false)
+		x, _ := p.parseUnaryExpr(0)
 		return &ast.UnaryExpr{OpPos: pos, Op: op, X: p.checkExpr(x)}, false
 
 	case token.ARROW:
@@ -2510,7 +2538,7 @@ func (p *parser) parseUnaryExpr(lhs, allowTuple, allowCmd bool) (ast.Expr, bool)
 		//   <- (chan type)    =>  (<-chan type)
 		//   <- (chan<- type)  =>  (<-chan (<-type))
 
-		x, _ := p.parseUnaryExpr(false, false, false)
+		x, _ := p.parseUnaryExpr(0)
 
 		// determine which case we have
 		if typ, ok := x.(*ast.ChanType); ok {
@@ -2541,11 +2569,11 @@ func (p *parser) parseUnaryExpr(lhs, allowTuple, allowCmd bool) (ast.Expr, bool)
 		// pointer type or unary "*" expression
 		pos := p.pos
 		p.next()
-		x, _ := p.parseUnaryExpr(false, false, false)
+		x, _ := p.parseUnaryExpr(0)
 		return &ast.StarExpr{Star: pos, X: p.checkExprOrType(x)}, false
 	}
 
-	return p.parseErrWrapExpr(lhs, allowTuple, allowCmd)
+	return p.parseErrWrapExpr(flags)
 }
 
 func (p *parser) tokPrec() (token.Token, int) {
@@ -2557,14 +2585,16 @@ func (p *parser) tokPrec() (token.Token, int) {
 }
 
 // If lhs is set and the result is an identifier, it is not resolved.
-func (p *parser) parseBinaryExpr(lhs bool, prec1 int, allowTuple, allowCmd bool) (x ast.Expr, isTuple bool) {
+// flags support flagInLHS, flagAllowTuple, flagAllowCmd
+func (p *parser) parseBinaryExpr(prec1 int, flags int) (x ast.Expr, isTuple bool) {
 	if p.trace {
 		defer un(trace(p, "BinaryExpr"))
 	}
 
-	if x, isTuple = p.parseUnaryExpr(lhs, allowTuple, allowCmd); isTuple {
+	if x, isTuple = p.parseUnaryExpr(flags); isTuple {
 		return
 	}
+	lhs := flags&flagInLHS != 0
 	for {
 		op, oprec := p.tokPrec()
 		if oprec < prec1 {
@@ -2575,17 +2605,18 @@ func (p *parser) parseBinaryExpr(lhs bool, prec1 int, allowTuple, allowCmd bool)
 			p.resolve(x)
 			lhs = false
 		}
-		y, _ := p.parseBinaryExpr(false, oprec+1, false, false)
+		y, _ := p.parseBinaryExpr(oprec+1, 0)
 		x = &ast.BinaryExpr{X: p.checkExpr(x), OpPos: pos, Op: op, Y: p.checkExpr(y)}
 	}
 }
 
-func (p *parser) parseRangeExpr(first ast.Expr, allowTuple, allowCmd bool) (x ast.Expr, isTuple bool) {
+// flags support flagAllowTuple, flagAllowCmd
+func (p *parser) parseRangeExpr(first ast.Expr, flags int) (x ast.Expr, isTuple bool) {
 	if p.trace {
 		defer un(trace(p, "RangeExpr"))
 	}
 	if p.tok != token.COLON {
-		x, isTuple = p.parseBinaryExpr(false, token.LowestPrec+1, allowTuple, allowCmd)
+		x, isTuple = p.parseBinaryExpr(token.LowestPrec+1, flags)
 		if isTuple || p.tok != token.COLON { // not RangeExpr
 			return
 		}
@@ -2594,13 +2625,13 @@ func (p *parser) parseRangeExpr(first ast.Expr, allowTuple, allowCmd bool) (x as
 	}
 	to := p.pos
 	p.next()
-	high, _ := p.parseBinaryExpr(false, token.LowestPrec+1, false, false)
+	high, _ := p.parseBinaryExpr(token.LowestPrec+1, 0)
 	var colon2 token.Pos
 	var expr3 ast.Expr
 	if p.tok == token.COLON {
 		colon2 = p.pos
 		p.next()
-		expr3, _ = p.parseBinaryExpr(false, token.LowestPrec+1, false, false)
+		expr3, _ = p.parseBinaryExpr(token.LowestPrec+1, 0)
 	}
 	if debugParseOutput {
 		log.Printf("ast.RangeExpr{First: %v, Last: %v, Expr3: %v}\n", x, high, expr3)
@@ -2616,13 +2647,14 @@ type tupleExpr struct {
 	closing  token.Pos
 }
 
-func (p *parser) parseLambdaExpr(allowTuple, allowCmd, allowRangeExpr bool) (x ast.Expr, isTuple bool) {
+// flags support flagAllowTuple, flagAllowCmd, flagAllowRangeExpr
+func (p *parser) parseLambdaExpr(flags int) (x ast.Expr, isTuple bool) {
 	var first = p.pos
 	if p.tok != token.DRARROW {
-		if allowRangeExpr {
-			x, isTuple = p.parseRangeExpr(nil, true, allowCmd)
+		if flags&flagAllowRangeExpr != 0 {
+			x, isTuple = p.parseRangeExpr(nil, flagAllowTuple|flags)
 		} else {
-			x, isTuple = p.parseBinaryExpr(false, token.LowestPrec+1, true, allowCmd)
+			x, isTuple = p.parseBinaryExpr(token.LowestPrec+1, flagAllowTuple|flags)
 		}
 	}
 	if p.tok == token.DRARROW { // =>
@@ -2636,7 +2668,7 @@ func (p *parser) parseLambdaExpr(allowTuple, allowCmd, allowRangeExpr bool) (x a
 			rhsHasParen = true
 			p.next()
 			for {
-				item := p.parseExpr(false, false, false)
+				item := p.parseExpr(0)
 				rhs = append(rhs, item)
 				if p.tok != token.COMMA {
 					break
@@ -2647,7 +2679,7 @@ func (p *parser) parseLambdaExpr(allowTuple, allowCmd, allowRangeExpr bool) (x a
 		case token.LBRACE: // {
 			body = p.parseBlockStmt()
 		default:
-			rhs = []ast.Expr{p.parseExpr(false, false, false)}
+			rhs = []ast.Expr{p.parseExpr(0)}
 		}
 		var lhs []*ast.Ident
 		if x != nil {
@@ -2696,7 +2728,7 @@ func (p *parser) parseLambdaExpr(allowTuple, allowCmd, allowRangeExpr bool) (x a
 			LhsHasParen: lhsHasParen,
 			RhsHasParen: rhsHasParen,
 		}, false
-	} else if isTuple && !allowTuple {
+	} else if isTuple && flags&flagAllowTuple == 0 {
 		p.error(x.(*tupleExpr).opening, msgTupleNotSupported)
 		p.advance(stmtStart)
 	}
@@ -2707,37 +2739,41 @@ func (p *parser) parseLambdaExpr(allowTuple, allowCmd, allowRangeExpr bool) (x a
 // The result may be a type or even a raw type ([...]int). Callers must
 // check the result (using checkExpr or checkExprOrType), depending on
 // context.
-func (p *parser) parseExprEx(lhs, allowTuple, allowCmd, allowRangeExpr bool) (ast.Expr, bool) {
+// flags support flagInLHS, flagAllowTuple, flagAllowCmd, flagAllowRangeExpr
+func (p *parser) parseExprEx(flags int) (ast.Expr, bool) {
 	if p.trace {
 		defer un(trace(p, "Expression"))
 	}
-	if lhs {
-		return p.parseBinaryExpr(true, token.LowestPrec+1, false, allowCmd)
+	if flags&flagInLHS != 0 {
+		return p.parseBinaryExpr(token.LowestPrec+1, flags&(flagInLHS|flagAllowCmd))
 	}
-	return p.parseLambdaExpr(allowTuple, allowCmd, allowRangeExpr)
+	return p.parseLambdaExpr(flags)
 }
 
-func (p *parser) parseExpr(lhs, allowCmd, allowRangeExpr bool) ast.Expr {
-	x, _ := p.parseExprEx(lhs, false, allowCmd, allowRangeExpr)
+// flags support flagInLHS, flagAllowCmd, flagAllowRangeExpr
+func (p *parser) parseExpr(flags int) ast.Expr {
+	x, _ := p.parseExprEx(flags)
 	return x
 }
 
 func (p *parser) parseRHS() ast.Expr {
-	return p.parseRHSEx(false)
+	return p.parseRHSEx(0)
 }
 
-func (p *parser) parseRHSEx(allowRangeExpr bool) ast.Expr {
+// flags support flagAllowRangeExpr
+func (p *parser) parseRHSEx(flags int) ast.Expr {
 	old := p.inRHS
 	p.inRHS = true
-	x := p.checkExpr(p.parseExpr(false, false, allowRangeExpr))
+	x := p.checkExpr(p.parseExpr(flags))
 	p.inRHS = old
 	return x
 }
 
-func (p *parser) parseRHSOrTypeEx(allowTuple bool) (x ast.Expr, isTuple bool) {
+// flags support flagAllowTuple
+func (p *parser) parseRHSOrTypeEx(flags int) (x ast.Expr, isTuple bool) {
 	old := p.inRHS
 	p.inRHS = true
-	x, isTuple = p.parseExprEx(false, allowTuple, false, false)
+	x, isTuple = p.parseExprEx(flags)
 	if !isTuple {
 		x = p.checkExprOrType(x)
 	}
@@ -2746,7 +2782,7 @@ func (p *parser) parseRHSOrTypeEx(allowTuple bool) (x ast.Expr, isTuple bool) {
 }
 
 func (p *parser) parseRHSOrType() ast.Expr {
-	x, _ := p.parseRHSOrTypeEx(false)
+	x, _ := p.parseRHSOrTypeEx(0)
 	return x
 }
 
@@ -2764,26 +2800,28 @@ const (
 // of a range clause (with mode == rangeOk). The returned statement is an
 // assignment with a right-hand side that is a single unary expression of
 // the form "range x". No guarantees are given for the left-hand side.
-func (p *parser) parseSimpleStmt(mode int, allowCmd bool) ast.Stmt {
-	ss, _ /* isRange */ := p.parseSimpleStmtEx(mode, allowCmd, false)
+// flags support flagAllowCmd
+func (p *parser) parseSimpleStmt(mode int, flags int) ast.Stmt {
+	ss, _ /* isRange */ := p.parseSimpleStmtEx(mode, flags)
 	return ss
 }
 
 func (p *parser) parseBranchCmdStmt(iden *ast.Ident) ast.Stmt { // XGo: goto as command
-	x, _ := p.parsePrimaryExpr(iden, false, false, true)
+	x, _ := p.parsePrimaryExpr(iden, flagAllowCmd)
 	return &ast.ExprStmt{X: x}
 }
 
-func (p *parser) parseSimpleStmtEx(mode int, allowCmd, allowRangeExpr bool) (ast.Stmt, bool) {
+// flags support flagAllowCmd, flagAllowRangeExpr
+func (p *parser) parseSimpleStmtEx(mode int, flags int) (ast.Stmt, bool) {
 	if p.trace {
 		defer un(trace(p, "SimpleStmt"))
 	}
 
-	if allowRangeExpr && p.tok == token.COLON { // rangeExpr
-		re, _ := p.parseRangeExpr(nil, false, false)
+	if flags&flagAllowRangeExpr != 0 && p.tok == token.COLON { // rangeExpr
+		re, _ := p.parseRangeExpr(nil, 0)
 		return &ast.ExprStmt{X: re}, true
 	}
-	x := p.parseLHSList(allowCmd)
+	x := p.parseLHSList(flags & flagAllowCmd)
 
 	switch p.tok {
 	case
@@ -2799,7 +2837,7 @@ func (p *parser) parseSimpleStmtEx(mode int, allowCmd, allowRangeExpr bool) (ast
 		if mode == rangeOk && p.tok == token.RANGE && (tok == token.DEFINE || tok == token.ASSIGN) {
 			pos := p.pos
 			p.next()
-			y = []ast.Expr{&ast.UnaryExpr{OpPos: pos, Op: token.RANGE, X: p.parseRHSEx(true)}}
+			y = []ast.Expr{&ast.UnaryExpr{OpPos: pos, Op: token.RANGE, X: p.parseRHSEx(flagAllowRangeExpr)}}
 			isRange = true
 		} else {
 			y = p.parseRHSList()
@@ -2827,8 +2865,8 @@ func (p *parser) parseSimpleStmtEx(mode int, allowCmd, allowRangeExpr bool) (ast
 
 	switch p.tok {
 	case token.COLON:
-		if allowRangeExpr {
-			re, _ := p.parseRangeExpr(x[0], false, false)
+		if flags&flagAllowRangeExpr != 0 {
+			re, _ := p.parseRangeExpr(x[0], 0)
 			return &ast.ExprStmt{X: re}, true
 		}
 		// labeled statement
@@ -2838,7 +2876,7 @@ func (p *parser) parseSimpleStmtEx(mode int, allowCmd, allowRangeExpr bool) (ast
 			// Go spec: The scope of a label is the body of the function
 			// in which it is declared and excludes the body of any nested
 			// function.
-			stmt := &ast.LabeledStmt{Label: label, Colon: colon, Stmt: p.parseStmt(allowCmd)}
+			stmt := &ast.LabeledStmt{Label: label, Colon: colon, Stmt: p.parseStmt(flags)}
 			p.declare(stmt, nil, p.labelScope, ast.Lbl, label)
 			return stmt, false
 		}
@@ -2948,7 +2986,7 @@ func (p *parser) parseBranchStmt(tok token.Token) ast.Stmt {
 	next := p.tok
 	if next != token.IDENT && next != token.SEMICOLON { // XGo: allow goto() as a function
 		p.unget(oldpos, token.IDENT, oldlit)
-		s := p.parseSimpleStmt(basic, true)
+		s := p.parseSimpleStmt(basic, flagAllowCmd)
 		p.expectSemi()
 		return s
 	}
@@ -3008,7 +3046,7 @@ func (p *parser) parseIfHeader() (init ast.Stmt, cond ast.Expr) {
 			p.next()
 			p.error(p.pos, "var declaration not allowed in 'IF' initializer")
 		}
-		init = p.parseSimpleStmt(basic, false)
+		init = p.parseSimpleStmt(basic, 0)
 	}
 
 	var condStmt ast.Stmt
@@ -3025,7 +3063,7 @@ func (p *parser) parseIfHeader() (init ast.Stmt, cond ast.Expr) {
 			p.expect(token.SEMICOLON)
 		}
 		if p.tok != token.LBRACE {
-			condStmt = p.parseSimpleStmt(basic, false)
+			condStmt = p.parseSimpleStmt(basic, 0)
 		}
 	} else {
 		condStmt = init
@@ -3072,7 +3110,7 @@ func (p *parser) parseForPhraseCond() (init ast.Stmt, cond ast.Expr) {
 			p.next()
 			p.error(p.pos, "var declaration not allowed in 'IF' initializer")
 		}
-		init = p.parseSimpleStmt(basic, false)
+		init = p.parseSimpleStmt(basic, 0)
 	}
 
 	var condStmt ast.Stmt
@@ -3089,7 +3127,7 @@ func (p *parser) parseForPhraseCond() (init ast.Stmt, cond ast.Expr) {
 			p.expect(token.SEMICOLON)
 		}
 		if !isForPhraseCondEnd(p.tok) {
-			condStmt = p.parseSimpleStmt(basic, false)
+			condStmt = p.parseSimpleStmt(basic, 0)
 		}
 	} else {
 		condStmt = init
@@ -3223,7 +3261,7 @@ func (p *parser) parseSwitchStmt() ast.Stmt {
 		prevLev := p.exprLev
 		p.exprLev = -1
 		if p.tok != token.SEMICOLON {
-			s2 = p.parseSimpleStmt(basic, false)
+			s2 = p.parseSimpleStmt(basic, 0)
 		}
 		if p.tok == token.SEMICOLON {
 			p.next()
@@ -3244,7 +3282,7 @@ func (p *parser) parseSwitchStmt() ast.Stmt {
 				// Having the extra nested but empty scope won't affect it.
 				p.openScope()
 				defer p.closeScope()
-				s2 = p.parseSimpleStmt(basic, false)
+				s2 = p.parseSimpleStmt(basic, 0)
 			}
 		}
 		p.exprLev = prevLev
@@ -3277,7 +3315,7 @@ func (p *parser) parseCommClause() *ast.CommClause {
 	var comm ast.Stmt
 	if p.tok == token.CASE {
 		p.next()
-		lhs := p.parseLHSList(false)
+		lhs := p.parseLHSList(0)
 		if p.tok == token.ARROW {
 			// SendStmt
 			if len(lhs) > 1 {
@@ -3355,13 +3393,13 @@ func (p *parser) parseForPhrases() (phrases []*ast.ForPhrase) {
 
 func (p *parser) parseForPhraseStmtPart(lhs []ast.Expr) *ast.ForPhraseStmt {
 	tokPos := p.expectIn() // in
-	x := p.parseExpr(false, false, true)
+	x := p.parseExpr(flagAllowRangeExpr)
 	var cond ast.Expr
 	var ifPos token.Pos
 	if p.tok == token.IF || p.tok == token.COMMA {
 		ifPos = p.pos
 		p.next()
-		cond = p.parseExpr(false, false, false)
+		cond = p.parseExpr(0)
 	}
 
 	stmt := &ast.ForPhraseStmt{ForPhrase: &ast.ForPhrase{TokPos: tokPos, X: x, IfPos: ifPos, Cond: cond}}
@@ -3407,7 +3445,7 @@ func (p *parser) parseForPhrase() *ast.ForPhrase { // for k, v in container if c
 	}
 
 	tokPos := p.expectIn() // in container
-	x := p.parseExpr(false, false, true)
+	x := p.parseExpr(flagAllowRangeExpr)
 	var init ast.Stmt
 	var cond ast.Expr
 	var ifPos token.Pos
@@ -3438,11 +3476,11 @@ func (p *parser) parseForStmt() ast.Stmt {
 				// "for range x" (nil lhs in assignment)
 				pos := p.pos
 				p.next()
-				y := []ast.Expr{&ast.UnaryExpr{OpPos: pos, Op: token.RANGE, X: p.parseRHSEx(true)}}
+				y := []ast.Expr{&ast.UnaryExpr{OpPos: pos, Op: token.RANGE, X: p.parseRHSEx(flagAllowRangeExpr)}}
 				s2 = &ast.AssignStmt{Rhs: y}
 				isRange = true
 			} else {
-				s2, isRange = p.parseSimpleStmtEx(rangeOk, false, true)
+				s2, isRange = p.parseSimpleStmtEx(rangeOk, flagAllowRangeExpr)
 			}
 		}
 		if !isRange && p.tok == token.SEMICOLON {
@@ -3450,11 +3488,11 @@ func (p *parser) parseForStmt() ast.Stmt {
 			s1 = s2
 			s2 = nil
 			if p.tok != token.SEMICOLON {
-				s2 = p.parseSimpleStmt(basic, false)
+				s2 = p.parseSimpleStmt(basic, 0)
 			}
 			p.expectSemi()
 			if p.tok != token.LBRACE {
-				s3 = p.parseSimpleStmt(basic, false)
+				s3 = p.parseSimpleStmt(basic, 0)
 			}
 		}
 		p.exprLev = prevLev
@@ -3515,7 +3553,8 @@ func (p *parser) parseForStmt() ast.Stmt {
 	}
 }
 
-func (p *parser) parseStmt(allowCmd bool) (s ast.Stmt) {
+// flags support flagAllowCmd
+func (p *parser) parseStmt(flags int) (s ast.Stmt) {
 	if p.trace {
 		defer un(trace(p, "Statement"))
 	}
@@ -3530,10 +3569,10 @@ func (p *parser) parseStmt(allowCmd bool) (s ast.Stmt) {
 		token.INT, token.FLOAT, token.IMAG, token.RAT, token.CHAR, token.STRING, token.CSTRING, token.PYSTRING, token.FUNC, token.LPAREN, // operands
 		token.ADD, token.SUB, token.MUL, token.AND, token.XOR, token.ARROW, token.NOT, token.ENV, // unary operators
 		token.LBRACK, token.STRUCT, token.CHAN, token.INTERFACE: // composite types
-		allowCmd = false
+		flags = 0
 		fallthrough
 	case token.IDENT, token.MAP: // operands
-		s = p.parseSimpleStmt(labelOk, allowCmd)
+		s = p.parseSimpleStmt(labelOk, flags)
 		// because of the required look-ahead, labeled statements are
 		// parsed by parseSimpleStmt - don't expect a semicolon after
 		// them
@@ -3805,7 +3844,7 @@ func (p *parser) parseOverloadFunc() (ast.Expr, bool) {
 	case token.FUNC:
 		return p.parseFuncTypeOrLit(), true
 	case token.LPAREN:
-		x, _ := p.parsePrimaryExpr(nil, false, false, false)
+		x, _ := p.parsePrimaryExpr(nil, 0)
 		return x, true
 	}
 	return nil, false

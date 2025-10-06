@@ -65,7 +65,7 @@ func (*OverloadFuncDecl) declNode() {}
 type CallExpr struct {
 	Fun        Expr         // function expression
 	Lparen     token.Pos    // position of "("
-	Args       []Expr       // function arguments; or nil
+	Args       []Expr       // positional arguments; or nil
 	Ellipsis   token.Pos    // position of "..." (token.NoPos if there is no "...")
 	Kwargs     []*KwargExpr // keyword arguments; or nil
 	Rparen     token.Pos    // position of ")"
