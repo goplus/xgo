@@ -1,0 +1,1 @@
+playSound getUrl("1.mp3", cache=false), loop=true
