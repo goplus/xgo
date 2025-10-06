@@ -59,8 +59,9 @@ func (*OverloadFuncDecl) declNode() {}
 
 // -----------------------------------------------------------------------------
 
-// A CallExpr node represents an expression followed by an argument list, which
-// may include positional and keyword arguments.
+// A CallExpr node represents an expression followed by an argument list.
+// The argument list may include positional arguments (Args) and/or
+// keyword arguments (Kwargs).
 type CallExpr struct {
 	Fun        Expr         // function expression
 	Lparen     token.Pos    // position of "("
