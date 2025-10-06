@@ -28,6 +28,7 @@ ast.FuncDecl:
                     ast.BasicLit:
                       Kind: STRING
                       Value: "1.mp3"
+                  Kwargs:
                     ast.KwargExpr:
                       Name:
                         ast.Ident:
@@ -35,6 +36,7 @@ ast.FuncDecl:
                       Value:
                         ast.Ident:
                           Name: false
+              Kwargs:
                 ast.KwargExpr:
                   Name:
                     ast.Ident:

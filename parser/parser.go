@@ -2102,11 +2102,12 @@ func (p *parser) parseCallOrConversion(fun ast.Expr, isCmd bool) *ast.CallExpr {
 		lparen, endTok = p.expect(token.LPAREN), token.RPAREN
 	}
 	p.exprLev++
-	var list []ast.Expr
+	var args []ast.Expr
+	var kwargs []*ast.KwargExpr
 	var ellipsis token.Pos
 	for p.tok != endTok && p.tok != token.EOF && !ellipsis.IsValid() {
 		flags := flagAllowKwargExpr
-		if isCmd && len(list) == 0 {
+		if isCmd && len(args) == 0 {
 			flags |= flagAllowTuple // support fake command: f (arg1, arg2, ...)
 		}
 		expr, exprKind := p.parseRHSOrTypeEx(flags)
@@ -2116,14 +2117,21 @@ func (p *parser) parseCallOrConversion(fun ast.Expr, isCmd bool) *ast.CallExpr {
 				p.error(t.opening, msgTupleNotSupported)
 				p.advance(stmtStart)
 			}
-			list, lparen, ellipsis, rparen = t.items, t.opening, t.ellipsis, t.closing
+			args, lparen, ellipsis, rparen = t.items, t.opening, t.ellipsis, t.closing
 			isCmd = true // force conversion of fake command to command
 			break
 		}
-		list = append(list, expr) // builtins may expect a type: make(some type, ...)
-		if p.tok == token.ELLIPSIS {
-			ellipsis = p.pos
-			p.next()
+		if exprKind == exprKwarg {
+			kwargs = append(kwargs, expr.(*ast.KwargExpr))
+		} else {
+			if len(kwargs) > 0 {
+				p.error(expr.Pos(), "positional argument follows keyword argument")
+			}
+			args = append(args, expr) // builtins may expect a type: make(some type, ...)
+			if p.tok == token.ELLIPSIS {
+				ellipsis = p.pos
+				p.next()
+			}
 		}
 		if isCmd && p.tok == token.RBRACE {
 			break
@@ -2144,7 +2152,7 @@ func (p *parser) parseCallOrConversion(fun ast.Expr, isCmd bool) *ast.CallExpr {
 		log.Printf("ast.CallExpr{Fun: %v, Ellipsis: %v, isCmd: %v}\n", fun, ellipsis != 0, isCmd)
 	}
 	return &ast.CallExpr{
-		Fun: fun, Lparen: lparen, Args: list, Ellipsis: ellipsis, Rparen: rparen, NoParenEnd: noParenEnd}
+		Fun: fun, Lparen: lparen, Args: args, Ellipsis: ellipsis, Kwargs: kwargs, Rparen: rparen, NoParenEnd: noParenEnd}
 }
 
 // flags support flagInLHS (keyOk = true)
