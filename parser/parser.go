@@ -1794,7 +1794,7 @@ func parseTplRetProc(file *token.File, src []byte, offset int) (tplast.Node, sca
 // parseOperand may return an expression or a raw type (incl. array
 // types of the form [...]T. Callers must verify the result.
 // If lhs is set and the result is an identifier, it is not resolved.
-// flags support flagInLHS, flagAllowTuple, flagAllowCmd, flagAllowKwargExpr
+// flags support flagInLHS, flagAllowTuple, flagAllowCmd
 func (p *parser) parseOperand(flags int) (x ast.Expr, exprKind int) {
 	if p.trace {
 		defer un(trace(p, "Operand"))
@@ -2370,7 +2370,7 @@ func (p *parser) checkExprOrType(x ast.Expr) ast.Expr {
 }
 
 // If lhs is set and the result is an identifier, it is not resolved.
-// flags support flagInLHS, flagAllowTuple, flagAllowCmd
+// flags support flagInLHS, flagAllowTuple, flagAllowCmd, flagAllowKwargExpr
 func (p *parser) parsePrimaryExpr(iden *ast.Ident, flags int) (x ast.Expr, exprKind int) {
 	if p.trace {
 		defer un(trace(p, "PrimaryExpr"))
@@ -2386,7 +2386,7 @@ func (p *parser) parsePrimaryExpr(iden *ast.Ident, flags int) (x ast.Expr, exprK
 L:
 	for {
 		switch p.tok {
-		case token.PERIOD:
+		case token.PERIOD: // .
 			p.next()
 			if lhs {
 				p.resolve(x)
@@ -2446,16 +2446,25 @@ L:
 				}
 				x = p.parseLiteralValue(x)
 			}
-		case token.NOT:
+		case token.NOT: // !
 			if allowCmd && p.isCmd(x) {
 				x = p.parseCallOrConversion(p.checkExprOrType(x), true)
 			} else {
 				x = &ast.ErrWrapExpr{X: x, Tok: token.NOT, TokPos: p.pos}
 				p.next()
 			}
-		case token.QUESTION:
+		case token.QUESTION: // ?
 			x = &ast.ErrWrapExpr{X: x, Tok: p.tok, TokPos: p.pos}
 			p.next()
+		case token.ASSIGN: // =
+			if flags&flagAllowKwargExpr != 0 {
+				if name, ok := x.(*ast.Ident); ok { // name=expr
+					p.next()
+					val := p.parseExpr(0)
+					return &ast.KwargExpr{Name: name, Value: val}, exprKwarg
+				}
+			}
+			fallthrough
 		default:
 			if allowCmd && p.isCmd(x) && p.checkCmd() {
 				if lhs {
