@@ -951,7 +951,7 @@ func (p *printer) expr1(expr ast.Expr, prec1, depth int) {
 				if i > 0 {
 					p.print(token.COMMA, blank)
 				}
-				p.print(arg.Name, token.ASSIGN)
+				p.print(arg.Name, blank, token.ASSIGN, blank)
 				p.expr0(arg.Value, depth)
 			}
 		}
