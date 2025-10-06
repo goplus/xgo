@@ -152,6 +152,7 @@ func Walk(v Visitor, node Node) {
 	case *CallExpr:
 		Walk(v, n.Fun)
 		walkList(v, n.Args)
+		walkList(v, n.Kwargs)
 
 	case *StarExpr:
 		Walk(v, n.X)
@@ -162,6 +163,10 @@ func Walk(v Visitor, node Node) {
 	case *BinaryExpr:
 		Walk(v, n.X)
 		Walk(v, n.Y)
+
+	case *KwargExpr:
+		Walk(v, n.Name)
+		Walk(v, n.Value)
 
 	case *KeyValueExpr:
 		Walk(v, n.Key)
