@@ -33,6 +33,7 @@ import (
 	"github.com/goplus/xgo/printer"
 	"github.com/goplus/xgo/token"
 	tpl "github.com/goplus/xgo/tpl/ast"
+	"github.com/qiniu/x/stringutil"
 )
 
 /*-----------------------------------------------------------------------------
@@ -712,6 +713,25 @@ func compileCallExpr(ctx *blockCtx, v *ast.CallExpr, inFlags int) {
 	fnt := pfn.Type
 	fn := &fnType{}
 	fn.load(fnt)
+	if len(v.Kwargs) > 0 { // https://github.com/goplus/xgo/issues/2443
+		n := len(v.Args)
+		args := make([]ast.Expr, n+1)
+		if fn.variadic { // has variadic parameter
+			idx := fn.size - 1
+			if idx < 0 || len(v.Args) < idx {
+				panic("TODO: no kwargs or arguments not enough")
+			}
+			copy(args, v.Args[:idx])
+			args[idx] = mergeKwargs(v.Kwargs, fn.params.At(idx).Type())
+			copy(args[idx+1:], v.Args[idx:])
+		} else {
+			copy(args, v.Args)
+			args[n] = mergeKwargs(v.Kwargs, fn.arg(n, false))
+		}
+		ne := *v
+		ne.Args, ne.Kwargs = args, nil
+		v = &ne
+	}
 	for fn != nil {
 		if err = compileCallArgs(ctx, pfn, fn, v, ellipsis, flags); err == nil {
 			if rec := ctx.recorder(); rec != nil {
@@ -726,6 +746,72 @@ func compileCallExpr(ctx *blockCtx, v *ast.CallExpr, inFlags int) {
 		return
 	}
 	panic(err)
+}
+
+func mergeKwargs(kwargs []*ast.KwargExpr, t types.Type) ast.Expr {
+	switch t := t.Underlying().(type) {
+	case *types.Pointer:
+		if t, ok := t.Elem().Underlying().(*types.Struct); ok {
+			return mergeStructKwargs(kwargs, t)
+		}
+	case *types.Struct:
+		return mergeStructKwargs(kwargs, t)
+	case *types.Map:
+		if t, ok := t.Key().Underlying().(*types.Basic); ok && t.Kind() == types.String {
+			return mergeStringMapKwargs(kwargs) // map[string]T
+		}
+	}
+	panic("TODO: unexpected kwargs type")
+}
+
+func mergeStringMapKwargs(kwargs []*ast.KwargExpr) ast.Expr {
+	n := len(kwargs)
+	elts := make([]ast.Expr, n)
+	for i, arg := range kwargs {
+		elts[i] = &ast.KeyValueExpr{
+			Key:   toBasicLit(arg.Name),
+			Value: arg.Value,
+		}
+	}
+	return &ast.CompositeLit{
+		Lbrace: kwargs[0].Pos(),
+		Elts:   elts,
+		Rbrace: kwargs[n-1].End() - 1,
+	}
+}
+
+func mergeStructKwargs(kwargs []*ast.KwargExpr, t *types.Struct) ast.Expr {
+	n := len(kwargs)
+	elts := make([]ast.Expr, n)
+	for i, arg := range kwargs {
+		elts[i] = &ast.KeyValueExpr{
+			Key:   getFldName(arg.Name, t),
+			Value: arg.Value,
+		}
+	}
+	return &ast.CompositeLit{
+		Lbrace: kwargs[0].Pos(),
+		Elts:   elts,
+		Rbrace: kwargs[n-1].End() - 1,
+	}
+}
+
+func getFldName(name *ast.Ident, t *types.Struct) *ast.Ident {
+	var capName string
+	exported := name.IsExported()
+	if !exported {
+		capName = stringutil.Capitalize(name.Name)
+	}
+	for i, n := 0, t.NumFields(); i < n; i++ {
+		fld := t.Field(i)
+		if fld.Name() == name.Name {
+			return name
+		}
+		if !exported && fld.Exported() && fld.Name() == capName {
+			return &ast.Ident{NamePos: name.NamePos, Name: capName}
+		}
+	}
+	return name // fallback to origin name
 }
 
 func toBasicLit(fn *ast.Ident) *ast.BasicLit {
