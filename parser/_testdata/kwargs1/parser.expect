@@ -44,3 +44,24 @@ ast.FuncDecl:
                   Value:
                     ast.Ident:
                       Name: true
+        ast.ExprStmt:
+          X:
+            ast.CallExpr:
+              Fun:
+                ast.Ident:
+                  Name: listDir
+              Kwargs:
+                ast.KwargExpr:
+                  Name:
+                    ast.Ident:
+                      Name: withHidden
+                  Value:
+                    ast.Ident:
+                      Name: true
+                ast.KwargExpr:
+                  Name:
+                    ast.Ident:
+                      Name: recursive
+                  Value:
+                    ast.Ident:
+                      Name: false
