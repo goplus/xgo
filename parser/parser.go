@@ -45,6 +45,12 @@ const (
 	msgTupleNotSupported = "tuple is not supported"
 )
 
+// Parser flags control parsing behavior using bitwise operations:
+//
+//	flagInLHS - parsing left-hand side expression (identifiers not resolved)
+//	flagAllowCmd - allow command-style function calls without parentheses
+//	flagAllowTuple - allow tuple expressions in this context
+//	flagAllowRangeExpr - allow range expressions (first:last or first:last:step)
 const (
 	flagInLHS = 1 << iota
 	flagAllowCmd
@@ -718,7 +724,8 @@ func (p *parser) parseIdentList() (list []*ast.Ident) {
 // ----------------------------------------------------------------------------
 // Common productions
 
-// If lhs is set, result list elements which are identifiers are not resolved.
+// If flagInLHS is set in flags, result list elements which are identifiers are
+// not resolved.
 // flags support flagInLHS, flagAllowCmd
 func (p *parser) parseExprList(flags int) (list []ast.Expr) {
 	if p.trace {
@@ -728,7 +735,7 @@ func (p *parser) parseExprList(flags int) (list []ast.Expr) {
 	list = append(list, p.checkExpr(p.parseExpr(flags)))
 	for p.tok == token.COMMA {
 		p.next()
-		list = append(list, p.checkExpr(p.parseExpr(flags&flagInLHS)))
+		list = append(list, p.checkExpr(p.parseExpr(flags&flagInLHS))) // clear all but flagInLHS
 	}
 	return
 }
