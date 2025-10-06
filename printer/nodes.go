@@ -943,6 +943,18 @@ func (p *printer) expr1(expr ast.Expr, prec1, depth int) {
 		} else {
 			p.exprList(x.Lparen, x.Args, depth, commaTerm, x.Rparen, false)
 		}
+		if len(x.Kwargs) > 0 {
+			if len(x.Args) > 0 {
+				p.print(token.COMMA, blank)
+			}
+			for i, arg := range x.Kwargs {
+				if i > 0 {
+					p.print(token.COMMA, blank)
+				}
+				p.print(arg.Name, blank, token.ASSIGN, blank)
+				p.expr0(arg.Value, depth)
+			}
+		}
 		if x.NoParenEnd == token.NoPos {
 			p.print(x.Rparen, token.RPAREN)
 		}
