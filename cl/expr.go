@@ -729,7 +729,11 @@ func compileCallExpr(ctx *blockCtx, v *ast.CallExpr, inFlags int) {
 			copy(args[idx+1:], v.Args[idx:])
 		} else {
 			copy(args, v.Args)
-			args[n] = mergeKwargs(ctx, v, fn.arg(n, false))
+		argType := fn.arg(n, false)
+		if argType == nil {
+			panic(ctx.newCodeErrorf(v.Pos(), v.End(), "too many arguments including keyword arguments"))
+		}
+		args[n] = mergeKwargs(ctx, v, argType)
 		}
 		ne := *v
 		ne.Args, ne.Kwargs = args, nil
