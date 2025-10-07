@@ -793,9 +793,9 @@ func mergeStringMapKwargs(kwargs []*ast.KwargExpr) ast.Expr {
 		}
 	}
 	return &ast.CompositeLit{
-		Lbrace: kwargs[0].Pos(),
+		Lbrace: kwargs[0].Pos() - 1,
 		Elts:   elts,
-		Rbrace: kwargs[n-1].End() - 1,
+		Rbrace: kwargs[n-1].End(),
 	}
 }
 
@@ -809,9 +809,9 @@ func mergeStructKwargs(kwargs []*ast.KwargExpr, u *types.Struct, inPkg bool) ast
 		}
 	}
 	return &ast.CompositeLit{
-		Lbrace: kwargs[0].Pos(),
+		Lbrace: kwargs[0].Pos() - 1,
 		Elts:   elts,
-		Rbrace: kwargs[n-1].End() - 1,
+		Rbrace: kwargs[n-1].End(),
 	}
 }
 
