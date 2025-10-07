@@ -729,11 +729,7 @@ func compileCallExpr(ctx *blockCtx, v *ast.CallExpr, inFlags int) {
 			copy(args[idx+1:], v.Args[idx:])
 		} else {
 			copy(args, v.Args)
-		argType := fn.arg(n, false)
-		if argType == nil {
-			panic(ctx.newCodeErrorf(v.Pos(), v.End(), "too many arguments including keyword arguments"))
-		}
-		args[n] = mergeKwargs(ctx, v, argType)
+			args[n] = mergeKwargs(ctx, v, fn.arg(n, false))
 		}
 		ne := *v
 		ne.Args, ne.Kwargs = args, nil
@@ -771,20 +767,19 @@ func inThisPkg(ctx *blockCtx, t types.Type) bool {
 }
 
 func mergeKwargs(ctx *blockCtx, v *ast.CallExpr, t types.Type) ast.Expr {
-	switch u := t.Underlying().(type) {
-	case *types.Pointer:
-		t = u.Elem()
-		if u, ok := t.Underlying().(*types.Struct); ok {
+	if t != nil {
+		switch u := t.Underlying().(type) {
+		case *types.Pointer:
+			t = u.Elem()
+			if u, ok := t.Underlying().(*types.Struct); ok {
+				return mergeStructKwargs(v.Kwargs, u, inThisPkg(ctx, t))
+			}
+			panic(ctx.newCodeErrorf(v.Pos(), v.End(), msgUnexpectedKwargs, t))
+		case *types.Struct:
 			return mergeStructKwargs(v.Kwargs, u, inThisPkg(ctx, t))
 		}
-	case *types.Struct:
-		return mergeStructKwargs(v.Kwargs, u, inThisPkg(ctx, t))
-	case *types.Map:
-		if t, ok := u.Key().Underlying().(*types.Basic); ok && t.Kind() == types.String {
-			return mergeStringMapKwargs(v.Kwargs) // map[string]T
-		}
 	}
-	panic(ctx.newCodeErrorf(v.Pos(), v.End(), msgUnexpectedKwargs, t))
+	return mergeStringMapKwargs(v.Kwargs) // fallback to map[string]T
 }
 
 func mergeStringMapKwargs(kwargs []*ast.KwargExpr) ast.Expr {
