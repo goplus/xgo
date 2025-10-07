@@ -718,15 +718,18 @@ func compileCallExpr(ctx *blockCtx, v *ast.CallExpr, inFlags int) {
 		args := make([]ast.Expr, n+1)
 		if fn.variadic { // has variadic parameter
 			idx := fn.size - 1
-			if idx < 0 || len(v.Args) < idx {
-				panic("TODO: no kwargs or arguments not enough")
+			if idx < 0 {
+				panic(ctx.newCodeError(v.Pos(), v.End(), msgNoKwargsOVF))
+			}
+			if len(v.Args) < idx {
+				panic(ctx.newCodeError(v.Pos(), v.End(), msgNoEnoughArgToKwargs))
 			}
 			copy(args, v.Args[:idx])
-			args[idx] = mergeKwargs(v.Kwargs, fn.params.At(idx).Type())
+			args[idx] = mergeKwargs(ctx, v, fn.params.At(idx).Type())
 			copy(args[idx+1:], v.Args[idx:])
 		} else {
 			copy(args, v.Args)
-			args[n] = mergeKwargs(v.Kwargs, fn.arg(n, false))
+			args[n] = mergeKwargs(ctx, v, fn.arg(n, false))
 		}
 		ne := *v
 		ne.Args, ne.Kwargs = args, nil
@@ -748,20 +751,36 @@ func compileCallExpr(ctx *blockCtx, v *ast.CallExpr, inFlags int) {
 	panic(err)
 }
 
-func mergeKwargs(kwargs []*ast.KwargExpr, t types.Type) ast.Expr {
-	switch t := t.Underlying().(type) {
-	case *types.Pointer:
-		if t, ok := t.Elem().Underlying().(*types.Struct); ok {
-			return mergeStructKwargs(kwargs, t)
-		}
-	case *types.Struct:
-		return mergeStructKwargs(kwargs, t)
-	case *types.Map:
-		if t, ok := t.Key().Underlying().(*types.Basic); ok && t.Kind() == types.String {
-			return mergeStringMapKwargs(kwargs) // map[string]T
+const (
+	msgNoKwargsOVF         = "keyword arguments are not supported for a function with only variadic parameters"
+	msgNoEnoughArgToKwargs = "not enough arguments for function call with keyword arguments"
+	msgUnexpectedKwargs    = "keyword arguments can only be used for struct or map[string]T types, but got %v"
+)
+
+func inThisPkg(ctx *blockCtx, t types.Type) bool {
+	if named, ok := t.(*types.Named); ok {
+		if named.Obj().Pkg() == ctx.pkg.Types {
+			return true
 		}
 	}
-	panic("TODO: unexpected kwargs type")
+	return false
+}
+
+func mergeKwargs(ctx *blockCtx, v *ast.CallExpr, t types.Type) ast.Expr {
+	switch u := t.Underlying().(type) {
+	case *types.Pointer:
+		t = u.Elem()
+		if u, ok := t.Underlying().(*types.Struct); ok {
+			return mergeStructKwargs(v.Kwargs, u, inThisPkg(ctx, t))
+		}
+	case *types.Struct:
+		return mergeStructKwargs(v.Kwargs, u, inThisPkg(ctx, t))
+	case *types.Map:
+		if t, ok := u.Key().Underlying().(*types.Basic); ok && t.Kind() == types.String {
+			return mergeStringMapKwargs(v.Kwargs) // map[string]T
+		}
+	}
+	panic(ctx.newCodeErrorf(v.Pos(), v.End(), msgUnexpectedKwargs, t))
 }
 
 func mergeStringMapKwargs(kwargs []*ast.KwargExpr) ast.Expr {
@@ -780,12 +799,12 @@ func mergeStringMapKwargs(kwargs []*ast.KwargExpr) ast.Expr {
 	}
 }
 
-func mergeStructKwargs(kwargs []*ast.KwargExpr, t *types.Struct) ast.Expr {
+func mergeStructKwargs(kwargs []*ast.KwargExpr, u *types.Struct, inPkg bool) ast.Expr {
 	n := len(kwargs)
 	elts := make([]ast.Expr, n)
 	for i, arg := range kwargs {
 		elts[i] = &ast.KeyValueExpr{
-			Key:   getFldName(arg.Name, t),
+			Key:   getFldName(arg.Name, u, inPkg),
 			Value: arg.Value,
 		}
 	}
@@ -796,18 +815,20 @@ func mergeStructKwargs(kwargs []*ast.KwargExpr, t *types.Struct) ast.Expr {
 	}
 }
 
-func getFldName(name *ast.Ident, t *types.Struct) *ast.Ident {
-	var capName string
-	exported := name.IsExported()
-	if !exported {
-		capName = stringutil.Capitalize(name.Name)
+func getFldName(name *ast.Ident, u *types.Struct, inPkg bool) *ast.Ident {
+	if name.IsExported() {
+		return name
 	}
-	for i, n := 0, t.NumFields(); i < n; i++ {
-		fld := t.Field(i)
+	capName := stringutil.Capitalize(name.Name)
+	if !inPkg {
+		return &ast.Ident{NamePos: name.NamePos, Name: capName}
+	}
+	for i, n := 0, u.NumFields(); i < n; i++ {
+		fld := u.Field(i)
 		if fld.Name() == name.Name {
 			return name
 		}
-		if !exported && fld.Exported() && fld.Name() == capName {
+		if fld.Exported() && fld.Name() == capName {
 			return &ast.Ident{NamePos: name.NamePos, Name: capName}
 		}
 	}
