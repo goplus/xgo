@@ -33,6 +33,7 @@ import (
 	"github.com/goplus/xgo/printer"
 	"github.com/goplus/xgo/token"
 	tpl "github.com/goplus/xgo/tpl/ast"
+	"github.com/qiniu/x/stringutil"
 )
 
 /*-----------------------------------------------------------------------------
@@ -712,6 +713,28 @@ func compileCallExpr(ctx *blockCtx, v *ast.CallExpr, inFlags int) {
 	fnt := pfn.Type
 	fn := &fnType{}
 	fn.load(fnt)
+	if len(v.Kwargs) > 0 { // https://github.com/goplus/xgo/issues/2443
+		n := len(v.Args)
+		args := make([]ast.Expr, n+1)
+		if fn.variadic { // has variadic parameter
+			idx := fn.size - 1
+			if idx < 0 {
+				panic(ctx.newCodeError(v.Pos(), v.End(), msgNoKwargsOVF))
+			}
+			if len(v.Args) < idx {
+				panic(ctx.newCodeError(v.Pos(), v.End(), msgNoEnoughArgToKwargs))
+			}
+			copy(args, v.Args[:idx])
+			args[idx] = mergeKwargs(ctx, v, fn.params.At(idx).Type())
+			copy(args[idx+1:], v.Args[idx:])
+		} else {
+			copy(args, v.Args)
+			args[n] = mergeKwargs(ctx, v, fn.arg(n, false))
+		}
+		ne := *v
+		ne.Args, ne.Kwargs = args, nil
+		v = &ne
+	}
 	for fn != nil {
 		if err = compileCallArgs(ctx, pfn, fn, v, ellipsis, flags); err == nil {
 			if rec := ctx.recorder(); rec != nil {
@@ -726,6 +749,89 @@ func compileCallExpr(ctx *blockCtx, v *ast.CallExpr, inFlags int) {
 		return
 	}
 	panic(err)
+}
+
+const (
+	msgNoKwargsOVF         = "keyword arguments are not supported for a function with only variadic parameters"
+	msgNoEnoughArgToKwargs = "not enough arguments for function call with keyword arguments"
+	msgUnexpectedKwargs    = "keyword arguments can only be used for struct or map[string]T types, but got %v"
+)
+
+func inThisPkg(ctx *blockCtx, t types.Type) bool {
+	if named, ok := t.(*types.Named); ok {
+		if named.Obj().Pkg() == ctx.pkg.Types {
+			return true
+		}
+	}
+	return false
+}
+
+func mergeKwargs(ctx *blockCtx, v *ast.CallExpr, t types.Type) ast.Expr {
+	if t != nil {
+		switch u := t.Underlying().(type) {
+		case *types.Pointer:
+			t = u.Elem()
+			if u, ok := t.Underlying().(*types.Struct); ok {
+				return mergeStructKwargs(v.Kwargs, u, inThisPkg(ctx, t))
+			}
+			panic(ctx.newCodeErrorf(v.Pos(), v.End(), msgUnexpectedKwargs, t))
+		case *types.Struct:
+			return mergeStructKwargs(v.Kwargs, u, inThisPkg(ctx, t))
+		}
+	}
+	return mergeStringMapKwargs(v.Kwargs) // fallback to map[string]T
+}
+
+func mergeStringMapKwargs(kwargs []*ast.KwargExpr) ast.Expr {
+	n := len(kwargs)
+	elts := make([]ast.Expr, n)
+	for i, arg := range kwargs {
+		elts[i] = &ast.KeyValueExpr{
+			Key:   toBasicLit(arg.Name),
+			Value: arg.Value,
+		}
+	}
+	return &ast.CompositeLit{
+		Lbrace: kwargs[0].Pos() - 1,
+		Elts:   elts,
+		Rbrace: kwargs[n-1].End(),
+	}
+}
+
+func mergeStructKwargs(kwargs []*ast.KwargExpr, u *types.Struct, inPkg bool) ast.Expr {
+	n := len(kwargs)
+	elts := make([]ast.Expr, n)
+	for i, arg := range kwargs {
+		elts[i] = &ast.KeyValueExpr{
+			Key:   getFldName(arg.Name, u, inPkg),
+			Value: arg.Value,
+		}
+	}
+	return &ast.CompositeLit{
+		Lbrace: kwargs[0].Pos() - 1,
+		Elts:   elts,
+		Rbrace: kwargs[n-1].End(),
+	}
+}
+
+func getFldName(name *ast.Ident, u *types.Struct, inPkg bool) *ast.Ident {
+	if name.IsExported() {
+		return name
+	}
+	capName := stringutil.Capitalize(name.Name)
+	if !inPkg {
+		return &ast.Ident{NamePos: name.NamePos, Name: capName}
+	}
+	for i, n := 0, u.NumFields(); i < n; i++ {
+		fld := u.Field(i)
+		if fld.Name() == name.Name {
+			return name
+		}
+		if fld.Exported() && fld.Name() == capName {
+			return &ast.Ident{NamePos: name.NamePos, Name: capName}
+		}
+	}
+	return name // fallback to origin name
 }
 
 func toBasicLit(fn *ast.Ident) *ast.BasicLit {

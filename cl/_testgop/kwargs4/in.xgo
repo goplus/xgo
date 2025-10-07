@@ -1,0 +1,7 @@
+import "github.com/goplus/xgo/cl/internal/testutil"
+
+func PlaySound(path string, options *testutil.Options) {
+}
+
+playSound "1.mp3", loop = true
+playSound "2.mp3", Loop = false, async = true

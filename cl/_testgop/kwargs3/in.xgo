@@ -1,0 +1,7 @@
+type Options map[string]bool
+
+func PlaySound(options Options, paths ...string) {
+}
+
+playSound "1.mp3", "foo.wav", loop = false
+playSound "2.mp3", loop = true, async = true

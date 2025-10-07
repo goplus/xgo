@@ -1,0 +1,10 @@
+type Options struct {
+    Loop  bool
+    async bool
+}
+
+func PlaySound(path string, options *Options) {
+}
+
+playSound "1.mp3", loop = true
+playSound "2.mp3", loop = false, async = true
