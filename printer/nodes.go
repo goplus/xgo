@@ -395,6 +395,10 @@ func (p *printer) parameters(fields *ast.FieldList) {
 			}
 			// parameter type
 			p.expr(stripParensAlways(par.Type))
+			// optional parameter marker
+			if par.Optional {
+				p.print(token.QUESTION)
+			}
 			prevLine = parLineEnd
 		}
 		// if the closing ")" is on a separate line from the last parameter,

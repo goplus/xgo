@@ -1105,8 +1105,9 @@ func (p *parser) parsePointerType() *ast.StarExpr {
 }
 
 type field struct {
-	name *ast.Ident
-	typ  ast.Expr
+	name     *ast.Ident
+	typ      ast.Expr
+	optional bool
 }
 
 func (p *parser) parseParameterList(scope *ast.Scope, name0 *ast.Ident, typ0 ast.Expr, closing token.Token) (params []*ast.Field) {
@@ -1129,7 +1130,7 @@ func (p *parser) parseParameterList(scope *ast.Scope, name0 *ast.Ident, typ0 ast
 	for name0 != nil || p.tok != closing && p.tok != token.EOF {
 		var par field
 		if typ0 != nil {
-			par = field{name0, typ0}
+			par = field{name: name0, typ: typ0, optional: false}
 		} else {
 			par = p.parseParamDecl(name0)
 		}
@@ -1205,7 +1206,7 @@ func (p *parser) parseParameterList(scope *ast.Scope, name0 *ast.Ident, typ0 ast
 		// parameter list consists of types only
 		for _, par := range list {
 			assert(par.typ != nil, "nil type in unnamed parameter list")
-			params = append(params, &ast.Field{Type: par.typ})
+			params = append(params, &ast.Field{Type: par.typ, Optional: par.optional})
 		}
 		return
 	}
@@ -1213,9 +1214,10 @@ func (p *parser) parseParameterList(scope *ast.Scope, name0 *ast.Ident, typ0 ast
 	// parameter list consists of named parameters with types
 	var names []*ast.Ident
 	var typ ast.Expr
+	var optional bool
 	addParams := func() {
 		assert(typ != nil, "nil type in named parameter list")
-		field := &ast.Field{Names: names, Type: typ}
+		field := &ast.Field{Names: names, Type: typ, Optional: optional}
 		// Go spec: The scope of an identifier denoting a function
 		// parameter or result variable is the function body.
 		p.declare(field, nil, scope, ast.Var, names...)
@@ -1223,11 +1225,12 @@ func (p *parser) parseParameterList(scope *ast.Scope, name0 *ast.Ident, typ0 ast
 		names = nil
 	}
 	for _, par := range list {
-		if par.typ != typ {
+		if par.typ != typ || par.optional != optional {
 			if len(names) > 0 {
 				addParams()
 			}
 			typ = par.typ
+			optional = par.optional
 		}
 		names = append(names, par.name)
 	}
@@ -1262,10 +1265,18 @@ func (p *parser) parseParamDecl(name *ast.Ident) (f field) {
 		case token.IDENT, token.MUL, token.ARROW, token.FUNC, token.CHAN, token.MAP, token.STRUCT, token.INTERFACE, token.LPAREN:
 			// name type
 			f.typ = p.parseType()
+			if p.tok == token.QUESTION {
+				f.optional = true
+				p.next()
+			}
 
 		case token.LBRACK:
 			// name "[" type1, ..., typeN "]" or name "[" n "]" type
 			f.name, f.typ = p.parseArrayFieldOrTypeInstance(f.name, stateType)
+			if p.tok == token.QUESTION {
+				f.optional = true
+				p.next()
+			}
 
 		case token.ELLIPSIS:
 			// name "..." type
@@ -1276,6 +1287,10 @@ func (p *parser) parseParamDecl(name *ast.Ident) (f field) {
 			// name "." ...
 			f.typ = p.parseQualifiedIdent(f.name)
 			f.name = nil
+			if p.tok == token.QUESTION {
+				f.optional = true
+				p.next()
+			}
 		}
 
 	case token.MUL, token.ARROW, token.FUNC, token.LBRACK, token.CHAN, token.MAP, token.STRUCT, token.INTERFACE, token.LPAREN:
@@ -1293,6 +1308,11 @@ func (p *parser) parseParamDecl(name *ast.Ident) (f field) {
 		//                 (should be "']'" in that case)
 		p.errorExpected(p.pos, "')'", 2)
 		p.advance(exprEnd)
+	}
+
+	if p.tok == token.QUESTION {
+		f.optional = true
+		p.next()
 	}
 
 	return
