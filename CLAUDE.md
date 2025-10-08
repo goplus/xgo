@@ -63,4 +63,8 @@ When implementing new language syntax, follow this two-phase approach:
 
 ### Testing Requirements
 
-- 100% test coverage for new syntax parsing
+- **Phase 1**: 100% test coverage for new syntax parsing in `parser/_testdata/`
+- **Phase 2**: Comprehensive test coverage for semantic implementation in `cl/_testgop/` covering:
+  - Common usage scenarios
+  - Edge cases and error conditions
+  - Integration with existing type system
