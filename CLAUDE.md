@@ -29,7 +29,7 @@ When implementing new language syntax, follow this two-phase approach:
 **Scope**: Code generation via `cl` package
 - **Code Generation**: Implement semantics using `github.com/goplus/gogen` package
 - **Type Safety**: Leverage gogen's type information maintenance for semantic correctness
-- **Testing**: Add comprehensive test cases in `cl/_testdata/` covering various usage scenarios
+- **Testing**: Add comprehensive test cases in `cl/_testgop/` covering various usage scenarios
 
 ### Communication Protocol
 - When I request syntax additions, first confirm the exact grammar specification
