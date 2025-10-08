@@ -1,6 +1,6 @@
-package optparam
+package main
 
-file optparam.go
+file optparam.xgo
 ast.FuncDecl:
   Doc:
     ast.CommentGroup:
@@ -23,8 +23,6 @@ ast.FuncDecl:
                 ast.Ident:
                   Name: int
               Optional: true
-  Body:
-    ast.BlockStmt:
 ast.FuncDecl:
   Name:
     ast.Ident:
@@ -57,8 +55,6 @@ ast.FuncDecl:
                 ast.Ident:
                   Name: bool
               Optional: true
-  Body:
-    ast.BlockStmt:
 ast.FuncDecl:
   Name:
     ast.Ident:
@@ -100,8 +96,6 @@ ast.FuncDecl:
                   Elt:
                     ast.Ident:
                       Name: byte
-  Body:
-    ast.BlockStmt:
 ast.FuncDecl:
   Doc:
     ast.CommentGroup:
@@ -138,8 +132,6 @@ ast.FuncDecl:
                         ast.Ident:
                           Name: string
               Optional: true
-  Body:
-    ast.BlockStmt:
 ast.FuncDecl:
   Doc:
     ast.CommentGroup:
@@ -187,8 +179,6 @@ ast.FuncDecl:
                     ast.Ident:
                       Name: int
               Optional: true
-  Body:
-    ast.BlockStmt:
 ast.FuncDecl:
   Doc:
     ast.CommentGroup:
@@ -231,8 +221,6 @@ ast.FuncDecl:
                     ast.Ident:
                       Name: string
               Optional: true
-  Body:
-    ast.BlockStmt:
 ast.FuncDecl:
   Doc:
     ast.CommentGroup:
@@ -248,9 +236,6 @@ ast.FuncDecl:
         ast.FieldList:
           List:
             ast.Field:
-              Names:
-                ast.Ident:
-                  Name: r
               Type:
                 ast.SelectorExpr:
                   X:
@@ -261,9 +246,6 @@ ast.FuncDecl:
                       Name: Reader
               Optional: true
             ast.Field:
-              Names:
-                ast.Ident:
-                  Name: w
               Type:
                 ast.SelectorExpr:
                   X:
@@ -273,8 +255,6 @@ ast.FuncDecl:
                     ast.Ident:
                       Name: Writer
               Optional: true
-  Body:
-    ast.BlockStmt:
 ast.FuncDecl:
   Doc:
     ast.CommentGroup:
@@ -323,8 +303,6 @@ ast.FuncDecl:
                             ast.Ident:
                               Name: string
               Optional: true
-  Body:
-    ast.BlockStmt:
 ast.FuncDecl:
   Doc:
     ast.CommentGroup:
@@ -381,8 +359,6 @@ ast.FuncDecl:
                             ast.Ident:
                               Name: error
               Optional: true
-  Body:
-    ast.BlockStmt:
 ast.FuncDecl:
   Doc:
     ast.CommentGroup:
@@ -423,8 +399,6 @@ ast.FuncDecl:
                     ast.Ident:
                       Name: Duration
               Optional: true
-  Body:
-    ast.BlockStmt:
 ast.FuncDecl:
   Doc:
     ast.CommentGroup:
@@ -453,8 +427,6 @@ ast.FuncDecl:
               Type:
                 ast.Ident:
                   Name: bool
-  Body:
-    ast.BlockStmt:
 ast.FuncDecl:
   Doc:
     ast.CommentGroup:
@@ -492,8 +464,6 @@ ast.FuncDecl:
                 ast.Ident:
                   Name: bool
               Optional: true
-  Body:
-    ast.BlockStmt:
 ast.FuncDecl:
   Doc:
     ast.CommentGroup:
@@ -532,8 +502,6 @@ ast.FuncDecl:
                 ast.Ident:
                   Name: bool
               Optional: true
-  Body:
-    ast.BlockStmt:
 ast.FuncDecl:
   Doc:
     ast.CommentGroup:
@@ -565,8 +533,6 @@ ast.FuncDecl:
                   Elt:
                     ast.Ident:
                       Name: string
-  Body:
-    ast.BlockStmt:
 ast.GenDecl:
   Doc:
     ast.CommentGroup:
