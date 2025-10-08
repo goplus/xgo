@@ -41,6 +41,7 @@ archives:
       - goos: windows
         format: zip
     files:
+      - "CLAUDE.md"
       - "CODE_OF_CONDUCT.md"
       - "Dockerfile"
       - "LICENSE"
@@ -208,6 +209,8 @@ nfpms:
     bindir: /usr/lib/{{ .ProjectName }}
     contents:
       # source folder
+      - src: "CLAUDE.md"
+        dst: "/usr/lib/{{ .ProjectName }}/CLAUDE.md"
       - src: "CODE_OF_CONDUCT.md"
         dst: "/usr/lib/{{ .ProjectName }}/CODE_OF_CONDUCT.md"
       - src: "Dockerfile"
@@ -287,6 +290,8 @@ snapcrafts:
       {{- if .Arm }}v{{ .Arm }}{{ end }}
     extra_files:
       # source folder
+      - source: "CLAUDE.md"
+        destination: "CLAUDE.md"
       - source: "CODE_OF_CONDUCT.md"
         destination: "CODE_OF_CONDUCT.md"
       - source: "Dockerfile"
