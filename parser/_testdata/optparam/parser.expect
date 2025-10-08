@@ -1,0 +1,713 @@
+package optparam
+
+file optparam.go
+ast.FuncDecl:
+  Doc:
+    ast.CommentGroup:
+      List:
+        ast.Comment:
+          Text: // Basic optional parameters
+  Name:
+    ast.Ident:
+      Name: single
+  Type:
+    ast.FuncType:
+      Params:
+        ast.FieldList:
+          List:
+            ast.Field:
+              Names:
+                ast.Ident:
+                  Name: a
+              Type:
+                ast.Ident:
+                  Name: int
+              Optional: true
+  Body:
+    ast.BlockStmt:
+ast.FuncDecl:
+  Name:
+    ast.Ident:
+      Name: multiple
+  Type:
+    ast.FuncType:
+      Params:
+        ast.FieldList:
+          List:
+            ast.Field:
+              Names:
+                ast.Ident:
+                  Name: a
+              Type:
+                ast.Ident:
+                  Name: int
+            ast.Field:
+              Names:
+                ast.Ident:
+                  Name: b
+              Type:
+                ast.Ident:
+                  Name: string
+              Optional: true
+            ast.Field:
+              Names:
+                ast.Ident:
+                  Name: c
+              Type:
+                ast.Ident:
+                  Name: bool
+              Optional: true
+  Body:
+    ast.BlockStmt:
+ast.FuncDecl:
+  Name:
+    ast.Ident:
+      Name: mixed
+  Type:
+    ast.FuncType:
+      Params:
+        ast.FieldList:
+          List:
+            ast.Field:
+              Names:
+                ast.Ident:
+                  Name: name
+              Type:
+                ast.Ident:
+                  Name: string
+            ast.Field:
+              Names:
+                ast.Ident:
+                  Name: age
+              Type:
+                ast.Ident:
+                  Name: int
+              Optional: true
+            ast.Field:
+              Names:
+                ast.Ident:
+                  Name: active
+              Type:
+                ast.Ident:
+                  Name: bool
+              Optional: true
+            ast.Field:
+              Names:
+                ast.Ident:
+                  Name: data
+              Type:
+                ast.ArrayType:
+                  Elt:
+                    ast.Ident:
+                      Name: byte
+  Body:
+    ast.BlockStmt:
+ast.FuncDecl:
+  Doc:
+    ast.CommentGroup:
+      List:
+        ast.Comment:
+          Text: // Pointer types with optional
+  Name:
+    ast.Ident:
+      Name: pointer
+  Type:
+    ast.FuncType:
+      Params:
+        ast.FieldList:
+          List:
+            ast.Field:
+              Names:
+                ast.Ident:
+                  Name: a
+              Type:
+                ast.StarExpr:
+                  X:
+                    ast.Ident:
+                      Name: int
+              Optional: true
+            ast.Field:
+              Names:
+                ast.Ident:
+                  Name: b
+              Type:
+                ast.StarExpr:
+                  X:
+                    ast.StarExpr:
+                      X:
+                        ast.Ident:
+                          Name: string
+              Optional: true
+  Body:
+    ast.BlockStmt:
+ast.FuncDecl:
+  Doc:
+    ast.CommentGroup:
+      List:
+        ast.Comment:
+          Text: // Complex types with optional
+  Name:
+    ast.Ident:
+      Name: complex
+  Type:
+    ast.FuncType:
+      Params:
+        ast.FieldList:
+          List:
+            ast.Field:
+              Names:
+                ast.Ident:
+                  Name: m
+              Type:
+                ast.MapType:
+                  Key:
+                    ast.Ident:
+                      Name: string
+                  Value:
+                    ast.Ident:
+                      Name: int
+              Optional: true
+            ast.Field:
+              Names:
+                ast.Ident:
+                  Name: s
+              Type:
+                ast.ArrayType:
+                  Elt:
+                    ast.Ident:
+                      Name: int
+              Optional: true
+            ast.Field:
+              Names:
+                ast.Ident:
+                  Name: ch
+              Type:
+                ast.ChanType:
+                  Value:
+                    ast.Ident:
+                      Name: int
+              Optional: true
+  Body:
+    ast.BlockStmt:
+ast.FuncDecl:
+  Doc:
+    ast.CommentGroup:
+      List:
+        ast.Comment:
+          Text: // Array types with optional
+  Name:
+    ast.Ident:
+      Name: arrays
+  Type:
+    ast.FuncType:
+      Params:
+        ast.FieldList:
+          List:
+            ast.Field:
+              Names:
+                ast.Ident:
+                  Name: a
+              Type:
+                ast.ArrayType:
+                  Len:
+                    ast.BasicLit:
+                      Kind: INT
+                      Value: 10
+                  Elt:
+                    ast.Ident:
+                      Name: int
+              Optional: true
+            ast.Field:
+              Names:
+                ast.Ident:
+                  Name: b
+              Type:
+                ast.ArrayType:
+                  Len:
+                    ast.BasicLit:
+                      Kind: INT
+                      Value: 5
+                  Elt:
+                    ast.Ident:
+                      Name: string
+              Optional: true
+  Body:
+    ast.BlockStmt:
+ast.FuncDecl:
+  Doc:
+    ast.CommentGroup:
+      List:
+        ast.Comment:
+          Text: // Interface types with optional
+  Name:
+    ast.Ident:
+      Name: interfaces
+  Type:
+    ast.FuncType:
+      Params:
+        ast.FieldList:
+          List:
+            ast.Field:
+              Names:
+                ast.Ident:
+                  Name: r
+              Type:
+                ast.SelectorExpr:
+                  X:
+                    ast.Ident:
+                      Name: io
+                  Sel:
+                    ast.Ident:
+                      Name: Reader
+              Optional: true
+            ast.Field:
+              Names:
+                ast.Ident:
+                  Name: w
+              Type:
+                ast.SelectorExpr:
+                  X:
+                    ast.Ident:
+                      Name: io
+                  Sel:
+                    ast.Ident:
+                      Name: Writer
+              Optional: true
+  Body:
+    ast.BlockStmt:
+ast.FuncDecl:
+  Doc:
+    ast.CommentGroup:
+      List:
+        ast.Comment:
+          Text: // Struct types with optional
+  Name:
+    ast.Ident:
+      Name: structs
+  Type:
+    ast.FuncType:
+      Params:
+        ast.FieldList:
+          List:
+            ast.Field:
+              Names:
+                ast.Ident:
+                  Name: p
+              Type:
+                ast.StructType:
+                  Fields:
+                    ast.FieldList:
+                      List:
+                        ast.Field:
+                          Names:
+                            ast.Ident:
+                              Name: X
+                          Type:
+                            ast.Ident:
+                              Name: int
+              Optional: true
+            ast.Field:
+              Names:
+                ast.Ident:
+                  Name: q
+              Type:
+                ast.StructType:
+                  Fields:
+                    ast.FieldList:
+                      List:
+                        ast.Field:
+                          Names:
+                            ast.Ident:
+                              Name: Y
+                          Type:
+                            ast.Ident:
+                              Name: string
+              Optional: true
+  Body:
+    ast.BlockStmt:
+ast.FuncDecl:
+  Doc:
+    ast.CommentGroup:
+      List:
+        ast.Comment:
+          Text: // Function types with optional
+  Name:
+    ast.Ident:
+      Name: funcs
+  Type:
+    ast.FuncType:
+      Params:
+        ast.FieldList:
+          List:
+            ast.Field:
+              Names:
+                ast.Ident:
+                  Name: f
+              Type:
+                ast.FuncType:
+                  Params:
+                    ast.FieldList:
+                      List:
+                        ast.Field:
+                          Type:
+                            ast.Ident:
+                              Name: int
+                  Results:
+                    ast.FieldList:
+                      List:
+                        ast.Field:
+                          Type:
+                            ast.Ident:
+                              Name: string
+              Optional: true
+            ast.Field:
+              Names:
+                ast.Ident:
+                  Name: g
+              Type:
+                ast.FuncType:
+                  Params:
+                    ast.FieldList:
+                      List:
+                        ast.Field:
+                          Type:
+                            ast.Ident:
+                              Name: string
+                  Results:
+                    ast.FieldList:
+                      List:
+                        ast.Field:
+                          Type:
+                            ast.Ident:
+                              Name: error
+              Optional: true
+  Body:
+    ast.BlockStmt:
+ast.FuncDecl:
+  Doc:
+    ast.CommentGroup:
+      List:
+        ast.Comment:
+          Text: // Qualified identifiers with optional
+  Name:
+    ast.Ident:
+      Name: qualified
+  Type:
+    ast.FuncType:
+      Params:
+        ast.FieldList:
+          List:
+            ast.Field:
+              Names:
+                ast.Ident:
+                  Name: t
+              Type:
+                ast.SelectorExpr:
+                  X:
+                    ast.Ident:
+                      Name: time
+                  Sel:
+                    ast.Ident:
+                      Name: Time
+              Optional: true
+            ast.Field:
+              Names:
+                ast.Ident:
+                  Name: d
+              Type:
+                ast.SelectorExpr:
+                  X:
+                    ast.Ident:
+                      Name: time
+                  Sel:
+                    ast.Ident:
+                      Name: Duration
+              Optional: true
+  Body:
+    ast.BlockStmt:
+ast.FuncDecl:
+  Doc:
+    ast.CommentGroup:
+      List:
+        ast.Comment:
+          Text: // Unnamed (anonymous) parameters with optional
+  Name:
+    ast.Ident:
+      Name: unnamed
+  Type:
+    ast.FuncType:
+      Params:
+        ast.FieldList:
+          List:
+            ast.Field:
+              Type:
+                ast.Ident:
+                  Name: int
+              Optional: true
+            ast.Field:
+              Type:
+                ast.Ident:
+                  Name: string
+              Optional: true
+            ast.Field:
+              Type:
+                ast.Ident:
+                  Name: bool
+  Body:
+    ast.BlockStmt:
+ast.FuncDecl:
+  Doc:
+    ast.CommentGroup:
+      List:
+        ast.Comment:
+          Text: // Mixed named and unnamed with optional
+  Name:
+    ast.Ident:
+      Name: mixedParams
+  Type:
+    ast.FuncType:
+      Params:
+        ast.FieldList:
+          List:
+            ast.Field:
+              Names:
+                ast.Ident:
+                  Name: a
+              Type:
+                ast.Ident:
+                  Name: int
+            ast.Field:
+              Names:
+                ast.Ident:
+                  Name: string
+              Type:
+                ast.Ident:
+                  Name: bool
+              Optional: true
+            ast.Field:
+              Names:
+                ast.Ident:
+                  Name: c
+              Type:
+                ast.Ident:
+                  Name: bool
+              Optional: true
+  Body:
+    ast.BlockStmt:
+ast.FuncDecl:
+  Doc:
+    ast.CommentGroup:
+      List:
+        ast.Comment:
+          Text: // All optional parameters
+  Name:
+    ast.Ident:
+      Name: allOptional
+  Type:
+    ast.FuncType:
+      Params:
+        ast.FieldList:
+          List:
+            ast.Field:
+              Names:
+                ast.Ident:
+                  Name: a
+              Type:
+                ast.Ident:
+                  Name: int
+              Optional: true
+            ast.Field:
+              Names:
+                ast.Ident:
+                  Name: b
+              Type:
+                ast.Ident:
+                  Name: string
+              Optional: true
+            ast.Field:
+              Names:
+                ast.Ident:
+                  Name: c
+              Type:
+                ast.Ident:
+                  Name: bool
+              Optional: true
+  Body:
+    ast.BlockStmt:
+ast.FuncDecl:
+  Doc:
+    ast.CommentGroup:
+      List:
+        ast.Comment:
+          Text: // Optional with variadic (variadic cannot be optional)
+  Name:
+    ast.Ident:
+      Name: withVariadic
+  Type:
+    ast.FuncType:
+      Params:
+        ast.FieldList:
+          List:
+            ast.Field:
+              Names:
+                ast.Ident:
+                  Name: a
+              Type:
+                ast.Ident:
+                  Name: int
+              Optional: true
+            ast.Field:
+              Names:
+                ast.Ident:
+                  Name: b
+              Type:
+                ast.Ellipsis:
+                  Elt:
+                    ast.Ident:
+                      Name: string
+  Body:
+    ast.BlockStmt:
+ast.GenDecl:
+  Doc:
+    ast.CommentGroup:
+      List:
+        ast.Comment:
+          Text: // Type declarations with optional
+  Tok: type
+  Specs:
+    ast.TypeSpec:
+      Name:
+        ast.Ident:
+          Name: Handler
+      Type:
+        ast.FuncType:
+          Params:
+            ast.FieldList:
+              List:
+                ast.Field:
+                  Names:
+                    ast.Ident:
+                      Name: req
+                  Type:
+                    ast.StarExpr:
+                      X:
+                        ast.Ident:
+                          Name: Request
+                  Optional: true
+                ast.Field:
+                  Names:
+                    ast.Ident:
+                      Name: resp
+                  Type:
+                    ast.StarExpr:
+                      X:
+                        ast.Ident:
+                          Name: Response
+                  Optional: true
+          Results:
+            ast.FieldList:
+              List:
+                ast.Field:
+                  Type:
+                    ast.Ident:
+                      Name: error
+ast.GenDecl:
+  Tok: type
+  Specs:
+    ast.TypeSpec:
+      Name:
+        ast.Ident:
+          Name: Callback
+      Type:
+        ast.FuncType:
+          Params:
+            ast.FieldList:
+              List:
+                ast.Field:
+                  Type:
+                    ast.Ident:
+                      Name: int
+                  Optional: true
+                ast.Field:
+                  Type:
+                    ast.Ident:
+                      Name: string
+                  Optional: true
+          Results:
+            ast.FieldList:
+              List:
+                ast.Field:
+                  Type:
+                    ast.Ident:
+                      Name: bool
+ast.GenDecl:
+  Doc:
+    ast.CommentGroup:
+      List:
+        ast.Comment:
+          Text: // Method with optional parameters
+  Tok: type
+  Specs:
+    ast.TypeSpec:
+      Name:
+        ast.Ident:
+          Name: Server
+      Type:
+        ast.StructType:
+          Fields:
+            ast.FieldList:
+ast.FuncDecl:
+  Recv:
+    ast.FieldList:
+      List:
+        ast.Field:
+          Names:
+            ast.Ident:
+              Name: s
+          Type:
+            ast.StarExpr:
+              X:
+                ast.Ident:
+                  Name: Server
+  Name:
+    ast.Ident:
+      Name: Handle
+  Type:
+    ast.FuncType:
+      Params:
+        ast.FieldList:
+          List:
+            ast.Field:
+              Names:
+                ast.Ident:
+                  Name: req
+              Type:
+                ast.StarExpr:
+                  X:
+                    ast.Ident:
+                      Name: Request
+              Optional: true
+            ast.Field:
+              Names:
+                ast.Ident:
+                  Name: opts
+              Type:
+                ast.StarExpr:
+                  X:
+                    ast.Ident:
+                      Name: Options
+              Optional: true
+      Results:
+        ast.FieldList:
+          List:
+            ast.Field:
+              Type:
+                ast.Ident:
+                  Name: error
+  Body:
+    ast.BlockStmt:
+      List:
+        ast.ReturnStmt:
+          Results:
+            ast.Ident:
+              Name: nil

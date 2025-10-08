@@ -24,6 +24,7 @@ When implementing new language syntax, follow this two-phase approach:
 - **Parser**: Implement parsing rules in `parser/` directory
 - **Printer**: Add formatting support for new syntax (inverse of parsing) in `printer/` directory
 - **Testing**: Add test cases in `parser/_testdata/` for new syntax
+  - **Note**: Printer shares test cases with parser - do NOT create separate test files in `printer/_testdata/`
 
 #### Phase 2: Semantic Implementation (Second Pull Request)  
 **Scope**: Code generation via `cl` package

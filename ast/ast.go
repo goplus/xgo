@@ -81,11 +81,12 @@ type CommentGroup = ast.CommentGroup
 // Field.Names is nil for unnamed parameters (parameter lists which only contain types)
 // and embedded struct fields. In the latter case, the field name is the type name.
 type Field struct {
-	Doc     *CommentGroup // associated documentation; or nil
-	Names   []*Ident      // field/method/parameter names; or nil
-	Type    Expr          // field/method/parameter type
-	Tag     *BasicLit     // field tag; or nil
-	Comment *CommentGroup // line comments; or nil
+	Doc      *CommentGroup // associated documentation; or nil
+	Names    []*Ident      // field/method/parameter names; or nil
+	Type     Expr          // field/method/parameter type
+	Tag      *BasicLit     // field tag; or nil
+	Comment  *CommentGroup // line comments; or nil
+	Optional token.Pos     // position of "?", or NoPos if not optional
 }
 
 // Pos returns position of first character belonging to the node.
@@ -100,6 +101,9 @@ func (f *Field) Pos() token.Pos {
 func (f *Field) End() token.Pos {
 	if f.Tag != nil {
 		return f.Tag.End()
+	}
+	if f.Optional.IsValid() {
+		return f.Optional + 1
 	}
 	return f.Type.End()
 }
