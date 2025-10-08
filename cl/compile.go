@@ -1410,6 +1410,7 @@ func aliasType(ctx *blockCtx, pkg *types.Package, pos token.Pos, name string, t 
 }
 
 func loadFunc(ctx *blockCtx, recv *types.Var, name string, d *ast.FuncDecl, genBody bool) {
+	transformOptionalParams(d)
 	if debugLoad {
 		if recv == nil {
 			log.Println("==> Load func", name)

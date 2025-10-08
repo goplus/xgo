@@ -96,17 +96,57 @@ func toParams(ctx *blockCtx, flds []*ast.Field) (typ *types.Tuple, variadic bool
 func toParam(ctx *blockCtx, fld *ast.Field, args []*gogen.Param) []*gogen.Param {
 	typ := toType(ctx, fld.Type)
 	pkg := ctx.pkg
+	isOptional := fld.Optional.IsValid()
 	if len(fld.Names) == 0 {
-		return append(args, pkg.NewParam(fld.Pos(), "", typ))
+		paramName := ""
+		if isOptional {
+			paramName = "__xgo_optional_"
+		}
+		return append(args, pkg.NewParam(fld.Pos(), paramName, typ))
 	}
 	for _, name := range fld.Names {
-		param := pkg.NewParam(name.Pos(), name.Name, typ)
+		paramName := name.Name
+		if isOptional {
+			paramName = "__xgo_optional_" + name.Name
+		}
+		param := pkg.NewParam(name.Pos(), paramName, typ)
 		args = append(args, param)
 		if rec := ctx.recorder(); rec != nil {
 			rec.Def(name, param)
 		}
 	}
 	return args
+}
+
+func transformOptionalParams(d *ast.FuncDecl) {
+	if d.Type.Params == nil || d.Body == nil {
+		return
+	}
+	renames := make(map[string]string)
+	for _, fld := range d.Type.Params.List {
+		if fld.Optional.IsValid() {
+			for _, name := range fld.Names {
+				renames[name.Name] = "__xgo_optional_" + name.Name
+			}
+		}
+	}
+	if len(renames) == 0 {
+		return
+	}
+	ast.Walk(&optionalParamRenamer{renames: renames}, d.Body)
+}
+
+type optionalParamRenamer struct {
+	renames map[string]string
+}
+
+func (r *optionalParamRenamer) Visit(node ast.Node) ast.Visitor {
+	if ident, ok := node.(*ast.Ident); ok {
+		if newName, found := r.renames[ident.Name]; found {
+			ident.Name = newName
+		}
+	}
+	return r
 }
 
 // -----------------------------------------------------------------------------
