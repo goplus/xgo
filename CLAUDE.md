@@ -1,4 +1,4 @@
-# XGo Project Contributor Guide
+# XGo Project AI Assistant Guide
 
 ## Project Overview
 
