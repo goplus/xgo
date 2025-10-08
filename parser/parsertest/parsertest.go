@@ -87,7 +87,13 @@ func FprintNode(w io.Writer, lead string, v any, prefix, indent string) {
 					fmt.Fprintf(w, "%s%v: %v\n", prefix, sf.Name, sfv)
 				case tyBytes: // skip
 				default:
-					FprintNode(w, fmt.Sprintf("%s%v:\n", prefix, sf.Name), sfv, prefix+indent, indent)
+					if sf.Name == "Optional" {
+						if pos, ok := sfv.(token.Pos); ok && pos != token.NoPos {
+							fmt.Fprintf(w, "%s%v: true\n", prefix, sf.Name)
+						}
+					} else {
+						FprintNode(w, fmt.Sprintf("%s%v:\n", prefix, sf.Name), sfv, prefix+indent, indent)
+					}
 				}
 			}
 			if m, ok := v.(*ast.MatrixLit); ok {

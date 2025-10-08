@@ -1,0 +1,215 @@
+package main
+
+file optparam.go
+ast.FuncDecl:
+  Name:
+    ast.Ident:
+      Name: single
+  Type:
+    ast.FuncType:
+      Params:
+        ast.FieldList:
+          List:
+            ast.Field:
+              Names:
+                ast.Ident:
+                  Name: a
+              Type:
+                ast.Ident:
+                  Name: int
+              Optional: true
+  Body:
+    ast.BlockStmt:
+ast.FuncDecl:
+  Name:
+    ast.Ident:
+      Name: multiple
+  Type:
+    ast.FuncType:
+      Params:
+        ast.FieldList:
+          List:
+            ast.Field:
+              Names:
+                ast.Ident:
+                  Name: a
+              Type:
+                ast.Ident:
+                  Name: int
+            ast.Field:
+              Names:
+                ast.Ident:
+                  Name: b
+              Type:
+                ast.Ident:
+                  Name: string
+              Optional: true
+            ast.Field:
+              Names:
+                ast.Ident:
+                  Name: c
+              Type:
+                ast.Ident:
+                  Name: bool
+              Optional: true
+  Body:
+    ast.BlockStmt:
+ast.FuncDecl:
+  Name:
+    ast.Ident:
+      Name: mixed
+  Type:
+    ast.FuncType:
+      Params:
+        ast.FieldList:
+          List:
+            ast.Field:
+              Names:
+                ast.Ident:
+                  Name: name
+              Type:
+                ast.Ident:
+                  Name: string
+            ast.Field:
+              Names:
+                ast.Ident:
+                  Name: age
+              Type:
+                ast.Ident:
+                  Name: int
+              Optional: true
+            ast.Field:
+              Names:
+                ast.Ident:
+                  Name: active
+              Type:
+                ast.Ident:
+                  Name: bool
+              Optional: true
+            ast.Field:
+              Names:
+                ast.Ident:
+                  Name: data
+              Type:
+                ast.ArrayType:
+                  Elt:
+                    ast.Ident:
+                      Name: byte
+  Body:
+    ast.BlockStmt:
+ast.FuncDecl:
+  Name:
+    ast.Ident:
+      Name: pointer
+  Type:
+    ast.FuncType:
+      Params:
+        ast.FieldList:
+          List:
+            ast.Field:
+              Names:
+                ast.Ident:
+                  Name: a
+              Type:
+                ast.StarExpr:
+                  X:
+                    ast.Ident:
+                      Name: int
+              Optional: true
+            ast.Field:
+              Names:
+                ast.Ident:
+                  Name: b
+              Type:
+                ast.StarExpr:
+                  X:
+                    ast.StarExpr:
+                      X:
+                        ast.Ident:
+                          Name: string
+              Optional: true
+  Body:
+    ast.BlockStmt:
+ast.FuncDecl:
+  Name:
+    ast.Ident:
+      Name: complex
+  Type:
+    ast.FuncType:
+      Params:
+        ast.FieldList:
+          List:
+            ast.Field:
+              Names:
+                ast.Ident:
+                  Name: m
+              Type:
+                ast.MapType:
+                  Key:
+                    ast.Ident:
+                      Name: string
+                  Value:
+                    ast.Ident:
+                      Name: int
+              Optional: true
+            ast.Field:
+              Names:
+                ast.Ident:
+                  Name: s
+              Type:
+                ast.ArrayType:
+                  Elt:
+                    ast.Ident:
+                      Name: int
+              Optional: true
+            ast.Field:
+              Names:
+                ast.Ident:
+                  Name: ch
+              Type:
+                ast.ChanType:
+                  Value:
+                    ast.Ident:
+                      Name: int
+              Optional: true
+  Body:
+    ast.BlockStmt:
+ast.GenDecl:
+  Tok: type
+  Specs:
+    ast.TypeSpec:
+      Name:
+        ast.Ident:
+          Name: Handler
+      Type:
+        ast.FuncType:
+          Params:
+            ast.FieldList:
+              List:
+                ast.Field:
+                  Names:
+                    ast.Ident:
+                      Name: req
+                  Type:
+                    ast.StarExpr:
+                      X:
+                        ast.Ident:
+                          Name: Request
+                  Optional: true
+                ast.Field:
+                  Names:
+                    ast.Ident:
+                      Name: resp
+                  Type:
+                    ast.StarExpr:
+                      X:
+                        ast.Ident:
+                          Name: Response
+                  Optional: true
+          Results:
+            ast.FieldList:
+              List:
+                ast.Field:
+                  Type:
+                    ast.Ident:
+                      Name: error
