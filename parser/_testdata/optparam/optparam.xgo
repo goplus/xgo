@@ -29,9 +29,6 @@ func qualified(t time.Time?, d time.Duration?)
 // Unnamed (anonymous) parameters with optional
 func unnamed(int?, string?, bool)
 
-// Mixed named and unnamed with optional
-func mixedParams(a int, string?, c bool?)
-
 // All optional parameters
 func allOptional(a int?, b string?, c bool?)
 

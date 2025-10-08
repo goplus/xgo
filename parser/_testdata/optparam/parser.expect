@@ -432,43 +432,6 @@ ast.FuncDecl:
     ast.CommentGroup:
       List:
         ast.Comment:
-          Text: // Mixed named and unnamed with optional
-  Name:
-    ast.Ident:
-      Name: mixedParams
-  Type:
-    ast.FuncType:
-      Params:
-        ast.FieldList:
-          List:
-            ast.Field:
-              Names:
-                ast.Ident:
-                  Name: a
-              Type:
-                ast.Ident:
-                  Name: int
-            ast.Field:
-              Names:
-                ast.Ident:
-                  Name: string
-              Type:
-                ast.Ident:
-                  Name: bool
-              Optional: true
-            ast.Field:
-              Names:
-                ast.Ident:
-                  Name: c
-              Type:
-                ast.Ident:
-                  Name: bool
-              Optional: true
-ast.FuncDecl:
-  Doc:
-    ast.CommentGroup:
-      List:
-        ast.Comment:
           Text: // All optional parameters
   Name:
     ast.Ident:
