@@ -396,7 +396,7 @@ func (p *printer) parameters(fields *ast.FieldList) {
 			// parameter type
 			p.expr(stripParensAlways(par.Type))
 			// optional parameter marker
-			if par.Optional {
+			if par.Optional.IsValid() {
 				p.print(token.QUESTION)
 			}
 			prevLine = parLineEnd

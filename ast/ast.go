@@ -86,7 +86,7 @@ type Field struct {
 	Type     Expr          // field/method/parameter type
 	Tag      *BasicLit     // field tag; or nil
 	Comment  *CommentGroup // line comments; or nil
-	Optional bool          // true if this parameter is optional (T?)
+	Optional token.Pos     // position of "?", or NoPos if not optional
 }
 
 // Pos returns position of first character belonging to the node.
@@ -101,6 +101,9 @@ func (f *Field) Pos() token.Pos {
 func (f *Field) End() token.Pos {
 	if f.Tag != nil {
 		return f.Tag.End()
+	}
+	if f.Optional.IsValid() {
+		return f.Optional + 1
 	}
 	return f.Type.End()
 }

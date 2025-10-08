@@ -1107,7 +1107,7 @@ func (p *parser) parsePointerType() *ast.StarExpr {
 type field struct {
 	name     *ast.Ident
 	typ      ast.Expr
-	optional bool
+	optional token.Pos
 }
 
 func (p *parser) parseParameterList(scope *ast.Scope, name0 *ast.Ident, typ0 ast.Expr, closing token.Token) (params []*ast.Field) {
@@ -1130,7 +1130,7 @@ func (p *parser) parseParameterList(scope *ast.Scope, name0 *ast.Ident, typ0 ast
 	for name0 != nil || p.tok != closing && p.tok != token.EOF {
 		var par field
 		if typ0 != nil {
-			par = field{name: name0, typ: typ0, optional: false}
+			par = field{name: name0, typ: typ0, optional: token.NoPos}
 		} else {
 			par = p.parseParamDecl(name0)
 		}
@@ -1214,7 +1214,7 @@ func (p *parser) parseParameterList(scope *ast.Scope, name0 *ast.Ident, typ0 ast
 	// parameter list consists of named parameters with types
 	var names []*ast.Ident
 	var typ ast.Expr
-	var optional bool
+	var optional token.Pos
 	addParams := func() {
 		assert(typ != nil, "nil type in named parameter list")
 		field := &ast.Field{Names: names, Type: typ, Optional: optional}
@@ -1266,7 +1266,7 @@ func (p *parser) parseParamDecl(name *ast.Ident) (f field) {
 			// name type
 			f.typ = p.parseType()
 			if p.tok == token.QUESTION {
-				f.optional = true
+				f.optional = p.pos
 				p.next()
 			}
 
@@ -1274,7 +1274,7 @@ func (p *parser) parseParamDecl(name *ast.Ident) (f field) {
 			// name "[" type1, ..., typeN "]" or name "[" n "]" type
 			f.name, f.typ = p.parseArrayFieldOrTypeInstance(f.name, stateType)
 			if p.tok == token.QUESTION {
-				f.optional = true
+				f.optional = p.pos
 				p.next()
 			}
 
@@ -1288,7 +1288,7 @@ func (p *parser) parseParamDecl(name *ast.Ident) (f field) {
 			f.typ = p.parseQualifiedIdent(f.name)
 			f.name = nil
 			if p.tok == token.QUESTION {
-				f.optional = true
+				f.optional = p.pos
 				p.next()
 			}
 		}
@@ -1311,7 +1311,7 @@ func (p *parser) parseParamDecl(name *ast.Ident) (f field) {
 	}
 
 	if p.tok == token.QUESTION {
-		f.optional = true
+		f.optional = p.pos
 		p.next()
 	}
 
