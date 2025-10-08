@@ -1265,18 +1265,10 @@ func (p *parser) parseParamDecl(name *ast.Ident) (f field) {
 		case token.IDENT, token.MUL, token.ARROW, token.FUNC, token.CHAN, token.MAP, token.STRUCT, token.INTERFACE, token.LPAREN:
 			// name type
 			f.typ = p.parseType()
-			if p.tok == token.QUESTION {
-				f.optional = p.pos
-				p.next()
-			}
 
 		case token.LBRACK:
 			// name "[" type1, ..., typeN "]" or name "[" n "]" type
 			f.name, f.typ = p.parseArrayFieldOrTypeInstance(f.name, stateType)
-			if p.tok == token.QUESTION {
-				f.optional = p.pos
-				p.next()
-			}
 
 		case token.ELLIPSIS:
 			// name "..." type
@@ -1287,10 +1279,6 @@ func (p *parser) parseParamDecl(name *ast.Ident) (f field) {
 			// name "." ...
 			f.typ = p.parseQualifiedIdent(f.name)
 			f.name = nil
-			if p.tok == token.QUESTION {
-				f.optional = p.pos
-				p.next()
-			}
 		}
 
 	case token.MUL, token.ARROW, token.FUNC, token.LBRACK, token.CHAN, token.MAP, token.STRUCT, token.INTERFACE, token.LPAREN:
