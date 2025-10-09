@@ -862,7 +862,6 @@ func greet(name string, count int?) {
 }
 
 greet "Alice", 3  // prints "Hello, Alice" three times
-greet "Bob", 0    // prints "Hello, Bob" once (default behavior)
 ```
 
 Optional parameters are denoted by adding `?` after the parameter type. The default value is always the zero value of that type (e.g., `0` for integers, `""` for strings, `false` for booleans).
@@ -876,7 +875,6 @@ func connect(host string, port int?, secure bool?) {
 }
 
 connect "example.com", 443, true  // Connecting to example.com on port 443 secure: true
-connect "example.com", 0, false   // Connecting to example.com on port 80 secure: false
 ```
 
 <h5 align="right"><a href="#table-of-contents">⬆ back to toc</a></h5>
