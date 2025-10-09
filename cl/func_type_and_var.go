@@ -96,11 +96,12 @@ func toParams(ctx *blockCtx, flds []*ast.Field) (typ *types.Tuple, variadic bool
 func toParam(ctx *blockCtx, fld *ast.Field, args []*gogen.Param) []*gogen.Param {
 	typ := toType(ctx, fld.Type)
 	pkg := ctx.pkg
+	isOptional := fld.Optional.IsValid()
 	if len(fld.Names) == 0 {
-		return append(args, pkg.NewParam(fld.Pos(), "", typ))
+		return append(args, pkg.NewParamEx(fld.Pos(), "", typ, isOptional))
 	}
 	for _, name := range fld.Names {
-		param := pkg.NewParam(name.Pos(), name.Name, typ)
+		param := pkg.NewParamEx(name.Pos(), name.Name, typ, isOptional)
 		args = append(args, param)
 		if rec := ctx.recorder(); rec != nil {
 			rec.Def(name, param)

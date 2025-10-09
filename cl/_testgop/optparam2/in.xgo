@@ -1,0 +1,19 @@
+func returnValue(x int?) int {
+	return x
+}
+
+func useInExpression(a int?, b int?) int {
+	result := a + b
+	return result * 2
+}
+
+func simpleNested(outer int?) {
+	f := func() {
+		println outer
+	}
+	f()
+}
+
+returnValue 42
+useInExpression 10, 5
+simpleNested 100

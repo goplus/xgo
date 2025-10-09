@@ -1,0 +1,29 @@
+func basic(a int, b int?) {
+	println a, b
+}
+
+func multiple(name string, age int?, active bool?) {
+	println name, age, active
+}
+
+func allOptional(x int?, y string?) {
+	println x, y
+}
+
+func withVariadic(a int?, b ...string) {
+	println a, b
+}
+
+type Server struct{}
+
+func (s *Server) handle(req string, opts int?) {
+	println req, opts
+}
+
+basic 10, 20
+multiple "Alice", 30, true
+allOptional 100, "test"
+withVariadic 5, "hello", "world"
+
+s := Server{}
+s.handle "request", 42

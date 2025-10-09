@@ -55,6 +55,7 @@ When implementing new language syntax, follow this two-phase approach:
 - Ensure new syntax doesn't break existing XGo/Go code
 - Follow Go idioms in generated code
 - Provide comprehensive error messages
+- **Code Formatting**: Run `go fmt` on any changed source files before committing
 
 ### Documentation Expectations
 
