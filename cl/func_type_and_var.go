@@ -110,7 +110,6 @@ func toParam(ctx *blockCtx, fld *ast.Field, args []*gogen.Param) []*gogen.Param 
 	return args
 }
 
-
 // -----------------------------------------------------------------------------
 
 func toType(ctx *blockCtx, typ ast.Expr) (t types.Type) {
