@@ -108,6 +108,7 @@ Here is my `Hello world` program:
     * [Error handling](#error-handling)
 * [Functions](#functions)
     * [Returning multiple values](#returning-multiple-values)
+    * [Optional parameters](#optional-parameters)
     * [Variadic parameters](#variadic-parameters)
     * [Higher order functions](#higher-order-functions)
     * [Lambda expressions](#lambda-expressions)
@@ -811,6 +812,41 @@ a, b := foo()
 println a // 2
 println b // 3
 c, _ := foo() // ignore values using `_`
+```
+
+<h5 align="right"><a href="#table-of-contents">⬆ back to toc</a></h5>
+
+
+### Optional parameters
+
+XGo supports optional parameters using the `T?` syntax. Optional parameters must have zero values as their defaults.
+
+```go
+func greet(name string, count int?) {
+    if count == 0 {
+        count = 1
+    }
+    for i := 0; i < count; i++ {
+        println "Hello,", name
+    }
+}
+
+greet "Alice", 3  // prints "Hello, Alice" three times
+greet "Bob"       // prints "Hello, Bob" once (default behavior)
+```
+
+Optional parameters are denoted by adding `?` after the parameter type. The default value is always the zero value of that type (e.g., `0` for integers, `""` for strings, `false` for booleans).
+
+```go
+func connect(host string, port int?, secure bool?) {
+    if port == 0 {
+        port = 80
+    }
+    println "Connecting to", host, "on port", port, "secure:", secure
+}
+
+connect "example.com", 443, true  // Connecting to example.com on port 443 secure: true
+connect "example.com"              // Connecting to example.com on port 80 secure: false
 ```
 
 <h5 align="right"><a href="#table-of-contents">⬆ back to toc</a></h5>

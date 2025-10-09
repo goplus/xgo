@@ -32,6 +32,13 @@ When implementing new language syntax, follow this two-phase approach:
 - **Type Safety**: Leverage gogen's type information maintenance for semantic correctness
 - **Testing**: Add comprehensive test cases in `cl/_testgop/` covering various usage scenarios
 
+#### Phase 3: Documentation (Third Pull Request)
+**Scope**: User-facing documentation updates
+- **Quick Start Guide**: Add feature documentation to `doc/docs.md` with practical examples
+- **Table of Contents**: Update TOC in quick start to include new feature section
+- **Language Specification**: Update specification documents if needed (e.g., `doc/spec.md`)
+- **Examples**: Provide clear, runnable code examples demonstrating the feature
+
 ### Communication Protocol
 - When I request syntax additions, first confirm the exact grammar specification
 - Always consider backward compatibility with existing Go code
@@ -70,3 +77,7 @@ When implementing new language syntax, follow this two-phase approach:
   - Common usage scenarios
   - Edge cases and error conditions
   - Integration with existing type system
+- **Phase 3**: Documentation validation
+  - Ensure all code examples in documentation are runnable and correct
+  - Verify documentation accurately reflects implemented behavior
+  - Check that TOC links work correctly
