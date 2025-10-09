@@ -108,8 +108,8 @@ Here is my `Hello world` program:
     * [Error handling](#error-handling)
 * [Functions](#functions)
     * [Returning multiple values](#returning-multiple-values)
-    * [Variadic parameters](#variadic-parameters)
     * [Optional parameters](#optional-parameters)
+    * [Variadic parameters](#variadic-parameters)
     * [Higher order functions](#higher-order-functions)
     * [Lambda expressions](#lambda-expressions)
 * [Structs](#structs)
@@ -817,36 +817,6 @@ c, _ := foo() // ignore values using `_`
 <h5 align="right"><a href="#table-of-contents">⬆ back to toc</a></h5>
 
 
-### Variadic parameters
-
-```go
-func sum(a ...int) int {
-    total := 0
-    for x <- a {
-        total += x
-    }
-    return total
-}
-
-println sum(2, 3, 5) // 10
-```
-
-Output parameters can have names.
-
-```go
-func sum(a ...int) (total int) {
-    for x <- a {
-        total += x
-    }
-    return // don't need return values if they are assigned
-}
-
-println sum(2, 3, 5) // 10
-```
-
-<h5 align="right"><a href="#table-of-contents">⬆ back to toc</a></h5>
-
-
 ### Optional parameters
 
 XGo supports optional parameters using the `T?` syntax. Optional parameters must have zero values as their defaults.
@@ -875,6 +845,36 @@ func connect(host string, port int?, secure bool?) {
 }
 
 connect "example.com", 443, true  // Connecting to example.com on port 443 secure: true
+```
+
+<h5 align="right"><a href="#table-of-contents">⬆ back to toc</a></h5>
+
+
+### Variadic parameters
+
+```go
+func sum(a ...int) int {
+    total := 0
+    for x <- a {
+        total += x
+    }
+    return total
+}
+
+println sum(2, 3, 5) // 10
+```
+
+Output parameters can have names.
+
+```go
+func sum(a ...int) (total int) {
+    for x <- a {
+        total += x
+    }
+    return // don't need return values if they are assigned
+}
+
+println sum(2, 3, 5) // 10
 ```
 
 <h5 align="right"><a href="#table-of-contents">⬆ back to toc</a></h5>
