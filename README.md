@@ -246,11 +246,11 @@ See [yap: Yet Another HTTP Web Framework](https://github.com/goplus/yap) for mor
 
 ### spx: An XGo 2D Game Engine
 
-![Screen Shot1](https://github.com/goplus/spx/blob/main/tutorial/01-Weather/1.jpg) ![Screen Shot2](https://github.com/goplus/spx/blob/main/tutorial/01-Weather/2.jpg)
+![Screen Shot1](https://github.com/goplus/spx/blob/v1/tutorial/01-Weather/1.jpg) ![Screen Shot2](https://github.com/goplus/spx/blob/v1/tutorial/01-Weather/2.jpg)
 
 Through this example you can learn how to implement dialogues between multiple actors.
 
-Here are some codes in [Kai.spx](https://github.com/goplus/spx/blob/main/tutorial/01-Weather/Kai.spx):
+Here are some codes in [Kai.spx](https://github.com/goplus/spx/blob/v1/tutorial/01-Weather/Kai.spx):
 
 ```coffee
 onStart => {
@@ -266,7 +266,7 @@ onMsg "2", => {
 
 We call `onStart` and `onMsg` to listen events. `onStart` is called when the program is started. And `onMsg` is called when someone calls `broadcast` to broadcast a message.
 
-When the program starts, Kai says `Where do you come from?`, and then broadcasts the message `1`. Who will recieve this message? Let's see codes in [Jaime.spx](https://github.com/goplus/spx/blob/main/tutorial/01-Weather/Jaime.spx):
+When the program starts, Kai says `Where do you come from?`, and then broadcasts the message `1`. Who will recieve this message? Let's see codes in [Jaime.spx](https://github.com/goplus/spx/blob/v1/tutorial/01-Weather/Jaime.spx):
 
 ```coffee
 onMsg "1", => {
