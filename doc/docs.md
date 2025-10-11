@@ -174,7 +174,7 @@ Your program can then use the CLI parameters like this:
 ```go
 import "os"
 
-println os.Args
+echo os.Args
 ```
 
 <h5 align="right"><a href="#table-of-contents">⬆ back to toc</a></h5>
@@ -201,8 +201,8 @@ This is a multiline comment.
 name := "Bob"
 age := 20
 largeNumber := int128(1 << 65)
-println name, age
-println largeNumber
+echo name, age
+echo largeNumber
 ```
 
 Variables are declared and initialized with `:=`.
@@ -236,7 +236,7 @@ In this way, their values can be swapped without an intermediary variable.
 ```go
 a, b := 0, 1
 a, b = b, a
-println a, b // 1, 0
+echo a, b // 1, 0
 ```
 
 <h5 align="right"><a href="#table-of-contents">⬆ back to toc</a></h5>
@@ -276,18 +276,18 @@ any // alias for Go's interface{}
 
 ```go
 name := "Bob"
-println name.len  // 3
-println name[0]   // 66
-println name[1:3] // ob
-println name[:2]  // Bo
-println name[2:]  // b
+echo name.len  // 3
+echo name[0]   // 66
+echo name[1:3] // ob
+echo name[:2]  // Bo
+echo name[2:]  // b
 
 // or using octal escape `\###` notation where `#` is an octal digit
-println "\141a"   // aa
+echo "\141a"   // aa
 
 // Unicode can be specified directly as `\u####` where # is a hex digit
 // and will be converted internally to its UTF-8 representation
-println "\u2605"  // ★
+echo "\u2605"  // ★
 ```
 
 String values are immutable. You cannot mutate elements:
@@ -315,11 +315,11 @@ b := s.int! // will panic if s isn't a valid integer
 ```go
 name := "Bob"
 bobby := name + "by" // + is used to concatenate strings
-println bobby // Bobby
+echo bobby // Bobby
 
 s := "Hello "
 s += "world"
-println s // Hello world
+echo s // Hello world
 ```
 
 Most XGo operators must have values of the same type on both sides. You cannot concatenate an
@@ -327,21 +327,21 @@ integer to a string:
 
 ```go failcompile
 age := 10
-println "age = " + age // not allowed
+echo "age = " + age // not allowed
 ```
 
 We have to either convert `age` to a `string`:
 
 ```go
 age := 10
-println "age = " + age.string
+echo "age = " + age.string
 ```
 
 However, you can replace `age.string` to `"${age}"`:
 
 ```go
 age := 10
-println "age = ${age}"
+echo "age = ${age}"
 ```
 
 Here is a more complex example of `${expr}`:
@@ -350,8 +350,8 @@ Here is a more complex example of `${expr}`:
 host := "example.com"
 page := 0
 limit := 20
-println "https://${host}/items?page=${page+1}&limit=${limit}" // https://example.com/items?page=1&limit=20
-println "$$" // $
+echo "https://${host}/items?page=${page+1}&limit=${limit}" // https://example.com/items?page=1&limit=20
+echo "$$" // $
 ```
 
 
@@ -364,8 +364,8 @@ A `rune` represents a single Unicode character and is an alias for `int32`.
 
 ```go
 rocket := '🚀'
-println rocket         // 128640
-println string(rocket) // 🚀
+echo rocket         // 128640
+echo string(rocket) // 🚀
 ```
 
 <h5 align="right"><a href="#table-of-contents">⬆ back to toc</a></h5>
@@ -432,9 +432,9 @@ b := bigint(1 << 200)
 And you can cast bool to number types (this is NOT supported in Go):
 
 ```go
-println int(true)       // 1
-println float64(true)   // 1
-println complex64(true) // (1+0i)
+echo int(true)       // 1
+echo float64(true)   // 1
+echo complex64(true) // (1+0i)
 ```
 
 <h5 align="right"><a href="#table-of-contents">⬆ back to toc</a></h5>
@@ -448,15 +448,15 @@ accessed using an *index* expression. Indexes start from `0`:
 
 ```go
 nums := [1, 2, 3]
-println nums      // [1 2 3]
-println nums.len  // 3
-println nums[0]   // 1
-println nums[1:3] // [2 3]
-println nums[:2]  // [1 2]
-println nums[2:]  // [3]
+echo nums      // [1 2 3]
+echo nums.len  // 3
+echo nums[0]   // 1
+echo nums[1:3] // [2 3]
+echo nums[:2]  // [1 2]
+echo nums[2:]  // [3]
 
 nums[1] = 5
-println nums // [1 5 3]
+echo nums // [1 5 3]
 ```
 
 Type of a slice literal is infered automatically.
@@ -492,8 +492,8 @@ If a key is not found, a zero value is returned by default:
 ```go
 a := {"Hello": 1, "xsw": 3}
 c := {"Hello": 1, "xsw": "XGo"}
-println a["bad_key"] // 0
-println c["bad_key"] // <nil>
+echo a["bad_key"] // 0
+echo c["bad_key"] // <nil>
 ```
 
 You can also check, if a key is present, and get its value.
@@ -501,7 +501,7 @@ You can also check, if a key is present, and get its value.
 ```go
 a := {"Hello": 1, "xsw": 3}
 if v, ok := a["xsw"]; ok {
-    println "its value is", v
+    echo "its value is", v
 }
 ```
 
@@ -518,7 +518,7 @@ Modules can be imported using the `import` keyword:
 import "strings"
 
 x := strings.NewReplacer("?", "!").Replace("Hello, world???")
-println x // Hello, world!!!
+echo x // Hello, world!!!
 ```
 
 <h5 align="right"><a href="#table-of-contents">⬆ back to toc</a></h5>
@@ -532,7 +532,7 @@ Any imported module name can be aliased:
 import strop "strings"
 
 x := strop.NewReplacer("?", "!").Replace("Hello, world???")
-println x // Hello, world!!!
+echo x // Hello, world!!!
 ```
 
 <h5 align="right"><a href="#table-of-contents">⬆ back to toc</a></h5>
@@ -551,11 +551,11 @@ there are no parentheses surrounding the condition and the braces are always req
 a := 10
 b := 20
 if a < b {
-    println "a < b"
+    echo "a < b"
 } else if a > b {
-    println "a > b"
+    echo "a > b"
 } else {
-    println "a == b"
+    echo "a == b"
 }
 ```
 
@@ -582,7 +582,7 @@ sum := 0
 for x in numbers {
     sum += x
 }
-println sum // 57
+echo sum // 57
 ```
 
 If an index is required, an alternative form `for index, value in arr` can be used.
@@ -590,7 +590,7 @@ If an index is required, an alternative form `for index, value in arr` can be us
 ```go
 names := ["Sam", "Peter"]
 for i, name in names {
-    println i, name
+    echo i, name
     // 0 Sam
     // 1 Peter
 }
@@ -604,17 +604,17 @@ for i, name in names {
 ```go
 m := {"one": 1, "two": 2}
 for key, val in m {
-    println key, val
+    echo key, val
     // one 1
     // two 2
 }
 for key, _ in m {
-    println key
+    echo key
     // one
     // two
 }
 for val in m {
-    println val
+    echo val
     // 1
     // 2
 }
@@ -629,7 +629,7 @@ You can use `range expression` (`start:end:step`) in for loop.
 
 ```go
 for i <- :5 {
-    println i
+    echo i
     // 0
     // 1
     // 2
@@ -637,14 +637,14 @@ for i <- :5 {
     // 4
 }
 for i <- 1:5 {
-    println i
+    echo i
     // 1
     // 2
     // 3
     // 4
 }
 for i <- 1:5:2 {
-    println i
+    echo i
     // 1
     // 3
 }
@@ -660,7 +660,7 @@ All loops of `for`/`<-` form can have an optional `if` condition.
 ```go
 numbers := [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 for num <- numbers if num%3 == 0 {
-    println num
+    echo num
     // 0
     // 3
     // 6
@@ -668,7 +668,7 @@ for num <- numbers if num%3 == 0 {
 }
 
 for num <- :10 if num%3 == 0 {
-    println num
+    echo num
     // 0
     // 3
     // 6
@@ -688,7 +688,7 @@ for i <= 100 {
     sum += i
     i++
 }
-println sum // 5050
+echo sum // 5050
 ```
 
 This form of the loop is similar to `while` loops in other languages.
@@ -706,7 +706,7 @@ for i := 0; i < 10; i += 2 {
     if i == 6 {
         continue
     }
-    println i
+    echo i
     // 0
     // 2
     // 4
@@ -759,12 +759,12 @@ func addSafe(x, y string) int {
     return strconv.Atoi(x)?:0 + strconv.Atoi(y)?:0
 }
 
-println `add("100", "23"):`, add("100", "23")!
+echo `add("100", "23"):`, add("100", "23")!
 
 sum, err := add("10", "abc")
-println `add("10", "abc"):`, sum, err
+echo `add("10", "abc"):`, sum, err
 
-println `addSafe("10", "abc"):`, addSafe("10", "abc")
+echo `addSafe("10", "abc"):`, addSafe("10", "abc")
 ```
 
 The output of this example is:
@@ -796,7 +796,7 @@ func add(x int, y int) int {
     return x + y
 }
 
-println add(2, 3) // 5
+echo add(2, 3) // 5
 ```
 
 <h5 align="right"><a href="#table-of-contents">⬆ back to toc</a></h5>
@@ -810,8 +810,8 @@ func foo() (int, int) {
 }
 
 a, b := foo()
-println a // 2
-println b // 3
+echo a // 2
+echo b // 3
 c, _ := foo() // ignore values using `_`
 ```
 
@@ -828,7 +828,7 @@ func greet(name string, count int?) {
         count = 1
     }
     for i := 0; i < count; i++ {
-        println "Hello,", name
+        echo "Hello,", name
     }
 }
 
@@ -843,7 +843,7 @@ func connect(host string, port int?, secure bool?) {
     if port == 0 {
         port = 80
     }
-    println "Connecting to", host, "on port", port, "secure:", secure
+    echo "Connecting to", host, "on port", port, "secure:", secure
 }
 
 connect "example.com", 443, true  // Connecting to example.com on port 443 secure: true
@@ -926,7 +926,7 @@ func sum(a ...int) int {
     return total
 }
 
-println sum(2, 3, 5) // 10
+echo sum(2, 3, 5) // 10
 ```
 
 Output parameters can have names.
@@ -939,7 +939,7 @@ func sum(a ...int) (total int) {
     return // don't need return values if they are assigned
 }
 
-println sum(2, 3, 5) // 10
+echo sum(2, 3, 5) // 10
 ```
 
 <h5 align="right"><a href="#table-of-contents">⬆ back to toc</a></h5>
@@ -966,10 +966,10 @@ func transform(a []float64, f func(float64) float64) []float64 {
 }
 
 y := transform([1, 2, 3], square)
-println y // [1 4 9]
+echo y // [1 4 9]
 
 z := transform([-3, 1, -5], abs)
-println z // [3 1 5]
+echo z // [3 1 5]
 ```
 
 <h5 align="right"><a href="#table-of-contents">⬆ back to toc</a></h5>
@@ -985,7 +985,7 @@ func transform(a []float64, f func(float64) float64) []float64 {
 }
 
 y := transform([1, 2, 3], x => x*x)
-println y // [1 4 9]
+echo y // [1 4 9]
 
 z := transform([-3, 1, -5], x => {
     if x < 0 {
@@ -993,7 +993,7 @@ z := transform([-3, 1, -5], x => {
     }
     return x
 })
-println z // [3 1 5]
+echo z // [3 1 5]
 ```
 
 <h5 align="right"><a href="#table-of-contents">⬆ back to toc</a></h5>
@@ -1017,14 +1017,14 @@ func (p *Foo) Gop_Enum(proc func(key int, val string)) {
 
 foo := &Foo{}
 for k, v := range foo {
-    println k, v
+    echo k, v
 }
 
 for k, v <- foo {
-    println k, v
+    echo k, v
 }
 
-println {v: k for k, v <- foo}
+echo {v: k for k, v <- foo}
 ```
 
 **Note: you can't use break/continue or return statements in for range of udt.Gop_Enum(callback).**
@@ -1054,14 +1054,14 @@ func (p *Foo) Gop_Enum() *FooIter {
 
 foo := &Foo{}
 for k, v := range foo {
-    println k, v
+    echo k, v
 }
 
 for k, v <- foo {
-    println k, v
+    echo k, v
 }
 
-println {v: k for k, v <- foo}
+echo {v: k for k, v <- foo}
 ```
 
 <h5 align="right"><a href="#table-of-contents">⬆ back to toc</a></h5>
@@ -1126,8 +1126,8 @@ func -(a MyBigInt) MyBigInt { // unary operator
 
 a := Int(1r)
 a += Int(2r)
-println a + Int(3r)
-println -a
+echo a + Int(3r)
+echo -a
 ```
 
 <h5 align="right"><a href="#table-of-contents">⬆ back to toc</a></h5>
@@ -1142,7 +1142,7 @@ import "xgo/ast/goptest"
 
 doc := goptest.New(`... XGo code ...`)!
 
-println doc.Any().FuncDecl().Name()
+echo doc.Any().FuncDecl().Name()
 ```
 
 In many languages, there is a concept named `property` who has `get` and `set` methods.
@@ -1154,7 +1154,7 @@ import "xgo/ast/goptest"
 
 doc := goptest.New(`... XGo code ...`)!
 
-println doc.any.funcDecl.name
+echo doc.any.funcDecl.name
 ```
 
 In XGo, we introduce a concept named `auto property`. It is a `get property`, but is implemented automatically. If we have a method named `Bar()`, then we will have a `get property` named `bar` at the same time.
@@ -1183,7 +1183,7 @@ And we have an XGo source file named `b.xgo`:
 
 ```go
 func sayMix() {
-    println "Mix Go and XGo"
+    echo "Mix Go and XGo"
 }
 
 p "world"
@@ -1262,7 +1262,7 @@ It will have the type of `bigrat`.
 ```go
 a := 4/5r
 b := a - 1/3r + 3 * 1/2r
-println a, b // 4/5 59/30
+echo a, b // 4/5 59/30
 ```
 
 Casting rational numbers works like other [primitive types](#primitive-types):
@@ -1271,9 +1271,9 @@ Casting rational numbers works like other [primitive types](#primitive-types):
 a := 1r
 b := bigrat(1r)
 c := bigrat(1)
-println a/3 // 0
-println b/3 // 1/3
-println c/3 // 1/3
+echo a/3 // 0
+echo b/3 // 1/3
+echo c/3 // 1/3
 ```
 
 <h5 align="right"><a href="#table-of-contents">⬆ back to toc</a></h5>
@@ -1310,8 +1310,8 @@ students := [student{"Ken", 90}, student{"Jason", 80}, student{"Lily", 85}]
 unknownScore, ok := {x.score for x <- students if x.name == "Unknown"}
 jasonScore := {x.score for x <- students if x.name == "Jason"}
 
-println unknownScore, ok // 0 false
-println jasonScore // 80
+echo unknownScore, ok // 0 false
+echo jasonScore // 80
 ```
 
 <h5 align="right"><a href="#table-of-contents">⬆ back to toc</a></h5>
