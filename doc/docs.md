@@ -862,12 +862,12 @@ XGo supports Python-like keyword arguments (kwargs) syntax for improved code rea
 ```go
 func process(opts map[string]any?, args ...any) {
     if name, ok := opts["name"]; ok {
-        println "Name:", name
+        echo "Name:", name
     }
     if age, ok := opts["age"]; ok {
-        println "Age:", age
+        echo "Age:", age
     }
-    println "Args:", args
+    echo "Args:", args
 }
 
 process(name="Ken", age=17)              // keyword parameters only
@@ -887,39 +887,16 @@ type Options struct {
 }
 
 func configure(opts *Options?) {
-    println "Name:", opts.Name
-    println "Age:", opts.Age
-    println "City:", opts.City
+    if opts != nil {
+        echo "Name:", opts.Name
+        echo "Age:", opts.Age
+        echo "City:", opts.City
+    }
 }
 
 configure(name="Ken", age=17, city="Tokyo")     // lowercase field names work
 configure(Name="Alice", Age=25, City="Paris")   // uppercase field names work too
 configure()                                      // optional parameter with zero value
-```
-
-#### Combining with variadic parameters
-
-When using both keyword and variadic parameters, the keyword parameter must be the second-to-last parameter (before the variadic parameter):
-
-```go
-type Config struct {
-    Host string
-    Port int
-}
-
-func connect(cfg *Config?, args ...string) {
-    if cfg.Host == "" {
-        cfg.Host = "localhost"
-    }
-    if cfg.Port == 0 {
-        cfg.Port = 8080
-    }
-    println "Connecting to", cfg.Host, ":", cfg.Port
-    println "Additional args:", args
-}
-
-connect("ssl", "verify", host="example.com", port=443)  // variadic parameters first, then keyword parameters
-connect("quick", "connection")  // uses default config with only variadic parameters
 ```
 
 **Key rules:**
