@@ -1005,7 +1005,7 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 	old, _ := p.SetCurFile(goFile, true)
 	defer p.RestoreCurFile(old)
 
-	preloadFuncDecl := func(d *ast.FuncDecl) {
+	preloadFuncDecl := func(d *ast.FuncDecl, overload bool) {
 		if ctx.classRecv != nil { // in class file (.spx/.gmx)
 			if recv := d.Recv; recv == nil || len(recv.List) == 0 {
 				d.Recv = ctx.classRecv
@@ -1018,7 +1018,13 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 			fn := func() {
 				old, _ := p.SetCurFile(goFile, true)
 				defer p.RestoreCurFile(old)
-				loadFunc(ctx, nil, fname, d, genFnBody)
+				if overload {
+					pkg := ctx.pkg.Types
+					fn := gogen.NewOverloadFunc(d.Name.Pos(), pkg, fname)
+					pkg.Scope().Insert(fn)
+				} else {
+					loadFunc(ctx, nil, fname, d, genFnBody)
+				}
 			}
 			if fname == "init" {
 				if genFnBody {
@@ -1060,7 +1066,13 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 					defer p.RestoreCurFile(old)
 					doInitType(ld)
 					recv := toRecv(ctx, d.Recv)
-					loadFunc(ctx, recv, fname, d, genFnBody)
+					if overload {
+						pkg := ctx.pkg.Types
+						typ := pkg.Scope().Lookup(tname).Type().(*types.Named)
+						gogen.NewOverloadMethod(typ, d.Name.Pos(), pkg, fname)
+					} else {
+						loadFunc(ctx, recv, fname, d, genFnBody)
+					}
 				}
 				ld.methods = append(ld.methods, fn)
 			}
@@ -1194,7 +1206,7 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 			}
 
 		case *ast.FuncDecl:
-			preloadFuncDecl(d)
+			preloadFuncDecl(d, false)
 
 		case *ast.OverloadFuncDecl:
 			var recv *ast.Ident
@@ -1282,12 +1294,33 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 						Name: id,
 						Type: expr.Type,
 						Body: expr.Body,
-					})
+					}, false)
 				default:
 					ctx.handleErrorf(expr.Pos(), expr.End(), "unknown func %v", ctx.LoadExpr(expr))
 					break LoopFunc
 				}
 			}
+			if d.Recv == nil {
+				ctx.lbinames = append(ctx.lbinames, d.Name.Name)
+			}
+			preloadFuncDecl(&ast.FuncDecl{
+				Doc:  d.Doc,
+				Recv: d.Recv,
+				Name: d.Name,
+				Type: &ast.FuncType{
+					Params: &ast.FieldList{
+						List: []*ast.Field{
+							&ast.Field{
+								Names: []*ast.Ident{
+									ast.NewIdent(overloadArgs),
+								},
+								Type: ast.NewIdent("any"),
+							},
+						},
+					},
+				},
+			}, true)
+
 			if exov { // need Gopo_xxx
 				oname, err := overloadName(recv, name.Name, d.Operator)
 				if err != nil {
@@ -1323,6 +1356,10 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 		}
 	}
 }
+
+const (
+	overloadArgs = "__xgo_overload_args__"
+)
 
 func checkOverloadMethodRecvType(ot *ast.Ident, recv ast.Expr) (*ast.Ident, bool) {
 	rtyp, _, ok := getRecvType(recv)
