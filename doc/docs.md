@@ -109,6 +109,7 @@ Here is my `Hello world` program:
 * [Functions](#functions)
     * [Returning multiple values](#returning-multiple-values)
     * [Optional parameters](#optional-parameters)
+    * [Keyword arguments](#keyword-arguments)
     * [Variadic parameters](#variadic-parameters)
     * [Higher order functions](#higher-order-functions)
     * [Lambda expressions](#lambda-expressions)
@@ -848,6 +849,68 @@ func connect(host string, port int?, secure bool?) {
 connect "example.com", 443, true  // Connecting to example.com on port 443 secure: true
 connect "example.com"              // Connecting to example.com on port 80 secure: false
 ```
+
+<h5 align="right"><a href="#table-of-contents">⬆ back to toc</a></h5>
+
+
+### Keyword arguments
+
+XGo supports Python-like keyword arguments (kwargs) syntax for improved code readability. When calling functions with many parameters, you can use `key=value` syntax to make your code more expressive and command-line-style.
+
+#### Using kwargs with maps
+
+```go
+func process(opts map[string]any?, args ...any) {
+    if name, ok := opts["name"]; ok {
+        echo "Name:", name
+    }
+    if age, ok := opts["age"]; ok {
+        echo "Age:", age
+    }
+    echo "Args:", args
+}
+
+process(name="Ken", age=17)              // keyword parameters only
+process("extra", 1, name="Ken", age=17)  // variadic parameters first, then keyword parameters
+process()                                 // all parameters optional
+```
+
+#### Using kwargs with structs
+
+You can also use structs or struct pointers for keyword parameters, which provides type safety:
+
+```go
+type Config struct {
+    Timeout    int
+    MaxRetries int
+    Debug      bool
+}
+
+func run(cfg *Config?) {
+    timeout := 30
+    maxRetries := 3
+    debug := false
+    if cfg != nil {
+        if cfg.Timeout > 0 {
+            timeout = cfg.Timeout
+        }
+        if cfg.MaxRetries > 0 {
+            maxRetries = cfg.MaxRetries
+        }
+        debug = cfg.Debug
+    }
+    echo "Timeout:", timeout, "MaxRetries:", maxRetries, "Debug:", debug
+}
+
+run(timeout=60, maxRetries=5)           // lowercase field names work
+run(Timeout=10, Debug=true)             // uppercase field names work too
+run()                                    // uses default values
+```
+
+**Key rules:**
+- The keyword parameter must be an optional parameter.
+- The keyword parameter must be the last parameter (without variadic) or second-to-last (with variadic).
+- When calling a function, keyword arguments must be placed after all normal parameters (including variadic parameters). This might seem inconsistent with the order of keyword and variadic parameters in a function declaration, but that's the rule.
 
 <h5 align="right"><a href="#table-of-contents">⬆ back to toc</a></h5>
 
