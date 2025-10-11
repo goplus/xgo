@@ -1355,7 +1355,7 @@ domainTag`> arg1, arg2, ...
 
 ### Built-in Domain Text Formats
 
-#### Template (tpl)
+#### Text Processing Language (tpl)
 
 ```go
 cl := tpl`expr = INT % ("+" | "-")`!
