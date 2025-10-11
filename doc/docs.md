@@ -125,6 +125,7 @@ Here is my `Hello world` program:
     * [List comprehension](#list-comprehension)
     * [Select data from a collection](#select-data-from-a-collection)
     * [Check if data exists in a collection](#check-if-data-exists-in-a-collection)
+* [Domain-specific text literals](#domain-specific-text-literals)
 * [Unix shebang](#unix-shebang)
 * [Compatibility with Go](#compatibility-with-go)
 
@@ -1349,6 +1350,79 @@ students := [student{"Ken", 90}, student{"Jason", 80}, student{"Lily", 85}]
 hasJason := {for x <- students if x.name == "Jason"} // is any student named Jason?
 hasFailed := {for x <- students if x.score < 60}     // is any student failed?
 ```
+
+<h5 align="right"><a href="#table-of-contents">⬆ back to toc</a></h5>
+
+
+## Domain-Specific Text Literals
+
+XGo supports domain-specific text literals, which allow you to embed domain-specific languages directly in your code with syntax highlighting and type safety. This feature is inspired by Markdown code blocks but designed for seamless integration with XGo code.
+
+### Syntax
+
+```go
+domainTag`text content`
+```
+
+For domain text literals with arguments:
+
+```go
+domainTag`> arg1, arg2, ...
+  text content
+`
+```
+
+### Built-in Domain Text Formats
+
+#### Text Processing Language (tpl)
+
+A grammar-based language for text processing that offers a more readable and maintainable alternative to regular expressions. For more details, see [tpl/README.md](../tpl/README.md).
+
+```go
+cl := tpl`expr = INT % ("+" | "-")`!
+echo cl.parseExpr("1+2-3", nil)
+```
+
+#### JSON
+
+```go
+echo json`{"a":1, "b":2}`
+```
+
+#### XML
+
+```go
+echo xml`<a>1</a>`
+```
+
+#### CSV
+
+```go
+echo csv`a,b`
+```
+
+#### HTML
+
+```go
+import "golang.org/x/net/html"
+
+echo html`<html><body><h1>hello</h1></body></html>`
+```
+
+#### Regular Expressions
+
+```go
+re := regexp`^[a-z]+\[[0-9]+\]$`!
+echo re.matchString("adam[23]")
+```
+
+### How It Works
+
+Each domain text literal is essentially a function call to a `New()` function in the corresponding package. For example, `json`{...}`` is equivalent to calling `json.New(...)`.
+
+### Extensibility
+
+You can add support for custom domain text formats by creating a package with a global `func New(string)` function. This makes the system highly extensible for your specific needs.
 
 <h5 align="right"><a href="#table-of-contents">⬆ back to toc</a></h5>
 
