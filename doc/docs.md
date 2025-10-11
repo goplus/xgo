@@ -880,23 +880,31 @@ process()                                 // all parameters optional
 You can also use structs or struct pointers for keyword parameters, which provides type safety:
 
 ```go
-type Options struct {
-    Name string
-    Age  int
-    City string
+type Config struct {
+    Timeout    int
+    MaxRetries int
+    Debug      bool
 }
 
-func configure(opts *Options?) {
-    if opts != nil {
-        echo "Name:", opts.Name
-        echo "Age:", opts.Age
-        echo "City:", opts.City
+func run(cfg *Config?) {
+    timeout := 30
+    maxRetries := 3
+    debug := false
+    if cfg != nil {
+        if cfg.Timeout > 0 {
+            timeout = cfg.Timeout
+        }
+        if cfg.MaxRetries > 0 {
+            maxRetries = cfg.MaxRetries
+        }
+        debug = cfg.Debug
     }
+    echo "Timeout:", timeout, "MaxRetries:", maxRetries, "Debug:", debug
 }
 
-configure(name="Ken", age=17, city="Tokyo")     // lowercase field names work
-configure(Name="Alice", Age=25, City="Paris")   // uppercase field names work too
-configure()                                      // optional parameter with zero value
+run(timeout=60, maxRetries=5)           // lowercase field names work
+run(Timeout=10, Debug=true)             // uppercase field names work too
+run()                                    // uses default values
 ```
 
 **Key rules:**
