@@ -482,18 +482,18 @@ XGo provides a convenient `<-` operator for appending elements to slices, which 
 
 ```go
 a := [1, 2, 3]
-a <- 4           // append single element
-a <- 5, 6, 7     // append multiple elements
+a in 4           // append single element
+a in 5, 6, 7     // append multiple elements
 b := [8, 9]
-a <- b...        // append another slice
+a in b...        // append another slice
 
 echo a // [1 2 3 4 5 6 7 8 9]
 ```
 
 This is equivalent to Go's append operations:
-- `a <- v` is the same as `a = append(a, v)`
-- `a <- v1, v2, v3` is the same as `a = append(a, v1, v2, v3)`
-- `a <- b...` is the same as `a = append(a, b...)`
+- `a in v` is the same as `a = append(a, v)`
+- `a in v1, v2, v3` is the same as `a = append(a, v1, v2, v3)`
+- `a in b...` is the same as `a = append(a, b...)`
 
 <h5 align="right"><a href="#table-of-contents">⬆ back to toc</a></h5>
 
@@ -648,7 +648,7 @@ for val in m {
 You can use `range expression` (`start:end:step`) in for loop.
 
 ```go
-for i <- :5 {
+for i in :5 {
     echo i
     // 0
     // 1
@@ -656,14 +656,14 @@ for i <- :5 {
     // 3
     // 4
 }
-for i <- 1:5 {
+for i in 1:5 {
     echo i
     // 1
     // 2
     // 3
     // 4
 }
-for i <- 1:5:2 {
+for i in 1:5:2 {
     echo i
     // 1
     // 3
@@ -679,7 +679,7 @@ All loops of `for`/`<-` form can have an optional `if` condition.
 
 ```go
 numbers := [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-for num <- numbers if num%3 == 0 {
+for num in numbers if num%3 == 0 {
     echo num
     // 0
     // 3
@@ -687,7 +687,7 @@ for num <- numbers if num%3 == 0 {
     // 9
 }
 
-for num <- :10 if num%3 == 0 {
+for num in :10 if num%3 == 0 {
     echo num
     // 0
     // 3
@@ -940,7 +940,7 @@ run()                                    // uses default values
 ```go
 func sum(a ...int) int {
     total := 0
-    for x <- a {
+    for x in a {
         total += x
     }
     return total
@@ -953,7 +953,7 @@ Output parameters can have names.
 
 ```go
 func sum(a ...int) (total int) {
-    for x <- a {
+    for x in a {
         total += x
     }
     return // don't need return values if they are assigned
@@ -982,7 +982,7 @@ func abs(x float64) float64 {
 }
 
 func transform(a []float64, f func(float64) float64) []float64 {
-    return [f(x) for x <- a]
+    return [f(x) for x in a]
 }
 
 y := transform([1, 2, 3], square)
@@ -1001,7 +1001,7 @@ You also can use `lambda expression` to define a anonymous function.
 
 ```go
 func transform(a []float64, f func(float64) float64) []float64 {
-    return [f(x) for x <- a]
+    return [f(x) for x in a]
 }
 
 y := transform([1, 2, 3], x => x*x)
@@ -1040,11 +1040,11 @@ for k, v := range foo {
     echo k, v
 }
 
-for k, v <- foo {
+for k, v in foo {
     echo k, v
 }
 
-echo {v: k for k, v <- foo}
+echo {v: k for k, v in foo}
 ```
 
 **Note: you can't use break/continue or return statements in for range of udt.Gop_Enum(callback).**
@@ -1077,11 +1077,11 @@ for k, v := range foo {
     echo k, v
 }
 
-for k, v <- foo {
+for k, v in foo {
     echo k, v
 }
 
-echo {v: k for k, v <- foo}
+echo {v: k for k, v in foo}
 ```
 
 <h5 align="right"><a href="#table-of-contents">⬆ back to toc</a></h5>
@@ -1302,16 +1302,16 @@ echo c/3 // 1/3
 ### List comprehension
 
 ```go
-a := [x*x for x <- [1, 3, 5, 7, 11]]
-b := [x*x for x <- [1, 3, 5, 7, 11] if x > 3]
-c := [i+v for i, v <- [1, 3, 5, 7, 11] if i%2 == 1]
+a := [x*x for x in [1, 3, 5, 7, 11]]
+b := [x*x for x in [1, 3, 5, 7, 11] if x > 3]
+c := [i+v for i, v in [1, 3, 5, 7, 11] if i%2 == 1]
 
 arr := [1, 2, 3, 4, 5, 6]
-d := [[a, b] for a <- arr if a < b for b <- arr if b > 2]
+d := [[a, b] for a in arr if a < b for b in arr if b > 2]
 
-x := {x: i for i, x <- [1, 3, 5, 7, 11]}
-y := {x: i for i, x <- [1, 3, 5, 7, 11] if i%2 == 1}
-z := {v: k for k, v <- {1: "Hello", 3: "Hi", 5: "xsw", 7: "XGo"} if k > 3}
+x := {x: i for i, x in [1, 3, 5, 7, 11]}
+y := {x: i for i, x in [1, 3, 5, 7, 11] if i%2 == 1}
+z := {v: k for k, v in {1: "Hello", 3: "Hi", 5: "xsw", 7: "XGo"} if k > 3}
 ```
 
 <h5 align="right"><a href="#table-of-contents">⬆ back to toc</a></h5>
@@ -1327,8 +1327,8 @@ type student struct {
 
 students := [student{"Ken", 90}, student{"Jason", 80}, student{"Lily", 85}]
 
-unknownScore, ok := {x.score for x <- students if x.name == "Unknown"}
-jasonScore := {x.score for x <- students if x.name == "Jason"}
+unknownScore, ok := {x.score for x in students if x.name == "Unknown"}
+jasonScore := {x.score for x in students if x.name == "Jason"}
 
 echo unknownScore, ok // 0 false
 echo jasonScore // 80
@@ -1347,8 +1347,8 @@ type student struct {
 
 students := [student{"Ken", 90}, student{"Jason", 80}, student{"Lily", 85}]
 
-hasJason := {for x <- students if x.name == "Jason"} // is any student named Jason?
-hasFailed := {for x <- students if x.score < 60}     // is any student failed?
+hasJason := {for x in students if x.name == "Jason"} // is any student named Jason?
+hasFailed := {for x in students if x.score < 60}     // is any student failed?
 ```
 
 <h5 align="right"><a href="#table-of-contents">⬆ back to toc</a></h5>
@@ -1441,13 +1441,13 @@ echo 1/3r + 2/7r*2
 
 arr := [1, 3, 5, 7, 11, 13, 17, 19]
 echo arr
-echo [x*x for x <- arr, x > 3]
+echo [x*x for x in arr, x > 3]
 
 m := {"Hi": 1, "XGo": 2}
 echo m
-echo {v: k for k, v <- m}
-echo [k for k, _ <- m]
-echo [v for v <- m]
+echo {v: k for k, v in m}
+echo [k for k, _ in m]
+echo [v for v in m]
 ```
 
 <h5 align="right"><a href="#table-of-contents">⬆ back to toc</a></h5>
@@ -1479,7 +1479,7 @@ Then write an XGo package named [foo](https://github.com/goplus/tutorial/tree/ma
 package foo
 
 func ReverseMap(m map[string]int) map[int]string {
-    return {v: k for k, v <- m}
+    return {v: k for k, v in m}
 }
 ```
 
