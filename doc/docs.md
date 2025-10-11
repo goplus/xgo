@@ -910,7 +910,7 @@ run()                                    // uses default values
 **Key rules:**
 - The keyword parameter must be an optional parameter.
 - The keyword parameter must be the last parameter (without variadic) or second-to-last (with variadic).
-- When calling a function, keyword arguments must be placed after all normal parameters (including optional parameters). This might seem inconsistent with the order of optional and variadic parameters in a function declaration, but that's the rule.
+- When calling a function, keyword arguments must be placed after all normal parameters (including variadic parameters). This might seem inconsistent with the order of keyword and variadic parameters in a function declaration, but that's the rule.
 
 <h5 align="right"><a href="#table-of-contents">⬆ back to toc</a></h5>
 
