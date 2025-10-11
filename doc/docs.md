@@ -1357,6 +1357,8 @@ domainTag`> arg1, arg2, ...
 
 #### Text Processing Language (tpl)
 
+A grammar-based language for text processing that offers a more readable and maintainable alternative to regular expressions. For more details, see [tpl/README.md](../tpl/README.md).
+
 ```go
 cl := tpl`expr = INT % ("+" | "-")`!
 echo cl.parseExpr("1+2-3", nil)
