@@ -871,7 +871,7 @@ func process(opts map[string]any?, args ...any) {
 }
 
 process(name="Ken", age=17)              // keyword parameters only
-process(name="Ken", age=17, "extra", 1)  // keyword + variadic parameters
+process("extra", 1, name="Ken", age=17)  // variadic parameters first, then keyword parameters
 process()                                 // all parameters optional
 ```
 
@@ -918,8 +918,8 @@ func connect(cfg *Config?, args ...string) {
     println "Additional args:", args
 }
 
-connect(host="example.com", port=443, "ssl", "verify")
-connect("quick", "connection")  // uses default config
+connect("ssl", "verify", host="example.com", port=443)  // variadic parameters first, then keyword parameters
+connect("quick", "connection")  // uses default config with only variadic parameters
 ```
 
 **Key rules:**
