@@ -475,6 +475,25 @@ And casting slice literals also works.
 a := []float64([1, 2, 3]) // []float64
 ```
 
+#### Appending to slices
+
+XGo provides a convenient `<-` operator for appending elements to slices, which is more intuitive than Go's `append` function:
+
+```go
+a := [1, 2, 3]
+a <- 4           // append single element
+a <- 5, 6, 7     // append multiple elements
+b := [8, 9]
+a <- b...        // append another slice
+
+echo a // [1 2 3 4 5 6 7 8 9]
+```
+
+This is equivalent to Go's append operations:
+- `a <- v` is the same as `a = append(a, v)`
+- `a <- v1, v2, v3` is the same as `a = append(a, v1, v2, v3)`
+- `a <- b...` is the same as `a = append(a, b...)`
+
 <h5 align="right"><a href="#table-of-contents">⬆ back to toc</a></h5>
 
 
