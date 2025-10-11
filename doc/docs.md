@@ -109,8 +109,8 @@ Here is my `Hello world` program:
 * [Functions](#functions)
     * [Returning multiple values](#returning-multiple-values)
     * [Optional parameters](#optional-parameters)
-    * [Variadic parameters](#variadic-parameters)
     * [Keyword arguments](#keyword-arguments)
+    * [Variadic parameters](#variadic-parameters)
     * [Higher order functions](#higher-order-functions)
     * [Lambda expressions](#lambda-expressions)
 * [Structs](#structs)
@@ -853,6 +853,83 @@ connect "example.com"              // Connecting to example.com on port 80 secur
 <h5 align="right"><a href="#table-of-contents">⬆ back to toc</a></h5>
 
 
+### Keyword arguments
+
+XGo supports Python-like keyword arguments (kwargs) syntax for improved code readability. When calling functions with many parameters, you can use `key=value` syntax to make your code more expressive and command-line-style.
+
+#### Using kwargs with maps
+
+```go
+func process(opts map[string]any?, args ...any) {
+    if name, ok := opts["name"]; ok {
+        println "Name:", name
+    }
+    if age, ok := opts["age"]; ok {
+        println "Age:", age
+    }
+    println "Args:", args
+}
+
+process(name="Ken", age=17)              // keyword parameters only
+process(name="Ken", age=17, "extra", 1)  // keyword + variadic parameters
+process()                                 // all parameters optional
+```
+
+#### Using kwargs with structs
+
+You can also use structs or struct pointers for keyword parameters, which provides type safety:
+
+```go
+type Options struct {
+    Name string
+    Age  int
+    City string
+}
+
+func configure(opts *Options?) {
+    println "Name:", opts.Name
+    println "Age:", opts.Age
+    println "City:", opts.City
+}
+
+configure(name="Ken", age=17, city="Tokyo")     // lowercase field names work
+configure(Name="Alice", Age=25, City="Paris")   // uppercase field names work too
+configure()                                      // optional parameter with zero value
+```
+
+#### Combining with variadic parameters
+
+When using both keyword and variadic parameters, the keyword parameter must be the second-to-last parameter (before the variadic parameter):
+
+```go
+type Config struct {
+    Host string
+    Port int
+}
+
+func connect(cfg *Config?, args ...string) {
+    if cfg.Host == "" {
+        cfg.Host = "localhost"
+    }
+    if cfg.Port == 0 {
+        cfg.Port = 8080
+    }
+    println "Connecting to", cfg.Host, ":", cfg.Port
+    println "Additional args:", args
+}
+
+connect(host="example.com", port=443, "ssl", "verify")
+connect("quick", "connection")  // uses default config
+```
+
+**Key rules:**
+- The keyword parameter must be an optional parameter.
+- The keyword parameter must be the last parameter (without variadic) or second-to-last (with variadic).
+- When calling a function, keyword arguments must be placed after all normal parameters (including optional parameters). This might seem inconsistent with the order of optional and variadic parameters in a function declaration, but that's the rule.
+
+<h5 align="right"><a href="#table-of-contents">⬆ back to toc</a></h5>
+
+
 ### Variadic parameters
 
 ```go
@@ -879,84 +956,6 @@ func sum(a ...int) (total int) {
 
 println sum(2, 3, 5) // 10
 ```
-
-<h5 align="right"><a href="#table-of-contents">⬆ back to toc</a></h5>
-
-
-### Keyword arguments
-
-XGo supports Python-like keyword arguments (kwargs) syntax for improved code readability. When calling functions with many parameters, you can use `key=value` syntax to make your code more expressive and command-line-style.
-
-#### Using kwargs with maps
-
-```go
-func process(opts map[string]any?, args ...any) {
-    if name, ok := opts["name"]; ok {
-        println "Name:", name
-    }
-    if age, ok := opts["age"]; ok {
-        println "Age:", age
-    }
-    println "Args:", args
-}
-
-process(name="Ken", age=17)              // named parameters only
-process(name="Ken", age=17, "extra", 1)  // named + variadic parameters
-process()                                 // all parameters optional
-```
-
-#### Using kwargs with structs
-
-You can also use structs or struct pointers for kwargs parameters, which provides type safety:
-
-```go
-type Options struct {
-    Name string
-    Age  int
-    City string
-}
-
-func configure(opts *Options?) {
-    println "Name:", opts.Name
-    println "Age:", opts.Age
-    println "City:", opts.City
-}
-
-configure(name="Ken", age=17, city="Tokyo")     // lowercase field names work
-configure(Name="Alice", Age=25, City="Paris")   // uppercase field names work too
-configure()                                      // optional parameter with zero value
-```
-
-#### Combining with variadic parameters
-
-When using both kwargs and variadic parameters, the kwargs parameter must be the second-to-last parameter (before the variadic parameter):
-
-```go
-type Config struct {
-    Host string
-    Port int
-}
-
-func connect(cfg *Config?, args ...string) {
-    if cfg.Host == "" {
-        cfg.Host = "localhost"
-    }
-    if cfg.Port == 0 {
-        cfg.Port = 8080
-    }
-    println "Connecting to", cfg.Host, ":", cfg.Port
-    println "Additional args:", args
-}
-
-connect(host="example.com", port=443, "ssl", "verify")
-connect("quick", "connection")  // uses default config
-```
-
-**Key rules:**
-- Named parameters must come after positional parameters when calling functions
-- The kwargs parameter must be the last parameter (without variadic) or second-to-last (with variadic)
-- Parameter names in function calls can use either lowercase or uppercase for struct fields
-- Use `T?` syntax to make kwargs parameters optional (defaults to zero value)
 
 <h5 align="right"><a href="#table-of-contents">⬆ back to toc</a></h5>
 
