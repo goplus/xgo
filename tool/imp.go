@@ -49,6 +49,8 @@ type Importer struct {
 	fset    *token.FileSet
 
 	Flags GenFlags // can change this for loading XGo modules
+
+	importStack map[string]bool
 }
 
 // NewImporter creates an XGo Importer.
@@ -66,7 +68,7 @@ func NewImporter(mod *xgomod.Module, xgo *env.XGo, fset *token.FileSet) *Importe
 	}
 	dir := mod.Root()
 	impFrom := packages.NewImporter(fset, dir)
-	ret := &Importer{mod: mod, xgo: xgo, impFrom: impFrom, fset: fset, Flags: defaultFlags}
+	ret := &Importer{mod: mod, xgo: xgo, impFrom: impFrom, fset: fset, Flags: defaultFlags, importStack: make(map[string]bool)}
 	impFrom.SetCache(cache.New(ret.PkgHash))
 	return ret
 }
@@ -133,6 +135,11 @@ const (
 
 // Import imports a Go/XGo package.
 func (p *Importer) Import(pkgPath string) (pkg *types.Package, err error) {
+	if p.importStack[pkgPath] {
+		return nil, fmt.Errorf("cycle import detected: package %s imports itself", pkgPath)
+	}
+	p.importStack[pkgPath] = true
+	defer delete(p.importStack, pkgPath)
 	if strings.HasPrefix(pkgPath, xgoMod) {
 		if suffix := pkgPath[len(xgoMod):]; suffix == "" || suffix[0] == '/' {
 			xgoRoot := p.xgo.Root
