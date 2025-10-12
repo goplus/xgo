@@ -29,12 +29,12 @@ retry:
 	switch v := expr.(type) {
 	case *ast.UnaryExpr:
 		if v.Op != token.TILDE {
-			panic(ctx.newCodeErrorf(v.Pos(), "invalid op %v must ~", v.Op))
+			panic(ctx.newCodeErrorf(v.Pos(), v.End(), "invalid op %v must ~", v.Op))
 		}
 		return []*types.Term{types.NewTerm(true, toType(ctx, v.X))}
 	case *ast.BinaryExpr:
 		if v.Op != token.OR {
-			panic(ctx.newCodeErrorf(v.Pos(), "invalid op %v must |", v.Op))
+			panic(ctx.newCodeErrorf(v.Pos(), v.End(), "invalid op %v must |", v.Op))
 		}
 		return append(toTermList(ctx, v.X), toTermList(ctx, v.Y)...)
 	case *ast.ParenExpr:
@@ -78,7 +78,7 @@ L:
 	switch t := typ.(type) {
 	case *ast.IndexExpr:
 		if orgTypeParams.Len() != 1 {
-			panic(ctx.newCodeErrorf(typ.Pos(), "got 1 type parameter, but receiver base type declares %v", orgTypeParams.Len()))
+			panic(ctx.newCodeErrorf(typ.Pos(), typ.End(), "got 1 type parameter, but receiver base type declares %v", orgTypeParams.Len()))
 		}
 		v := t.Index.(*ast.Ident)
 		tp := orgTypeParams.At(0)
@@ -87,7 +87,7 @@ L:
 	case *ast.IndexListExpr:
 		n := len(t.Indices)
 		if n != orgTypeParams.Len() {
-			panic(ctx.newCodeErrorf(typ.Pos(), "got %v arguments but %v type parameters", n, orgTypeParams.Len()))
+			panic(ctx.newCodeErrorf(typ.Pos(), typ.End(), "got %v arguments but %v type parameters", n, orgTypeParams.Len()))
 		}
 		tparams = make([]*types.TypeParam, n)
 		for i := 0; i < n; i++ {
@@ -97,7 +97,7 @@ L:
 			tparams[i] = types.NewTypeParam(obj, tp.Constraint())
 		}
 	default:
-		panic(ctx.newCodeErrorf(typ.Pos(), "cannot use generic type %v without instantiation", named))
+		panic(ctx.newCodeErrorf(typ.Pos(), typ.End(), "cannot use generic type %v without instantiation", named))
 	}
 	return
 }

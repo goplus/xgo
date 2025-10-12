@@ -2,9 +2,8 @@ package main
 
 import (
 	"fmt"
-	"io"
-
 	"github.com/qiniu/x/osx"
+	"io"
 )
 
 var r io.Reader

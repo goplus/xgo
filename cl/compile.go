@@ -19,6 +19,8 @@ package cl
 
 import (
 	"fmt"
+	goast "go/ast"
+	gotoken "go/token"
 	"go/types"
 	"log"
 	"reflect"
@@ -246,7 +248,7 @@ type baseLoader struct {
 	start token.Pos
 }
 
-func initLoader(ctx *pkgCtx, syms map[string]loader, start token.Pos, name string, fn func(), genBody bool) bool {
+func initLoader(ctx *pkgCtx, syms map[string]loader, start, end token.Pos, name string, fn func(), genBody bool) bool {
 	if name == "_" {
 		if genBody {
 			ctx.inits = append(ctx.inits, fn)
@@ -256,7 +258,7 @@ func initLoader(ctx *pkgCtx, syms map[string]loader, start token.Pos, name strin
 	if old, ok := syms[name]; ok {
 		oldpos := ctx.Position(old.pos())
 		ctx.handleErrorf(
-			start, "%s redeclared in this block\n\tprevious declaration at %v", name, oldpos)
+			start, end, "%s redeclared in this block\n\tprevious declaration at %v", name, oldpos)
 		return false
 	}
 	syms[name] = &baseLoader{start: start, fn: fn}
@@ -277,7 +279,7 @@ type typeLoader struct {
 	start        token.Pos
 }
 
-func getTypeLoader(ctx *pkgCtx, syms map[string]loader, start token.Pos, name string) *typeLoader {
+func getTypeLoader(ctx *pkgCtx, syms map[string]loader, start, end token.Pos, name string) *typeLoader {
 	t, ok := syms[name]
 	if ok {
 		if start != token.NoPos {
@@ -286,7 +288,7 @@ func getTypeLoader(ctx *pkgCtx, syms map[string]loader, start token.Pos, name st
 				ld.start = start
 			} else {
 				ctx.handleErrorf(
-					start, "%s redeclared in this block\n\tprevious declaration at %v",
+					start, end, "%s redeclared in this block\n\tprevious declaration at %v",
 					name, ctx.Position(ld.pos()))
 			}
 			return ld
@@ -414,16 +416,16 @@ func (p *blockCtx) findImport(name string) (pi pkgImp, ok bool) {
 	return
 }
 
-func (p *pkgCtx) newCodeError(pos token.Pos, msg string) error {
-	return &gogen.CodeError{Fset: p.nodeInterp, Pos: pos, Msg: msg}
+func (p *pkgCtx) newCodeError(pos, end token.Pos, msg string) error {
+	return &gogen.CodeError{Fset: p.nodeInterp, Pos: pos, End: end, Msg: msg}
 }
 
-func (p *pkgCtx) newCodeErrorf(pos token.Pos, format string, args ...any) error {
-	return &gogen.CodeError{Fset: p.nodeInterp, Pos: pos, Msg: fmt.Sprintf(format, args...)}
+func (p *pkgCtx) newCodeErrorf(pos, end token.Pos, format string, args ...any) error {
+	return &gogen.CodeError{Fset: p.nodeInterp, Pos: pos, End: end, Msg: fmt.Sprintf(format, args...)}
 }
 
-func (p *pkgCtx) handleErrorf(pos token.Pos, format string, args ...any) {
-	p.handleErr(p.newCodeErrorf(pos, format, args...))
+func (p *pkgCtx) handleErrorf(pos, end token.Pos, format string, args ...any) {
+	p.handleErr(p.newCodeErrorf(pos, end, format, args...))
 }
 
 func (p *pkgCtx) handleErr(err error) {
@@ -479,7 +481,7 @@ func (p *pkgCtx) recoverErr(e any, src ast.Node) error {
 	if !ok {
 		if src != nil {
 			text := p.LoadExpr(src)
-			err = p.newCodeErrorf(src.Pos(), "compile `%v`: %v", text, e)
+			err = p.newCodeErrorf(src.Pos(), src.End(), "compile `%v`: %v", text, e)
 		} else {
 			err = fmt.Errorf("%v", e)
 		}
@@ -495,6 +497,66 @@ func (p *pkgCtx) lookupClassNode(name string) ast.Node {
 		}
 	}
 	return nil
+}
+
+type visitedT = map[*types.Struct]none
+
+// see https://github.com/goplus/xgo/issues/2439
+func embeddedFieldCast(o *types.Struct, tn *types.Named, pv *gogen.Element, visited visitedT) bool {
+	if _, ok := visited[o]; ok {
+		return false
+	}
+	visited[o] = none{}
+	for i, n := 0, o.NumFields(); i < n; i++ {
+		if fld := o.Field(i); fld.Embedded() {
+			var ptr bool
+			var ftn *types.Named
+			switch ft := fld.Type().(type) {
+			case *types.Named:
+				ftn = ft
+			case *types.Pointer:
+				if ft, ok := ft.Elem().(*types.Named); ok {
+					ftn, ptr = ft, true
+				}
+			}
+			if ftn != nil {
+				if ftn == tn {
+					pv.Val = &goast.SelectorExpr{
+						X:   pv.Val,
+						Sel: goast.NewIdent(fld.Name()),
+					}
+					if !ptr {
+						pv.Val = &goast.UnaryExpr{
+							Op: gotoken.AND,
+							X:  pv.Val,
+						}
+					}
+					return true
+				}
+				if fldStruct, ok := ftn.Underlying().(*types.Struct); ok {
+					if embeddedFieldCast(fldStruct, tn, pv, visited) {
+						return true
+					}
+				}
+			}
+		}
+	}
+	return false
+}
+
+func implicitCast(pkg *gogen.Package, V, T types.Type, pv *gogen.Element) bool {
+	if pv != nil {
+		if t, ok := T.(*types.Pointer); ok {
+			if tn, ok := t.Elem().(*types.Named); ok {
+				if v, ok := V.(*types.Pointer); ok {
+					if o, ok := v.Elem().Underlying().(*types.Struct); ok {
+						return embeddedFieldCast(o, tn, pv, visitedT{})
+					}
+				}
+			}
+		}
+	}
+	return false
 }
 
 const (
@@ -532,6 +594,7 @@ func NewPackage(pkgPath string, pkg *ast.Package, conf *Config) (p *gogen.Packag
 		NoSkipConstant:  conf.NoSkipConstant,
 		PkgPathIox:      osxPkgPath,
 		DbgPositioner:   interp,
+		CanImplicitCast: implicitCast,
 	}
 	var rec *goxRecorder
 	if conf.Recorder != nil {
@@ -714,7 +777,7 @@ func loadFile(ctx *pkgCtx, f *ast.File) {
 				}
 			} else {
 				if name, ok := getRecvTypeName(ctx, d.Recv, false); ok {
-					getTypeLoader(ctx, ctx.syms, token.NoPos, name).load()
+					getTypeLoader(ctx, ctx.syms, token.NoPos, token.NoPos, name).load()
 				}
 			}
 		}
@@ -791,8 +854,9 @@ func preloadGopFile(p *gogen.Package, ctx *blockCtx, file string, f *ast.File, c
 		}
 		syms := parent.syms
 		pos := f.Pos()
+		end := f.End()
 		ctx.classDecl = f.ClassFieldsDecl()
-		ld := getTypeLoader(parent, syms, pos, classType)
+		ld := getTypeLoader(parent, syms, pos, end, classType)
 		ld.typ = func() {
 			if debugLoad {
 				log.Println("==> Load > NewType", classType)
@@ -815,21 +879,23 @@ func preloadGopFile(p *gogen.Package, ctx *blockCtx, file string, f *ast.File, c
 				if baseTypeName != "" { // base class (not normal classfile)
 					flds = append(flds, types.NewField(pos, pkg, baseTypeName, baseType, true))
 					tags = append(tags, "")
-					chk.chkRedecl(ctx, baseTypeName, pos)
+					chk.chkRedecl(ctx, baseTypeName, pos, end, fieldKindClass)
 					if sp != nil { // for work class
 						if !goxTestFile && gameClass != "" { // has project class
 							typ := toType(ctx, &ast.Ident{Name: gameClass})
 							getUnderlying(ctx, typ) // ensure type is loaded
 							typ = types.NewPointer(typ)
 							name := getTypeName(typ)
-							if !chk.chkRedecl(ctx, name, pos) {
+							if !chk.chkRedecl(ctx, name, pos, end, fieldKindClass) {
 								fld := types.NewField(pos, pkg, name, typ, true)
 								flds = append(flds, fld)
 								tags = append(tags, "")
 							}
 						}
 					} else { // embed work classes for project class
-						flds = proj.embed(flds, p)
+						flds = proj.embed(func(name string) bool {
+							return chk.chkRedecl(ctx, name, pos, end, fieldKindClass)
+						}, flds, p)
 					}
 				}
 				rec := ctx.recorder()
@@ -840,7 +906,7 @@ func preloadGopFile(p *gogen.Package, ctx *blockCtx, file string, f *ast.File, c
 						tag := toFieldTag(spec.Tag)
 						if len(spec.Names) == 0 {
 							name := parseTypeEmbedName(spec.Type)
-							if chk.chkRedecl(ctx, name.Name, spec.Type.Pos()) {
+							if chk.chkRedecl(ctx, name.Name, spec.Type.Pos(), spec.Type.End(), fieldKindUser) {
 								continue
 							}
 							fld := types.NewField(spec.Type.Pos(), pkg, name.Name, typ, true)
@@ -851,7 +917,7 @@ func preloadGopFile(p *gogen.Package, ctx *blockCtx, file string, f *ast.File, c
 							tags = append(tags, tag)
 						} else {
 							for _, name := range spec.Names {
-								if chk.chkRedecl(ctx, name.Name, name.Pos()) {
+								if chk.chkRedecl(ctx, name.Name, name.Pos(), name.End(), fieldKindUser) {
 									continue
 								}
 								fld := types.NewField(name.Pos(), pkg, name.Name, typ, false)
@@ -891,7 +957,7 @@ func preloadGopFile(p *gogen.Package, ctx *blockCtx, file string, f *ast.File, c
 	preloadFile(p, ctx, f, goFile, !conf.Outline)
 	if sp != nil && sp.feats != 0 {
 		spfeats := sp.feats
-		ld := getTypeLoader(parent, parent.syms, token.NoPos, classType)
+		ld := getTypeLoader(parent, parent.syms, token.NoPos, token.NoPos, classType)
 		if (spfeats & spriteClassfname) != 0 { // Classfname() string
 			ld.methods = append(ld.methods, func() {
 				old, _ := p.SetCurFile(goFile, true)
@@ -965,7 +1031,7 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 				if debugLoad {
 					log.Println("==> Preload func", fname)
 				}
-				if initLoader(parent, syms, name.Pos(), fname, fn, genFnBody) {
+				if initLoader(parent, syms, name.Pos(), name.End(), fname, fn, genFnBody) {
 					if strings.HasPrefix(fname, "Gopx_") { // Gopx_xxx func
 						ctx.lbinames = append(ctx.lbinames, fname)
 					}
@@ -982,13 +1048,13 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 					defer p.RestoreCurFile(old)
 					loadFunc(ctx, nil, fname, d, genFnBody)
 				}
-				initLoader(parent, syms, name.Pos(), fname, fn, genFnBody)
+				initLoader(parent, syms, name.Pos(), name.End(), fname, fn, genFnBody)
 				ctx.lbinames = append(ctx.lbinames, fname)
 			} else {
 				if debugLoad {
 					log.Printf("==> Preload method %s.%s\n", tname, fname)
 				}
-				ld := getTypeLoader(parent, syms, token.NoPos, tname)
+				ld := getTypeLoader(parent, syms, token.NoPos, token.NoPos, tname)
 				fn := func() {
 					old, _ := p.SetCurFile(goFile, true)
 					defer p.RestoreCurFile(old)
@@ -1039,7 +1105,8 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 						log.Println("==> Preload type", name)
 					}
 					pos := tName.Pos()
-					ld := getTypeLoader(parent, syms, pos, name)
+					end := tName.End()
+					ld := getTypeLoader(parent, syms, pos, end, name)
 					defs := ctx.pkg.NewTypeDefs()
 					if goFile != skippingGoFile { // is XGo file
 						ld.typ = func() {
@@ -1147,7 +1214,7 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 				var ok bool
 				recv, ok = d.Recv.List[0].Type.(*ast.Ident)
 				if !ok {
-					ctx.handleErrorf(d.Recv.List[0].Type.Pos(), "invalid recv type %v", ctx.LoadExpr(d.Recv.List[0].Type))
+					ctx.handleErrorf(d.Recv.List[0].Type.Pos(), d.Recv.List[0].Type.End(), "invalid recv type %v", ctx.LoadExpr(d.Recv.List[0].Type))
 					break
 				}
 				ctx.lbinames = append(ctx.lbinames, recv)
@@ -1164,7 +1231,7 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 				switch expr := fn.(type) {
 				case *ast.Ident:
 					if d.Recv != nil && !d.Operator && !d.IsClass {
-						ctx.handleErrorf(expr.Pos(), "invalid method %v", ctx.LoadExpr(expr))
+						ctx.handleErrorf(expr.Pos(), expr.End(), "invalid method %v", ctx.LoadExpr(expr))
 						break LoopFunc
 					}
 					exov = true
@@ -1183,12 +1250,12 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 					}
 				case *ast.SelectorExpr:
 					if d.Recv == nil || d.IsClass {
-						ctx.handleErrorf(expr.Pos(), "invalid func %v", ctx.LoadExpr(expr))
+						ctx.handleErrorf(expr.Pos(), expr.End(), "invalid func %v", ctx.LoadExpr(expr))
 						break LoopFunc
 					}
 					rtyp, ok := checkOverloadMethodRecvType(recv, expr.X)
 					if !ok {
-						ctx.handleErrorf(expr.Pos(), "invalid recv type %v", ctx.LoadExpr(expr.X))
+						ctx.handleErrorf(expr.Pos(), expr.End(), "invalid recv type %v", ctx.LoadExpr(expr.X))
 						break LoopFunc
 					}
 
@@ -1200,7 +1267,7 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 					}
 				case *ast.FuncLit:
 					if d.Recv != nil && !d.Operator && !d.IsClass {
-						ctx.handleErrorf(expr.Pos(), "invalid method %v", ctx.LoadExpr(expr))
+						ctx.handleErrorf(expr.Pos(), expr.End(), "invalid method %v", ctx.LoadExpr(expr))
 						break LoopFunc
 					}
 					name1 := overloadFuncName(name.Name, idx)
@@ -1217,14 +1284,14 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 						Body: expr.Body,
 					})
 				default:
-					ctx.handleErrorf(expr.Pos(), "unknown func %v", ctx.LoadExpr(expr))
+					ctx.handleErrorf(expr.Pos(), expr.End(), "unknown func %v", ctx.LoadExpr(expr))
 					break LoopFunc
 				}
 			}
 			if exov { // need Gopo_xxx
 				oname, err := overloadName(recv, name.Name, d.Operator)
 				if err != nil {
-					ctx.handleErrorf(name.NamePos, "%v", err)
+					ctx.handleErrorf(name.Pos(), name.End(), "%v", err)
 					break
 				}
 				if recv != nil {
@@ -1607,7 +1674,7 @@ func loadVars(ctx *blockCtx, v *ast.ValueSpec, doc *ast.CommentGroup, global boo
 						}
 						compileLambda(ctx, e, sig)
 					} else {
-						panic(ctx.newCodeErrorf(e.Pos(), "lambda unsupport multiple assignment"))
+						panic(ctx.newCodeErrorf(e.Pos(), e.End(), "lambda unsupport multiple assignment"))
 					}
 				case *ast.SliceLit:
 					compileSliceLit(ctx, e, typ)
@@ -1652,7 +1719,7 @@ func removeNames(syms map[string]loader, names []*ast.Ident) {
 
 func setNamesLoader(ctx *pkgCtx, syms map[string]loader, names []*ast.Ident, load func()) {
 	for _, name := range names {
-		initLoader(ctx, syms, name.Pos(), name.Name, load, true)
+		initLoader(ctx, syms, name.Pos(), name.End(), name.Name, load, true)
 	}
 }
 

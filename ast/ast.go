@@ -81,11 +81,12 @@ type CommentGroup = ast.CommentGroup
 // Field.Names is nil for unnamed parameters (parameter lists which only contain types)
 // and embedded struct fields. In the latter case, the field name is the type name.
 type Field struct {
-	Doc     *CommentGroup // associated documentation; or nil
-	Names   []*Ident      // field/method/parameter names; or nil
-	Type    Expr          // field/method/parameter type
-	Tag     *BasicLit     // field tag; or nil
-	Comment *CommentGroup // line comments; or nil
+	Doc      *CommentGroup // associated documentation; or nil
+	Names    []*Ident      // field/method/parameter names; or nil
+	Type     Expr          // field/method/parameter type
+	Tag      *BasicLit     // field tag; or nil
+	Comment  *CommentGroup // line comments; or nil
+	Optional token.Pos     // position of "?", or NoPos if not optional
 }
 
 // Pos returns position of first character belonging to the node.
@@ -100,6 +101,9 @@ func (f *Field) Pos() token.Pos {
 func (f *Field) End() token.Pos {
 	if f.Tag != nil {
 		return f.Tag.End()
+	}
+	if f.Optional.IsValid() {
+		return f.Optional + 1
 	}
 	return f.Type.End()
 }
@@ -241,16 +245,6 @@ type (
 		Rparen token.Pos // position of ")"
 	}
 
-	// A CallExpr node represents an expression followed by an argument list.
-	CallExpr struct {
-		Fun        Expr      // function expression
-		Lparen     token.Pos // position of "("
-		Args       []Expr    // function arguments; or nil
-		Ellipsis   token.Pos // position of "..." (token.NoPos if there is no "...")
-		Rparen     token.Pos // position of ")"
-		NoParenEnd token.Pos
-	}
-
 	// A StarExpr node represents an expression of the form "*" Expression.
 	// Semantically it could be a unary "*" expression, or a pointer type.
 	StarExpr struct {
@@ -386,9 +380,6 @@ func (x *SliceExpr) Pos() token.Pos { return x.X.Pos() }
 func (x *TypeAssertExpr) Pos() token.Pos { return x.X.Pos() }
 
 // Pos returns position of first character belonging to the node.
-func (x *CallExpr) Pos() token.Pos { return x.Fun.Pos() }
-
-// Pos returns position of first character belonging to the node.
 func (x *StarExpr) Pos() token.Pos { return x.Star }
 
 // Pos returns position of first character belonging to the node.
@@ -473,19 +464,6 @@ func (x *SliceExpr) End() token.Pos { return x.Rbrack + 1 }
 func (x *TypeAssertExpr) End() token.Pos { return x.Rparen + 1 }
 
 // End returns position of first character immediately after the node.
-func (x *CallExpr) End() token.Pos {
-	if x.NoParenEnd != token.NoPos {
-		return x.NoParenEnd
-	}
-	return x.Rparen + 1
-}
-
-// IsCommand returns if a CallExpr is a command style CallExpr or not.
-func (x *CallExpr) IsCommand() bool {
-	return x.NoParenEnd != token.NoPos
-}
-
-// End returns position of first character immediately after the node.
 func (x *StarExpr) End() token.Pos { return x.X.End() }
 
 // End returns position of first character immediately after the node.
@@ -533,7 +511,6 @@ func (*IndexExpr) exprNode()      {}
 func (*IndexListExpr) exprNode()  {}
 func (*SliceExpr) exprNode()      {}
 func (*TypeAssertExpr) exprNode() {}
-func (*CallExpr) exprNode()       {}
 func (*StarExpr) exprNode()       {}
 func (*UnaryExpr) exprNode()      {}
 func (*BinaryExpr) exprNode()     {}

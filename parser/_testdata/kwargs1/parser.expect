@@ -1,0 +1,67 @@
+package main
+
+file kwargs.xgo
+noEntrypoint
+ast.FuncDecl:
+  Name:
+    ast.Ident:
+      Name: main
+  Type:
+    ast.FuncType:
+      Params:
+        ast.FieldList:
+  Body:
+    ast.BlockStmt:
+      List:
+        ast.ExprStmt:
+          X:
+            ast.CallExpr:
+              Fun:
+                ast.Ident:
+                  Name: playSound
+              Args:
+                ast.CallExpr:
+                  Fun:
+                    ast.Ident:
+                      Name: getUrl
+                  Args:
+                    ast.BasicLit:
+                      Kind: STRING
+                      Value: "1.mp3"
+                  Kwargs:
+                    ast.KwargExpr:
+                      Name:
+                        ast.Ident:
+                          Name: cache
+                      Value:
+                        ast.Ident:
+                          Name: false
+              Kwargs:
+                ast.KwargExpr:
+                  Name:
+                    ast.Ident:
+                      Name: loop
+                  Value:
+                    ast.Ident:
+                      Name: true
+        ast.ExprStmt:
+          X:
+            ast.CallExpr:
+              Fun:
+                ast.Ident:
+                  Name: listDir
+              Kwargs:
+                ast.KwargExpr:
+                  Name:
+                    ast.Ident:
+                      Name: withHidden
+                  Value:
+                    ast.Ident:
+                      Name: true
+                ast.KwargExpr:
+                  Name:
+                    ast.Ident:
+                      Name: recursive
+                  Value:
+                    ast.Ident:
+                      Name: false

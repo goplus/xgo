@@ -1,9 +1,8 @@
 package main
 
 import (
-	"time"
-
 	"github.com/goplus/xgo/cl/internal/unit"
+	"time"
 )
 
 func Wait(time.Duration) {

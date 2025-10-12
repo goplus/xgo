@@ -59,6 +59,55 @@ func (*OverloadFuncDecl) declNode() {}
 
 // -----------------------------------------------------------------------------
 
+// A CallExpr node represents an expression followed by an argument list.
+// The argument list may include positional arguments (Args) and/or
+// keyword arguments (Kwargs).
+type CallExpr struct {
+	Fun        Expr         // function expression
+	Lparen     token.Pos    // position of "("
+	Args       []Expr       // positional arguments; or nil
+	Ellipsis   token.Pos    // position of "..." (token.NoPos if there is no "...")
+	Kwargs     []*KwargExpr // keyword arguments; or nil
+	Rparen     token.Pos    // position of ")"
+	NoParenEnd token.Pos
+}
+
+// Pos returns position of first character belonging to the node.
+func (x *CallExpr) Pos() token.Pos { return x.Fun.Pos() }
+
+// End returns position of first character immediately after the node.
+func (x *CallExpr) End() token.Pos {
+	if x.NoParenEnd != token.NoPos {
+		return x.NoParenEnd
+	}
+	return x.Rparen + 1
+}
+
+func (*CallExpr) exprNode() {}
+
+// IsCommand returns if a CallExpr is a command style CallExpr or not.
+func (x *CallExpr) IsCommand() bool {
+	return x.NoParenEnd != token.NoPos
+}
+
+// A KwargExpr node represents a keyword argument expression.
+type KwargExpr struct {
+	Name  *Ident // argument name
+	Value Expr   // argument value
+}
+
+func (p *KwargExpr) Pos() token.Pos {
+	return p.Name.Pos()
+}
+
+func (p *KwargExpr) End() token.Pos {
+	return p.Value.End()
+}
+
+func (p *KwargExpr) exprNode() {}
+
+// -----------------------------------------------------------------------------
+
 // A DomainTextLit node represents a domain-specific text literal.
 // https://github.com/goplus/xgo/issues/2143
 //
@@ -313,6 +362,9 @@ func (p *LambdaExpr2) Pos() token.Pos {
 
 // End - position of first character immediately after the node.
 func (p *LambdaExpr2) End() token.Pos {
+	if p.Body == nil {
+		return p.Rarrow + 2
+	}
 	return p.Body.End()
 }
 

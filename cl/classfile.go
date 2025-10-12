@@ -87,13 +87,15 @@ type gmxProject struct {
 	hasMain_   bool
 }
 
-func (p *gmxProject) embed(flds []*types.Var, pkg *gogen.Package) []*types.Var {
+func (p *gmxProject) embed(chk func(name string) bool, flds []*types.Var, pkg *gogen.Package) []*types.Var {
 	for _, sp := range p.sprites {
 		if sp.feats&spriteEmbedded != 0 {
 			for _, spt := range sp.types {
-				spto := pkg.Ref(spt)                // work class
-				pt := types.NewPointer(spto.Type()) // pointer to work class
-				flds = append(flds, types.NewField(token.NoPos, pkg.Types, spto.Name(), pt, false))
+				spto := pkg.Ref(spt) // work class
+				if chk != nil && !chk(spto.Name()) {
+					pt := types.NewPointer(spto.Type()) // pointer to work class
+					flds = append(flds, types.NewField(token.NoPos, pkg.Types, spto.Name(), pt, false))
+				}
 			}
 		}
 	}
@@ -463,7 +465,7 @@ func gmxCheckProjs(pkg *gogen.Package, ctx *pkgCtx) (*gmxProject, bool) {
 func gmxProjMain(pkg *gogen.Package, parent *pkgCtx, proj *gmxProject) {
 	base := proj.game                      // project base class
 	classType := proj.getGameClass(parent) // project class
-	ld := getTypeLoader(parent, parent.syms, token.NoPos, classType)
+	ld := getTypeLoader(parent, parent.syms, token.NoPos, token.NoPos, classType)
 	if ld.typ == nil { // no project class, use default
 		ld.typ = func() {
 			if debugLoad {
@@ -477,7 +479,7 @@ func gmxProjMain(pkg *gogen.Package, parent *pkgCtx, proj *gmxProject) {
 				baseType = types.NewPointer(baseType)
 			}
 
-			flds := proj.embed([]*types.Var{
+			flds := proj.embed(nil, []*types.Var{
 				types.NewField(token.NoPos, pkg.Types, base.Name(), baseType, true),
 			}, pkg)
 
