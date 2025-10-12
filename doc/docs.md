@@ -109,8 +109,8 @@ Here is my `Hello world` program:
 * [Functions](#functions)
     * [Returning multiple values](#returning-multiple-values)
     * [Optional parameters](#optional-parameters)
-    * [Keyword arguments](#keyword-arguments)
     * [Variadic parameters](#variadic-parameters)
+    * [Keyword arguments](#keyword-arguments)
     * [Higher order functions](#higher-order-functions)
     * [Lambda expressions](#lambda-expressions)
 * [Structs](#structs)
@@ -873,6 +873,36 @@ connect "example.com"             // Connecting to example.com on port 80 secure
 <h5 align="right"><a href="#table-of-contents">⬆ back to toc</a></h5>
 
 
+### Variadic parameters
+
+```go
+func sum(a ...int) int {
+    total := 0
+    for x in a {
+        total += x
+    }
+    return total
+}
+
+echo sum(2, 3, 5) // 10
+```
+
+Output parameters can have names.
+
+```go
+func sum(a ...int) (total int) {
+    for x in a {
+        total += x
+    }
+    return // don't need return values if they are assigned
+}
+
+echo sum(2, 3, 5) // 10
+```
+
+<h5 align="right"><a href="#table-of-contents">⬆ back to toc</a></h5>
+
+
 ### Keyword arguments
 
 XGo supports Python-like keyword arguments (kwargs) syntax for improved code readability. When calling functions with many parameters, you can use `key=value` syntax to make your code more expressive and command-line-style.
@@ -931,36 +961,6 @@ run                                        // uses default values
 - The keyword parameter must be an optional parameter.
 - The keyword parameter must be the last parameter (without variadic) or second-to-last (with variadic).
 - When calling a function, keyword arguments must be placed after all normal parameters (including variadic parameters). This might seem inconsistent with the order of keyword and variadic parameters in a function declaration, but that's the rule.
-
-<h5 align="right"><a href="#table-of-contents">⬆ back to toc</a></h5>
-
-
-### Variadic parameters
-
-```go
-func sum(a ...int) int {
-    total := 0
-    for x in a {
-        total += x
-    }
-    return total
-}
-
-echo sum(2, 3, 5) // 10
-```
-
-Output parameters can have names.
-
-```go
-func sum(a ...int) (total int) {
-    for x in a {
-        total += x
-    }
-    return // don't need return values if they are assigned
-}
-
-echo sum(2, 3, 5) // 10
-```
 
 <h5 align="right"><a href="#table-of-contents">⬆ back to toc</a></h5>
 
