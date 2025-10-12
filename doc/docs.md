@@ -867,7 +867,7 @@ func connect(host string, port int?, secure bool?) {
 }
 
 connect "example.com", 443, true  // Connecting to example.com on port 443 secure: true
-connect "example.com"              // Connecting to example.com on port 80 secure: false
+connect "example.com"             // Connecting to example.com on port 80 secure: false
 ```
 
 <h5 align="right"><a href="#table-of-contents">⬆ back to toc</a></h5>
@@ -890,9 +890,9 @@ func process(opts map[string]any?, args ...any) {
     echo "Args:", args
 }
 
-process(name="Ken", age=17)              // keyword parameters only
-process("extra", 1, name="Ken", age=17)  // variadic parameters first, then keyword parameters
-process()                                 // all parameters optional
+process name = "Ken", age = 17              // keyword parameters only
+process "extra", 1, name = "Ken", age = 17  // variadic parameters first, then keyword parameters
+process                                     // all parameters optional
 ```
 
 #### Using kwargs with structs
@@ -922,9 +922,9 @@ func run(cfg *Config?) {
     echo "Timeout:", timeout, "MaxRetries:", maxRetries, "Debug:", debug
 }
 
-run(timeout=60, maxRetries=5)           // lowercase field names work
-run(Timeout=10, Debug=true)             // uppercase field names work too
-run()                                    // uses default values
+run timeout = 60, maxRetries = 5           // lowercase field names work
+run Timeout = 10, Debug = true             // uppercase field names work too
+run                                        // uses default values
 ```
 
 **Key rules:**
