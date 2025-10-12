@@ -1117,3 +1117,7 @@ var a = struct{v int}{(x => x)}
 var a = struct{v int}{v: (x => x)}
 `)
 }
+
+func TestErrShiftString(t *testing.T) {
+	codeErrorTest(t, `bar.xgo:1:9: cannot convert "12" (untyped string constant) to type uint`, `echo 1<<"12"`)
+}

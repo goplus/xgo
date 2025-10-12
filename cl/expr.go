@@ -419,6 +419,18 @@ func compileUnaryExpr(ctx *blockCtx, v *ast.UnaryExpr, twoValue bool) {
 func compileBinaryExpr(ctx *blockCtx, v *ast.BinaryExpr) {
 	compileExpr(ctx, v.X)
 	compileExpr(ctx, v.Y)
+
+	// Check shift operation type constraints
+	if v.Op == token.SHL || v.Op == token.SHR {
+		y := ctx.cb.Get(-1)
+		if basic, ok := y.Type.(*types.Basic); ok {
+			if basic.Info()&types.IsString != 0 {
+				panic(ctx.newCodeErrorf(v.Y.Pos(), v.Y.End(),
+					"cannot convert %s (untyped string constant) to type uint", ctx.LoadExpr(v.Y)))
+			}
+		}
+	}
+
 	ctx.cb.BinaryOp(gotoken.Token(v.Op), v)
 }
 
