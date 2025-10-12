@@ -88,7 +88,7 @@ Code style is just the first step. We have made many efforts to make the code mo
 | a = append(a, 4)<br>a = append(a, 5, 6, 7) | a <- 4<br>a <- 5, 6, 7 | Append values to a list |
 | a := map[string]int{<br>&nbsp;&nbsp;&nbsp;&nbsp;"Monday": 1,<br>&nbsp;&nbsp;&nbsp;&nbsp;"Tuesday": 2,<br>} | a := {<br>&nbsp;&nbsp;&nbsp;&nbsp;"Monday": 1,<br>&nbsp;&nbsp;&nbsp;&nbsp;"Tuesday": 2,<br>} | Mapping literals |
 | OnStart(func() {<br>&nbsp;&nbsp;&nbsp;&nbsp;...<br>}) | onStart => {<br>&nbsp;&nbsp;&nbsp;&nbsp;...<br>} | Lambda expressions |
-| PlaySound("1.mp3",<br>&nbsp;&nbsp;&nbsp;&nbsp;&Options{Loop: true}) | playSound "1.mp3",<br>&nbsp;&nbsp;&nbsp;&nbsp;loop = true | Python-like [Keyword arguments](doc/docs.md#keyword-arguments) (kwargs) |
+| Play("1.mp3",<br>&nbsp;&nbsp;&nbsp;&nbsp;&Options{Loop: true}) | play "1.mp3",<br>&nbsp;&nbsp;&nbsp;&nbsp;loop = true | Python-like [Keyword arguments](doc/docs.md#keyword-arguments) (kwargs) |
 | type Rect struct {<br>&nbsp;&nbsp;&nbsp;&nbsp;Width&nbsp; float64<br>&nbsp;&nbsp;&nbsp;&nbsp;Height float64<br>}<br><br>func (this *Rect) Area() float64 { <br>&nbsp;&nbsp;&nbsp;&nbsp;return this.Width * this.Height<br>} | var (<br>&nbsp;&nbsp;&nbsp;&nbsp;Width&nbsp; float64<br>&nbsp;&nbsp;&nbsp;&nbsp;Height float64<br>)<br><br>func Area() float64 { <br>&nbsp;&nbsp;&nbsp;&nbsp;return Width * Height<br>} | [XGo Classfiles](doc/classfile.md): We can express OOP with global variables and functions. |
 
 For more details, see [The XGo Mini Specification](doc/spec-mini.md).
