@@ -29,7 +29,7 @@ const (
 	xgoPackage = "XGoPackage"
 )
 
-func isGopPackage(in *doc.Package) bool {
+func isXGoPackage(in *doc.Package) bool {
 	for _, v := range in.Consts {
 		for _, name := range v.Names {
 			if name == gopPackage || name == xgoPackage {
