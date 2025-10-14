@@ -1,0 +1,11 @@
+== Type T ==
+- Method Bar -
+Recv: *T
+Doc: Bar doc 1
+
+func (p *T) Bar()
+- Method Bar -
+Recv: T
+Doc: Bar doc 2
+
+func (t T) Bar()

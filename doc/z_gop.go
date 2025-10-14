@@ -26,12 +26,13 @@ const (
 	gopoPrefix = "Gopo_" // overload function/method
 	gopxPrefix = "Gopx_" // type as parameters function/method
 	gopPackage = "GopPackage"
+	xgoPackage = "XGoPackage"
 )
 
-func isGopPackage(in *doc.Package) bool {
+func isXGoPackage(in *doc.Package) bool {
 	for _, v := range in.Consts {
 		for _, name := range v.Names {
-			if name == gopPackage {
+			if name == gopPackage || name == xgoPackage {
 				return true
 			}
 		}
