@@ -338,7 +338,6 @@ type pkgCtx struct {
 	nproj    int                    // number of non-test projects
 	projs    map[string]*gmxProject // .gmx => project
 	classes  map[*ast.File]*gmxClass
-	overpos  map[string]token.Pos // overload => pos
 	fset     *token.FileSet
 	syms     map[string]loader
 	lbinames []any // names that should load before initGopPkg (can be string/func or *ast.Ident/type)
@@ -578,7 +577,6 @@ func NewPackage(pkgPath string, pkg *ast.Package, conf *Config) (p *gogen.Packag
 		nodeInterp: interp,
 		projs:      make(map[string]*gmxProject),
 		classes:    make(map[*ast.File]*gmxClass),
-		overpos:    make(map[string]token.Pos),
 		syms:       make(map[string]loader),
 		generics:   make(map[string]bool),
 	}
@@ -750,7 +748,7 @@ func initGopPkg(ctx *pkgCtx, pkg *gogen.Package, gopSyms map[string]bool) {
 			ctx.loadType(lbi.(*ast.Ident).Name)
 		}
 	}
-	gogen.InitThisGopPkgEx(pkg.Types, ctx.overpos)
+	gogen.InitThisGopPkg(pkg.Types)
 }
 
 func loadFile(ctx *pkgCtx, f *ast.File) {
@@ -1005,7 +1003,7 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 	old, _ := p.SetCurFile(goFile, true)
 	defer p.RestoreCurFile(old)
 
-	preloadFuncDecl := func(d *ast.FuncDecl) {
+	preloadFuncDecl := func(d *ast.FuncDecl, overload bool) {
 		if ctx.classRecv != nil { // in class file (.spx/.gmx)
 			if recv := d.Recv; recv == nil || len(recv.List) == 0 {
 				d.Recv = ctx.classRecv
@@ -1018,7 +1016,13 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 			fn := func() {
 				old, _ := p.SetCurFile(goFile, true)
 				defer p.RestoreCurFile(old)
-				loadFunc(ctx, nil, fname, d, genFnBody)
+				if overload {
+					pkg := ctx.pkg.Types
+					fn := gogen.NewOverloadFunc(d.Name.Pos(), pkg, fname)
+					pkg.Scope().Insert(fn)
+				} else {
+					loadFunc(ctx, nil, fname, d, genFnBody)
+				}
 			}
 			if fname == "init" {
 				if genFnBody {
@@ -1060,7 +1064,13 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 					defer p.RestoreCurFile(old)
 					doInitType(ld)
 					recv := toRecv(ctx, d.Recv)
-					loadFunc(ctx, recv, fname, d, genFnBody)
+					if overload {
+						pkg := ctx.pkg.Types
+						typ := pkg.Scope().Lookup(tname).Type().(*types.Named)
+						gogen.NewOverloadMethod(typ, d.Name.Pos(), pkg, fname)
+					} else {
+						loadFunc(ctx, recv, fname, d, genFnBody)
+					}
 				}
 				ld.methods = append(ld.methods, fn)
 			}
@@ -1194,7 +1204,7 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 			}
 
 		case *ast.FuncDecl:
-			preloadFuncDecl(d)
+			preloadFuncDecl(d, false)
 
 		case *ast.OverloadFuncDecl:
 			var recv *ast.Ident
@@ -1225,6 +1235,7 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 			onames := make([]string, 0, 4)
 			exov := false
 			name := d.Name
+			var hasErr bool
 		LoopFunc:
 
 			for idx, fn := range d.Funcs {
@@ -1232,6 +1243,7 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 				case *ast.Ident:
 					if d.Recv != nil && !d.Operator && !d.IsClass {
 						ctx.handleErrorf(expr.Pos(), expr.End(), "invalid method %v", ctx.LoadExpr(expr))
+						hasErr = true
 						break LoopFunc
 					}
 					exov = true
@@ -1251,11 +1263,13 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 				case *ast.SelectorExpr:
 					if d.Recv == nil || d.IsClass {
 						ctx.handleErrorf(expr.Pos(), expr.End(), "invalid func %v", ctx.LoadExpr(expr))
+						hasErr = true
 						break LoopFunc
 					}
 					rtyp, ok := checkOverloadMethodRecvType(recv, expr.X)
 					if !ok {
 						ctx.handleErrorf(expr.Pos(), expr.End(), "invalid recv type %v", ctx.LoadExpr(expr.X))
+						hasErr = true
 						break LoopFunc
 					}
 
@@ -1268,6 +1282,7 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 				case *ast.FuncLit:
 					if d.Recv != nil && !d.Operator && !d.IsClass {
 						ctx.handleErrorf(expr.Pos(), expr.End(), "invalid method %v", ctx.LoadExpr(expr))
+						hasErr = true
 						break LoopFunc
 					}
 					name1 := overloadFuncName(name.Name, idx)
@@ -1282,22 +1297,19 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 						Name: id,
 						Type: expr.Type,
 						Body: expr.Body,
-					})
+					}, false)
 				default:
 					ctx.handleErrorf(expr.Pos(), expr.End(), "unknown func %v", ctx.LoadExpr(expr))
+					hasErr = true
 					break LoopFunc
 				}
 			}
+
 			if exov { // need Gopo_xxx
 				oname, err := overloadName(recv, name.Name, d.Operator)
 				if err != nil {
 					ctx.handleErrorf(name.Pos(), name.End(), "%v", err)
 					break
-				}
-				if recv != nil {
-					ctx.overpos[recv.Name+"."+name.Name] = name.NamePos
-				} else {
-					ctx.overpos[name.Name] = name.NamePos
 				}
 				oval := strings.Join(onames, ",")
 				preloadConst(&ast.GenDecl{
@@ -1311,18 +1323,41 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 					},
 				})
 				ctx.lbinames = append(ctx.lbinames, oname)
-			} else {
-				ctx.overpos[name.Name] = name.NamePos
+			}
+			if !hasErr {
+				if d.Recv == nil {
+					ctx.lbinames = append(ctx.lbinames, d.Name.Name)
+				}
+				preloadFuncDecl(&ast.FuncDecl{
+					Doc:  d.Doc,
+					Recv: d.Recv,
+					Name: d.Name,
+					Type: &ast.FuncType{
+						Params: &ast.FieldList{
+							List: []*ast.Field{
+								&ast.Field{
+									Names: []*ast.Ident{
+										ast.NewIdent(overloadArgs),
+									},
+									Type: ast.NewIdent("any"),
+								},
+							},
+						},
+					},
+				}, true)
 			}
 			if ctx.rec != nil {
 				ctx.rec.ReferDef(d.Name, d)
 			}
-
 		default:
 			log.Panicf("TODO - cl.preloadFile: unknown decl - %T\n", decl)
 		}
 	}
 }
+
+const (
+	overloadArgs = "__xgo_overload_args__"
+)
 
 func checkOverloadMethodRecvType(ot *ast.Ident, recv ast.Expr) (*ast.Ident, bool) {
 	rtyp, _, ok := getRecvType(recv)
