@@ -120,7 +120,7 @@ Some identifiers are [predeclared](#predeclared-identifiers).
 
 ### Keywords
 
-The following keywords are reserved and may not be used as identifiers.
+The following keywords are reserved and may not be used as identifiers (TODO: some keywords are allowed as identifiers).
 
 ```go
 break        default      func         interface    select
@@ -456,7 +456,7 @@ TypeName  = identifier | QualifiedIdent .
 TypeArgs  = "[" TypeList [ "," ] "]" .
 TypeList  = Type { "," Type } .
 TypeLit   = ArrayType | StructType | PointerType | FunctionType | InterfaceType |
-            SliceType | MapType .
+            SliceType | MapType . // TODO: check this
 ```
 
 The language [predeclares]() certain type names. Others are introduced with [type declarations](#type-declarations). _Composite types_—array, struct, pointer, function, interface, slice, map—may be constructed using type literals.
@@ -2399,18 +2399,9 @@ func protect(g func()) {
 }
 ```
 
-### Additional built-in functions
+### TODO
 
-The following additional built-in functions are provided for convenience:
-
-```go
-print(args ...any)     // prints arguments to standard output
-printf(format string, args ...any)  // prints formatted output
-println(args ...any)   // prints arguments with newline
-echo(args ...any)      // alias for println
-```
-
-These functions are primarily intended for quick debugging and simple output. For production code, consider using the `fmt` package for more robust formatting and output control.
+See builtin/doc.xgo for additional built-in functions.
 
 ## Blocks
 
@@ -2779,7 +2770,11 @@ import _ "lib/math"
 
 ### An example package
 
-> **Note**: A complete example package demonstrating XGo package structure and features will be added here.
+Here is a complete XGo package that implements XXX.
+
+```go
+TODO
+```
 
 ## Program initialization and execution
 
@@ -2839,7 +2834,7 @@ the initialization order is `d`, `b`, `c`, `a`. Note that the order of subexpres
 
 Dependency analysis is performed per package; only references referring to variables, functions, and (non-interface) methods declared in the current package are considered. If other, hidden, data dependencies exists between variables, the initialization order between those variables is unspecified.
 
-For instance, given the declarations
+For instance, given the declarations (TODO: use classfile instead of method)
 
 ```go
 var x = I(T{}).ab()   // x has an undetected, hidden dependency on a and b
