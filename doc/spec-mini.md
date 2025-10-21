@@ -2401,12 +2401,7 @@ func protect(g func()) {
 
 ### TODO
 
-```go
-print
-printf
-println
-...
-```
+See builtin/doc.xgo for additional built-in functions.
 
 ## Blocks
 
@@ -2793,8 +2788,6 @@ These two simple declarations are equivalent:
 var i int
 var i int = 0
 ```
-
-TODO
 
 ### Package initialization
 
