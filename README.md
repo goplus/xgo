@@ -130,7 +130,7 @@ require github.com/goplus/lib v0.2.0
 
 Based on LLGo, XGo can import libraries written in C/C++ and Python.
 
-Here is an example (see [chello](demo/_llgo/chello/hello.gop)) of printing `Hello world` using C's `printf`:
+Here is an example (see [chello](demo/_llgo/chello/hello.xgo)) of printing `Hello world` using C's `printf`:
 
 ```go
 import "c"
@@ -148,7 +148,7 @@ xgo mod tidy       # for generating go.sum file
 xgo run .
 ```
 
-And here is an example (see [pyhello](demo/_llgo/pyhello/hello.gop)) of printing `Hello world` using Python's `print`:
+And here is an example (see [pyhello](demo/_llgo/pyhello/hello.xgo)) of printing `Hello world` using Python's `print`:
 
 ```go
 import "py/std"
@@ -160,9 +160,9 @@ Here, `py"Hello world"` is a syntax supported by XGo, representing a Python stri
 
 Here are more examples of XGo calling C/C++ and Python libraries:
 
-* [pytensor](demo/_llgo/pytensor/tensor.gop): a simple demo using [py/torch](https://pkg.go.dev/github.com/goplus/lib/py/torch)
-* [tetris](demo/_llgo/tetris/tetris.gop): a tetris game based on [c/raylib](https://pkg.go.dev/github.com/goplus/lib/c/raylib)
-* [sqlitedemo](demo/_llgo/sqlitedemo/sqlitedemo.gop): a demo using [c/sqlite](https://pkg.go.dev/github.com/goplus/lib/c/sqlite)
+* [pytensor](demo/_llgo/pytensor/tensor.xgo): a simple demo using [py/torch](https://pkg.go.dev/github.com/goplus/lib/py/torch)
+* [tetris](demo/_llgo/tetris/tetris.xgo): a tetris game based on [c/raylib](https://pkg.go.dev/github.com/goplus/lib/c/raylib)
+* [sqlitedemo](demo/_llgo/sqlitedemo/sqlitedemo.xgo): a demo using [c/sqlite](https://pkg.go.dev/github.com/goplus/lib/c/sqlite)
 
 To find out more about LLGo/XGo's support for C/C++ and Python in detail, please refer to homepage of [llgo](https://github.com/goplus/llgo).
 
