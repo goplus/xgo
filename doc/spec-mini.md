@@ -1164,12 +1164,61 @@ Function literals are _closures_: they may refer to variables defined in a surro
 
 ### Commands and calls
 
-TODO
+XGo supports two styles for invoking functions and methods: the traditional function-call style with parentheses, and a command-style syntax without parentheses that creates more readable, natural-looking code.
+
+```go
+CommandStmt = IDENT [ "." IDENT ] SPACE LambdaExprList [ "..." ] .
+```
+
+#### Function-call style
+
+The traditional function call syntax uses parentheses to enclose arguments:
+
+```go
+println("Hello world")
+fmt.Println("Hello", "world")
+math.Max(10, 20)
+```
+
+Method calls follow the same pattern:
+
+```go
+list.Append(item)
+obj.Method(arg1, arg2)
+```
+
+#### Command-style syntax
+
+XGo's command-style syntax omits the parentheses, using whitespace to separate the function or method name from its arguments. This is the preferred style in XGo as it produces cleaner, more readable code:
+
+```go
+println "Hello world"
+fmt.Println "Hello", "world"
+math.Max 10, 20
+```
+
+Qualified method calls (with a receiver) also work without parentheses:
+
+```go
+list.Append item
+obj.Method arg1, arg2
+```
+
+The command syntax supports variadic arguments using the `...` operator:
+
+```go
+fmt.Println items...
+append slice, elements...
+```
+
+To emphasize XGo's preference for command-style syntax, `echo` is provided as an alias for `println`:
 
 ```go
 echo "Hello world"
 echo("Hello world")
 ```
+
+Both forms are functionally equivalent. The first form (command-style) is preferred for its clarity and conciseness.
 
 ### Built-in functions
 
