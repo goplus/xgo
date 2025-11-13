@@ -1164,12 +1164,74 @@ Function literals are _closures_: they may refer to variables defined in a surro
 
 ### Commands and calls
 
-TODO
+Function and method calls in XGo can be written in two styles: the traditional function-call style with parentheses, and the command-style without parentheses.
+
+#### Command-style syntax
+
+XGo recommends the **command-style** syntax, which omits parentheses for a more natural, shell-like appearance:
 
 ```go
 echo "Hello world"
-echo("Hello world")
+print "Temperature is" 25
 ```
+
+The command-style syntax is defined by the grammar:
+
+```
+CommandStmt = IDENT [ "." IDENT ] SPACE LambdaExprList [ "..." ]
+```
+
+- `IDENT`: The function or method name (optionally qualified with a package or type name)
+- `SPACE`: A whitespace separator
+- `LambdaExprList`: The argument list
+- `"..."`: Optional variadic argument marker
+
+#### Function-call style
+
+For compatibility with traditional syntax, XGo also supports the conventional function-call style with parentheses:
+
+```go
+echo("Hello world")
+print("Temperature is", 25)
+```
+
+Both styles are equivalent and produce identical results. XGo's parser automatically handles both forms.
+
+#### Qualified calls
+
+Functions can be called with qualified names (package or type qualifiers):
+
+```go
+fmt.Println "Hello world"  // Qualified call with command-style
+fmt.Println("Hello world") // Qualified call with function-call style
+
+math.Max 3.14 2.71  // Qualified call, command-style
+math.Max(3.14, 2.71) // Qualified call, function-call style
+```
+
+#### Variadic arguments
+
+Functions with variadic parameters can be called with the `...` spread operator:
+
+```go
+append nums 1 2 3...  // Command-style with spread
+append(nums, 1, 2, 3...) // Function-call style with spread
+
+print values...  // Command-style
+print(values...) // Function-call style
+```
+
+#### Design philosophy
+
+The command-style syntax emphasizes XGo's design philosophy of readability and expressiveness. Functions like `println` and `echo` are treated more like natural language commands, making code more intuitive:
+
+```go
+echo "Starting the program"
+println "Processing data"
+exit 0
+```
+
+`echo` is provided as an alias for `println` to emphasize this command-oriented design.
 
 ### Built-in functions
 
