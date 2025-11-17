@@ -1521,6 +1521,15 @@ func compileCompositeLitEx(ctx *blockCtx, v *ast.CompositeLit, expected types.Ty
 	if v.Type != nil {
 		typ = toType(ctx, v.Type)
 		underlying = getUnderlying(ctx, typ)
+		// Auto-reference typed composite literal when expected type is pointer
+		if expected != nil {
+			if t, ok := expected.(*types.Pointer); ok {
+				telem := t.Elem()
+				if types.Identical(typ, telem) {
+					hasPtr = true
+				}
+			}
+		}
 	} else if expected != nil {
 		if t, ok := expected.(*types.Pointer); ok {
 			telem := t.Elem()
