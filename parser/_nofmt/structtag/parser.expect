@@ -1,0 +1,23 @@
+package main
+
+file tag.xgo
+ast.GenDecl:
+  Tok: type
+  Specs:
+    ast.TypeSpec:
+      Name:
+        ast.Ident:
+          Name: Start
+      Type:
+        ast.StructType:
+          Fields:
+            ast.FieldList:
+              List:
+                ast.Field:
+                  Type:
+                    ast.Ident:
+                      Name: _
+                  Tag:
+                    ast.BasicLit:
+                      Kind: STRING
+                      Value: "Start program"
