@@ -943,7 +943,8 @@ func preloadGopFile(p *gogen.Package, ctx *blockCtx, file string, f *ast.File, c
 				{Name: "this"},
 			},
 			Type: &ast.StarExpr{
-				X: &ast.Ident{Name: classType},
+				Star: f.Pos(),
+				X:    ast.NewIdentEx(f.Pos(), classType, ast.ImplicitFun),
 			},
 		}}}
 	}
