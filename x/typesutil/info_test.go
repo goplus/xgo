@@ -1828,7 +1828,7 @@ func onCloned() {
 024: 19: 6 | "Hi"                *ast.BasicLit                  | value   : untyped string = "Hi" | constant
 == defs ==
 000:  0: 0 | Main                | func (*main.Kai).Main()
-001:  0: 0 | this                | var this *main.Kai
+001:  1: 1 | this                | var this *main.Kai
 002:  3: 2 | a                   | field a int
 003:  6: 6 | info                | type main.info struct{x int; y int}
 004:  7: 2 | x                   | field x int
@@ -2534,7 +2534,7 @@ func add = (
 016: 13:14 | b                   *ast.Ident                     | var     : float64 | variable
 == defs ==
 000:  0: 0 | Gopo_Rect_add       | const main.Gopo_Rect_add untyped string
-001:  0: 0 | this                | var this *main.Rect
+001:  1: 1 | this                | var this *main.Rect
 002:  2: 6 | addInt              | func (*main.Rect).addInt(a int, b int) int
 003:  2:13 | a                   | var a int
 004:  2:16 | b                   | var b int
