@@ -238,6 +238,15 @@ func (p *nodeInterp) LoadExpr(node ast.Node) string {
 	return string(f.Code[pos.Offset : pos.Offset+n])
 }
 
+func (p *nodeInterp) ProjFile() *ast.File {
+	for _, f := range p.files {
+		if f.IsProj {
+			return f
+		}
+	}
+	return nil
+}
+
 type loader interface {
 	load()
 	pos() token.Pos
@@ -352,6 +361,7 @@ type pkgCtx struct {
 
 	goxMainClass string
 	goxMain      int32 // normal gox files with main func
+	goxFile      *ast.File
 
 	featTypesAlias bool // support types alias
 }
