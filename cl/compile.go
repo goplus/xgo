@@ -361,7 +361,6 @@ type pkgCtx struct {
 
 	goxMainClass string
 	goxMain      int32 // normal gox files with main func
-	goxFile      *ast.File
 
 	featTypesAlias bool // support types alias
 }
