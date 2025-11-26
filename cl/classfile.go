@@ -505,10 +505,8 @@ func gmxProjMain(pkg *gogen.Package, parent *pkgCtx, proj *gmxProject) {
 		recv := types.NewParam(token.NoPos, pkg.Types, "this", types.NewPointer(t))
 		sig := types.NewSignatureType(recv, nil, nil, nil, nil, false)
 		fn, err := pkg.NewFuncWith(token.NoPos, "Main", sig, func() gotoken.Pos {
-			if f := parent.ProjFile(); f != nil {
-				return f.Pos()
-			}
-			return token.NoPos
+			// parent.ProjFile() never be nil here
+			return parent.ProjFile().Pos()
 		})
 		if err != nil {
 			panic(err)
