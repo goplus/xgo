@@ -1798,8 +1798,8 @@ func onCloned() {
 	say("Hi")
 }
 `, `== types ==
-000:  0: 0 | Kai                 *ast.Ident                     | type    : main.Kai | type
-001:  0: 0 | MyGame              *ast.Ident                     | type    : main.MyGame | type
+000:  0: 0 | MyGame              *ast.Ident                     | type    : main.MyGame | type
+001:  1: 1 | Kai                 *ast.Ident                     | type    : main.Kai | type
 002:  3: 4 | int                 *ast.Ident                     | type    : int | type
 003:  6:11 | struct {
 	x int
@@ -1828,7 +1828,7 @@ func onCloned() {
 024: 19: 6 | "Hi"                *ast.BasicLit                  | value   : untyped string = "Hi" | constant
 == defs ==
 000:  0: 0 | Main                | func (*main.Kai).Main()
-001:  0: 0 | this                | var this *main.Kai
+001:  1: 1 | this                | var this *main.Kai
 002:  3: 2 | a                   | field a int
 003:  6: 6 | info                | type main.info struct{x int; y int}
 004:  7: 2 | x                   | field x int
@@ -1836,8 +1836,8 @@ func onCloned() {
 006: 11: 6 | onInit              | func (*main.Kai).onInit()
 007: 18: 6 | onCloned            | func (*main.Kai).onCloned()
 == uses ==
-000:  0: 0 | Kai                 | type main.Kai struct{github.com/goplus/xgo/cl/internal/spx.Sprite; *main.MyGame; a int}
-001:  0: 0 | MyGame              | type main.MyGame struct{*github.com/goplus/xgo/cl/internal/spx.MyGame}
+000:  0: 0 | MyGame              | type main.MyGame struct{*github.com/goplus/xgo/cl/internal/spx.MyGame}
+001:  1: 1 | Kai                 | type main.Kai struct{github.com/goplus/xgo/cl/internal/spx.Sprite; *main.MyGame; a int}
 002:  3: 4 | int                 | type int
 003:  7: 4 | int                 | type int
 004:  8: 4 | int                 | type int
@@ -2516,7 +2516,7 @@ func add = (
 )
 `, `== types ==
 000:  0: 0 | ".addInt,,.addString" *ast.BasicLit                  | value   : untyped string = ".addInt,,.addString" | constant
-001:  0: 0 | Rect                *ast.Ident                     | type    : main.Rect | type
+001:  1: 1 | Rect                *ast.Ident                     | type    : main.Rect | type
 002:  2:18 | int                 *ast.Ident                     | type    : int | type
 003:  2:23 | int                 *ast.Ident                     | type    : int | type
 004:  3: 9 | a                   *ast.Ident                     | var     : int | variable
@@ -2534,7 +2534,7 @@ func add = (
 016: 13:14 | b                   *ast.Ident                     | var     : float64 | variable
 == defs ==
 000:  0: 0 | Gopo_Rect_add       | const main.Gopo_Rect_add untyped string
-001:  0: 0 | this                | var this *main.Rect
+001:  1: 1 | this                | var this *main.Rect
 002:  2: 6 | addInt              | func (*main.Rect).addInt(a int, b int) int
 003:  2:13 | a                   | var a int
 004:  2:16 | b                   | var b int
@@ -2546,7 +2546,7 @@ func add = (
 010: 12: 7 | a                   | var a float64
 011: 12:10 | b                   | var b float64
 == uses ==
-000:  0: 0 | Rect                | type main.Rect struct{}
+000:  1: 1 | Rect                | type main.Rect struct{}
 001:  2:18 | int                 | type int
 002:  2:23 | int                 | type int
 003:  3: 9 | a                   | var a int

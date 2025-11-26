@@ -49,6 +49,9 @@ func gopSpxErrorTestMap(t *testing.T, msg string, dirs map[string][]string, file
 }
 
 func TestSpxError(t *testing.T) {
+	gopSpxErrorTestEx(t, `Kai.tspx:1:1: Kai redeclared in this block
+	previous declaration at Game.tgmx:1:6`, `type Kai interface {}`, ``, "Game.tgmx", "Kai.tspx")
+
 	gopSpxErrorTestEx(t, `Game.tgmx:6:2: userScore redeclared
 	Game.tgmx:5:2 other declaration of userScore`, `
 import "bytes"
