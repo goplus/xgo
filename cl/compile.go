@@ -238,6 +238,15 @@ func (p *nodeInterp) LoadExpr(node ast.Node) string {
 	return string(f.Code[pos.Offset : pos.Offset+n])
 }
 
+func (p *nodeInterp) ProjFile() *ast.File {
+	for _, f := range p.files {
+		if f.IsProj {
+			return f
+		}
+	}
+	return nil
+}
+
 type loader interface {
 	load()
 	pos() token.Pos
