@@ -59,6 +59,13 @@ func TestLoadExpr(t *testing.T) {
 	}
 }
 
+func TestProjFile(t *testing.T) {
+	var ni nodeInterp
+	if v := ni.ProjFile(); v != nil {
+		t.Fatal("ProjFile:", v)
+	}
+}
+
 func TestSpriteOf(t *testing.T) {
 	proj := &gmxProject{}
 	if getSpxObj(proj, "a") != nil {
