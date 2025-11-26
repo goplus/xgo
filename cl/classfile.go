@@ -503,7 +503,16 @@ func gmxProjMain(pkg *gogen.Package, parent *pkgCtx, proj *gmxProject) {
 
 		t := pkg.Ref(classType).Type()
 		recv := types.NewParam(token.NoPos, pkg.Types, "this", types.NewPointer(t))
-		fn := pkg.NewFunc(recv, "Main", nil, nil, false)
+		sig := types.NewSignatureType(recv, nil, nil, nil, nil, false)
+		fn, err := pkg.NewFuncWith(token.NoPos, "Main", sig, func() gotoken.Pos {
+			if f := parent.ProjFile(); f != nil {
+				return f.Pos()
+			}
+			return token.NoPos
+		})
+		if err != nil {
+			panic(err)
+		}
 
 		parent.inits = append(parent.inits, func() {
 			old, _ := pkg.SetCurFile(defaultGoFile, true)
