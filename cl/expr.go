@@ -435,7 +435,7 @@ func compileStarExprLHS(ctx *blockCtx, v *ast.StarExpr) { // *x = ...
 
 func compileStarExpr(ctx *blockCtx, v *ast.StarExpr) { // ... = *x
 	compileExpr(ctx, v.X)
-	ctx.cb.Star()
+	ctx.cb.Star(v)
 }
 
 func compileTypeAssertExpr(ctx *blockCtx, v *ast.TypeAssertExpr, twoValue bool) {
