@@ -2285,16 +2285,17 @@ var d = a.mul(c)
 010:  9:30 | *foo                *ast.StarExpr                  | type    : *main.foo | type
 011:  9:31 | foo                 *ast.Ident                     | type    : main.foo | type
 012: 10: 9 | a                   *ast.Ident                     | var     : *main.foo | variable
-013: 18:10 | *foo                *ast.StarExpr                  | type    : *main.foo | type
-014: 18:11 | foo                 *ast.Ident                     | type    : main.foo | type
-015: 19: 9 | a                   *ast.Ident                     | var     : *main.foo | variable
-016: 19: 9 | a.mul               *ast.SelectorExpr              | value   : func(b int) *main.foo | value
-017: 19: 9 | a.mul(100)          *ast.CallExpr                  | value   : *main.foo | value
-018: 19:15 | 100                 *ast.BasicLit                  | value   : untyped int = 100 | constant
-019: 20: 9 | a                   *ast.Ident                     | var     : *main.foo | variable
-020: 20: 9 | a.mul               *ast.SelectorExpr              | value   : func(b *main.foo) *main.foo | value
-021: 20: 9 | a.mul(c)            *ast.CallExpr                  | value   : *main.foo | value
-022: 20:15 | c                   *ast.Ident                     | var     : *main.foo | variable
+013: 13: 7 | foo                 *ast.Ident                     | type    : main.foo | type
+014: 18:10 | *foo                *ast.StarExpr                  | type    : *main.foo | type
+015: 18:11 | foo                 *ast.Ident                     | type    : main.foo | type
+016: 19: 9 | a                   *ast.Ident                     | var     : *main.foo | variable
+017: 19: 9 | a.mul               *ast.SelectorExpr              | value   : func(b int) *main.foo | value
+018: 19: 9 | a.mul(100)          *ast.CallExpr                  | value   : *main.foo | value
+019: 19:15 | 100                 *ast.BasicLit                  | value   : untyped int = 100 | constant
+020: 20: 9 | a                   *ast.Ident                     | var     : *main.foo | variable
+021: 20: 9 | a.mul               *ast.SelectorExpr              | value   : func(b *main.foo) *main.foo | value
+022: 20: 9 | a.mul(c)            *ast.CallExpr                  | value   : *main.foo | value
+023: 20:15 | c                   *ast.Ident                     | var     : *main.foo | variable
 == defs ==
 000:  0: 0 | Gopo_foo_mul        | const main.Gopo_foo_mul untyped string
 001:  2: 6 | foo                 | type main.foo struct{}
