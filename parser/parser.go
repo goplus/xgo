@@ -986,10 +986,24 @@ func (p *parser) parseFieldDecl(scope *ast.Scope) *ast.Field {
 	case token.IDENT:
 		name := p.parseIdent()
 		if p.tok == token.PERIOD || p.tok == token.STRING || p.tok == token.SEMICOLON || p.tok == token.RBRACE {
-			// embedded type
-			typ = name
-			if p.tok == token.PERIOD {
-				typ = p.parseQualifiedIdent(name)
+			// Check for struct tag syntax: _ "string"
+			if name.Name == "_" && p.tok == token.STRING {
+				// Transform _ "string" into _ struct{} `_:"string"`
+				names = []*ast.Ident{name}
+				typ = &ast.StructType{
+					Struct: name.Pos(),
+					Fields: &ast.FieldList{
+						Opening: name.Pos(),
+						Closing: name.Pos(),
+					},
+				}
+				// The string will be handled as a tag below (lines 1055-1059)
+			} else {
+				// embedded type
+				typ = name
+				if p.tok == token.PERIOD {
+					typ = p.parseQualifiedIdent(name)
+				}
 			}
 		} else {
 			// name1, name2, ... T
@@ -1054,8 +1068,27 @@ func (p *parser) parseFieldDecl(scope *ast.Scope) *ast.Field {
 
 	var tag *ast.BasicLit
 	if p.tok == token.STRING {
-		tag = &ast.BasicLit{ValuePos: p.pos, Kind: p.tok, Value: p.lit}
-		p.next()
+		// Check if this is a struct tag syntax transformation (_ "string" -> _ struct{} `_:"string"`)
+		if len(names) == 1 && names[0].Name == "_" {
+			if _, ok := typ.(*ast.StructType); ok {
+				// Transform the string literal into tag format: `_:"content"`
+				// p.lit contains the quoted string, e.g., "\"Start recording meeting minutes\""
+				// We need to create a tag in format: `_:"Start recording meeting minutes"`
+				// The content should keep the quotes: `_:"value"` where value stays quoted
+				tag = &ast.BasicLit{
+					ValuePos: p.pos,
+					Kind:     p.tok,
+					Value:    "`_:" + p.lit + "`", // Wrap the quoted string in backticks with _: prefix
+				}
+				p.next()
+			} else {
+				tag = &ast.BasicLit{ValuePos: p.pos, Kind: p.tok, Value: p.lit}
+				p.next()
+			}
+		} else {
+			tag = &ast.BasicLit{ValuePos: p.pos, Kind: p.tok, Value: p.lit}
+			p.next()
+		}
 	}
 
 	p.expectSemi()
