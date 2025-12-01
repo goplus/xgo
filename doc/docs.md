@@ -99,13 +99,13 @@ Here is my `Hello world` program:
     * [Slices](#slices)
     * [Maps](#maps)
 * [Module imports](#module-imports)
-
-</td><td width=33% valign=top>
-
 * [Statements & expressions](#statements--expressions)
     * [If..else](#ifelse)
     * [For loop](#for-loop)
     * [Error handling](#error-handling)
+
+</td><td width=33% valign=top>
+
 * [Functions](#functions)
     * [Returning multiple values](#returning-multiple-values)
     * [Optional parameters](#optional-parameters)
@@ -114,6 +114,11 @@ Here is my `Hello world` program:
     * [Higher order functions](#higher-order-functions)
     * [Lambda expressions](#lambda-expressions)
 * [Structs](#structs)
+    * [Struct tags](#struct-tags)
+    * [Custom iterators](#custom-iterators)
+    * [Deduce struct type](#deduce-struct-type)
+    * [Overload operators](#overload-operators)
+    * [Auto property](#auto-property)
 
 </td><td valign=top>
 
@@ -1020,6 +1025,24 @@ echo z // [3 1 5]
 
 
 ## Structs
+
+### Struct tags
+
+Go does not provide a way to add reflection information to a struct type. XGo uses Go's built-in struct field tags to implement struct type tags. For example:
+
+```go
+type Start struct {
+    _ "Start recording meeting minutes"
+}
+```
+
+It is equivalent to
+
+```go
+type Start struct {
+    _ struct{} `_:"Start recording meeting minutes"`
+}
+```
 
 ### Custom iterators
 
