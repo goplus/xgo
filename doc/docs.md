@@ -114,6 +114,7 @@ Here is my `Hello world` program:
     * [Higher order functions](#higher-order-functions)
     * [Lambda expressions](#lambda-expressions)
 * [Structs](#structs)
+    * [Struct tags](#struct-tags)
 
 </td><td valign=top>
 
@@ -1020,6 +1021,60 @@ echo z // [3 1 5]
 
 
 ## Structs
+
+### Struct tags
+
+XGo provides a simplified syntax for adding documentation or metadata to struct fields using struct tags. This is particularly useful for documenting the purpose or meaning of fields, especially when working with blank identifier fields.
+
+#### Basic syntax
+
+Instead of writing verbose struct tag syntax:
+
+```go
+type Start struct {
+    _ struct{} `_:"Start recording meeting minutes"`
+}
+```
+
+You can use the simplified syntax:
+
+```go
+type Start struct {
+    _ "Start recording meeting minutes"
+}
+```
+
+XGo automatically converts the simplified syntax to the canonical Go struct tag format during code generation.
+
+#### Multiple tags
+
+You can use this syntax with multiple fields:
+
+```go
+type MeetingActions struct {
+    _ "Start recording meeting minutes"
+    _ "Stop recording and save"
+    _ "Pause recording temporarily"
+}
+```
+
+This is particularly useful for defining enums or action lists where each blank identifier field represents a distinct state or action with its associated documentation.
+
+#### Mixed with regular fields
+
+The simplified struct tag syntax can be mixed with regular struct fields:
+
+```go
+type Config struct {
+    Name    string
+    _ "This marks the configuration boundary"
+    Timeout int
+    Debug   bool
+}
+```
+
+<h5 align="right"><a href="#table-of-contents">⬆ back to toc</a></h5>
+
 
 ### Custom iterators
 
