@@ -375,7 +375,7 @@ func toStructType(ctx *blockCtx, v *ast.StructType) *types.Struct {
 			ident := parseTypeEmbedName(field.Type)
 			fld := types.NewField(ident.NamePos, pkg, name, typ, true)
 			fields = append(fields, fld)
-			tags = append(tags, toFieldTag(field.Tag))
+			tags = append(tags, transformFieldTag(field.Tag))
 			if rec != nil {
 				rec.Def(ident, fld)
 			}
@@ -387,7 +387,7 @@ func toStructType(ctx *blockCtx, v *ast.StructType) *types.Struct {
 			}
 			fld := types.NewField(name.NamePos, pkg, name.Name, typ, false)
 			fields = append(fields, fld)
-			tags = append(tags, toFieldTag(field.Tag))
+			tags = append(tags, transformFieldTag(field.Tag))
 			if rec != nil {
 				rec.Def(name, fld)
 			}
@@ -403,6 +403,27 @@ func toFieldTag(v *ast.BasicLit) string {
 			log.Panicln("TODO: toFieldTag -", err)
 		}
 		return tag
+	}
+	return ""
+}
+
+// transformFieldTag transforms struct field tags from "content" to `_:"content"`
+func transformFieldTag(v *ast.BasicLit) string {
+	if v != nil {
+		tag := toFieldTag(v)
+		// Transform tag: "content" -> `_:"content"`
+		// Need to escape quotes in the tag content
+		escapedTag := ""
+		for _, ch := range tag {
+			if ch == '"' {
+				escapedTag += `\"`
+			} else if ch == '\\' {
+				escapedTag += `\\`
+			} else {
+				escapedTag += string(ch)
+			}
+		}
+		return `_:"` + escapedTag + `"`
 	}
 	return ""
 }

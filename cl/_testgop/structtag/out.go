@@ -17,5 +17,5 @@ type MixedStruct struct {
 	ID int
 	_  struct {
 	} `_:"Documentation tag"`
-	Name string `json:"name"`
+	Name string `_:"json:\"name\""`
 }
