@@ -1,5 +1,5 @@
 type Start struct {
-	_ "Start program"
+	_ "Start recording meeting minutes"
 }
 
 type MultiTag struct {

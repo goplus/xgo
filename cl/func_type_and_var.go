@@ -343,9 +343,29 @@ func toStructType(ctx *blockCtx, v *ast.StructType) *types.Struct {
 	chk := newCheckRedecl()
 	rec := ctx.recorder()
 	for _, field := range fieldList {
+		// Handle struct tag syntax: _ "string" -> _ struct{} `_:"string"`
+		// Check before calling toType to avoid "_ is not a type" error
+		if len(field.Names) == 0 && field.Tag != nil {
+			if ident, ok := field.Type.(*ast.Ident); ok && ident.Name == "_" {
+				// Transform to: field name="_", type=struct{}, tag=`_:"original"`
+				emptyStruct := types.NewStruct(nil, nil)
+				fld := types.NewField(ident.NamePos, pkg, "_", emptyStruct, false)
+				fields = append(fields, fld)
+				// Transform tag: "content" -> `_:"content"`
+				originalTag := toFieldTag(field.Tag)
+				transformedTag := `_:"` + originalTag + `"`
+				tags = append(tags, transformedTag)
+				if rec != nil {
+					rec.Def(ident, fld)
+				}
+				continue
+			}
+		}
+
 		typ := toType(ctx, field.Type)
 		if len(field.Names) == 0 { // embedded
 			name := getTypeName(typ)
+
 			if chk.chkRedecl(ctx, name, field.Type.Pos(), field.Type.End(), fieldKindUser) {
 				continue
 			}
