@@ -1164,8 +1164,8 @@ func (this *Rect) test() {
 	gopClTestFile(t, `
 import "bytes"
 var (
-	*bytes.Buffer "spec:\"buffer\""
-	a int "json:\"a\""
+	*bytes.Buffer "buffer"
+	a int "a"
 	b int
 )
 func test(){}
@@ -1174,8 +1174,8 @@ func test(){}
 import "bytes"
 
 type Rect struct {
-	*bytes.Buffer `+"`spec:\"buffer\"`"+`
-	a             int `+"`json:\"a\"`"+`
+	*bytes.Buffer `+"`_:\"buffer\"`"+`
+	a             int `+"`_:\"a\"`"+`
 	b             int
 }
 
