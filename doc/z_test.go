@@ -51,9 +51,9 @@ func TestCheckTypeMethod(t *testing.T) {
 	}
 }
 
-func TestIsGopPackage(t *testing.T) {
-	if isGopPackage(&doc.Package{}) {
-		t.Fatal("isGopPackage: true?")
+func TestIsXGoPackage(t *testing.T) {
+	if isXGoPackage(&doc.Package{}) {
+		t.Fatal("isXGoPackage: true?")
 	}
 }
 

@@ -88,6 +88,7 @@ Code style is just the first step. We have made many efforts to make the code mo
 | a = append(a, 4)<br>a = append(a, 5, 6, 7) | a <- 4<br>a <- 5, 6, 7 | Append values to a list |
 | a := map[string]int{<br>&nbsp;&nbsp;&nbsp;&nbsp;"Monday": 1,<br>&nbsp;&nbsp;&nbsp;&nbsp;"Tuesday": 2,<br>} | a := {<br>&nbsp;&nbsp;&nbsp;&nbsp;"Monday": 1,<br>&nbsp;&nbsp;&nbsp;&nbsp;"Tuesday": 2,<br>} | Mapping literals |
 | OnStart(func() {<br>&nbsp;&nbsp;&nbsp;&nbsp;...<br>}) | onStart => {<br>&nbsp;&nbsp;&nbsp;&nbsp;...<br>} | Lambda expressions |
+| Play("1.mp3", &Options{Loop: true}) | play "1.mp3", loop = true | Python-like [keyword arguments](doc/docs.md#keyword-arguments) (kwargs) |
 | type Rect struct {<br>&nbsp;&nbsp;&nbsp;&nbsp;Width&nbsp; float64<br>&nbsp;&nbsp;&nbsp;&nbsp;Height float64<br>}<br><br>func (this *Rect) Area() float64 { <br>&nbsp;&nbsp;&nbsp;&nbsp;return this.Width * this.Height<br>} | var (<br>&nbsp;&nbsp;&nbsp;&nbsp;Width&nbsp; float64<br>&nbsp;&nbsp;&nbsp;&nbsp;Height float64<br>)<br><br>func Area() float64 { <br>&nbsp;&nbsp;&nbsp;&nbsp;return Width * Height<br>} | [XGo Classfiles](doc/classfile.md): We can express OOP with global variables and functions. |
 
 For more details, see [The XGo Mini Specification](doc/spec-mini.md).
@@ -129,7 +130,7 @@ require github.com/goplus/lib v0.2.0
 
 Based on LLGo, XGo can import libraries written in C/C++ and Python.
 
-Here is an example (see [chello](demo/_llgo/chello/hello.gop)) of printing `Hello world` using C's `printf`:
+Here is an example (see [chello](demo/_llgo/chello/hello.xgo)) of printing `Hello world` using C's `printf`:
 
 ```go
 import "c"
@@ -147,7 +148,7 @@ xgo mod tidy       # for generating go.sum file
 xgo run .
 ```
 
-And here is an example (see [pyhello](demo/_llgo/pyhello/hello.gop)) of printing `Hello world` using Python's `print`:
+And here is an example (see [pyhello](demo/_llgo/pyhello/hello.xgo)) of printing `Hello world` using Python's `print`:
 
 ```go
 import "py/std"
@@ -159,9 +160,9 @@ Here, `py"Hello world"` is a syntax supported by XGo, representing a Python stri
 
 Here are more examples of XGo calling C/C++ and Python libraries:
 
-* [pytensor](demo/_llgo/pytensor/tensor.gop): a simple demo using [py/torch](https://pkg.go.dev/github.com/goplus/lib/py/torch)
-* [tetris](demo/_llgo/tetris/tetris.gop): a tetris game based on [c/raylib](https://pkg.go.dev/github.com/goplus/lib/c/raylib)
-* [sqlitedemo](demo/_llgo/sqlitedemo/sqlitedemo.gop): a demo using [c/sqlite](https://pkg.go.dev/github.com/goplus/lib/c/sqlite)
+* [pytensor](demo/_llgo/pytensor/tensor.xgo): a simple demo using [py/torch](https://pkg.go.dev/github.com/goplus/lib/py/torch)
+* [tetris](demo/_llgo/tetris/tetris.xgo): a tetris game based on [c/raylib](https://pkg.go.dev/github.com/goplus/lib/c/raylib)
+* [sqlitedemo](demo/_llgo/sqlitedemo/sqlitedemo.xgo): a demo using [c/sqlite](https://pkg.go.dev/github.com/goplus/lib/c/sqlite)
 
 To find out more about LLGo/XGo's support for C/C++ and Python in detail, please refer to homepage of [llgo](https://github.com/goplus/llgo).
 

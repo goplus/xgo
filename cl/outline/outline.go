@@ -257,8 +257,8 @@ func (p Package) Outline(withUnexported ...bool) (ret *All) {
 				named.Helpers = append(named.Helpers, Func{v, p.docs})
 			}
 		case *types.Const:
-			if name := v.Name(); strings.HasPrefix(name, "Gop") {
-				if name == "GopPackage" || name == "Gop_sched" {
+			if name := v.Name(); strings.HasPrefix(name, "Gop") || strings.HasPrefix(name, "XGo") {
+				if name == "GopPackage" || name == "XGoPackage" || name == "Gop_sched" {
 					continue
 				}
 			}

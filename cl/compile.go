@@ -238,6 +238,15 @@ func (p *nodeInterp) LoadExpr(node ast.Node) string {
 	return string(f.Code[pos.Offset : pos.Offset+n])
 }
 
+func (p *nodeInterp) ProjFile() *ast.File {
+	for _, f := range p.files {
+		if f.IsProj {
+			return f
+		}
+	}
+	return nil
+}
+
 type loader interface {
 	load()
 	pos() token.Pos
@@ -940,10 +949,11 @@ func preloadGopFile(p *gogen.Package, ctx *blockCtx, file string, f *ast.File, c
 
 		ctx.classRecv = &ast.FieldList{List: []*ast.Field{{
 			Names: []*ast.Ident{
-				{Name: "this"},
+				{NamePos: f.Pos(), Name: "this"},
 			},
 			Type: &ast.StarExpr{
-				X: &ast.Ident{Name: classType},
+				Star: f.Pos(),
+				X:    ast.NewIdentEx(f.Pos(), classType, ast.ImplicitFun),
 			},
 		}}}
 	}

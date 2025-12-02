@@ -49,6 +49,23 @@ func gopSpxErrorTestMap(t *testing.T, msg string, dirs map[string][]string, file
 }
 
 func TestSpxError(t *testing.T) {
+	gopSpxErrorTestEx(t, `Game.tgmx:7:16: cannot use *Kai (type Kai) as type github.com/goplus/xgo/cl/internal/spx.Sprite in slice literal`, `
+var (
+	foo []Sprite
+	Kai *Kai
+)
+
+foo = []Sprite{*Kai}
+`, ``, "Game.tgmx", "Kai.tspx")
+
+	gopSpxErrorTestEx(t, `Game.tgmx:1:6: Game redeclared in this block
+	previous declaration at Game.tgmx:1:1
+Game.tgmx:1:1: invalid receiver type Game (Game is an interface type)
+Game.tgmx:1:1: invalid receiver type Game (Game is an interface type)`, `type Game interface {}`, ``, "Game.tgmx", "Kai.tspx")
+
+	gopSpxErrorTestEx(t, `Kai.tspx:1:1: Kai redeclared in this block
+	previous declaration at Game.tgmx:1:6`, `type Kai interface {}`, ``, "Game.tgmx", "Kai.tspx")
+
 	gopSpxErrorTestEx(t, `Game.tgmx:6:2: userScore redeclared
 	Game.tgmx:5:2 other declaration of userScore`, `
 import "bytes"
@@ -1147,8 +1164,8 @@ func (this *Rect) test() {
 	gopClTestFile(t, `
 import "bytes"
 var (
-	*bytes.Buffer "spec:\"buffer\""
-	a int "json:\"a\""
+	*bytes.Buffer "buffer"
+	a int "a"
 	b int
 )
 func test(){}
@@ -1157,8 +1174,8 @@ func test(){}
 import "bytes"
 
 type Rect struct {
-	*bytes.Buffer `+"`spec:\"buffer\"`"+`
-	a             int `+"`json:\"a\"`"+`
+	*bytes.Buffer `+"`_:\"buffer\"`"+`
+	a             int `+"`_:\"a\"`"+`
 	b             int
 }
 

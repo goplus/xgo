@@ -22,6 +22,7 @@ import (
 	"log"
 	"math/big"
 	"strconv"
+	"strings"
 
 	"github.com/goplus/gogen"
 	"github.com/goplus/xgo/ast"
@@ -343,6 +344,21 @@ func toStructType(ctx *blockCtx, v *ast.StructType) *types.Struct {
 	chk := newCheckRedecl()
 	rec := ctx.recorder()
 	for _, field := range fieldList {
+		// Struct Tags (#2488): Check before calling toType to
+		// avoid "_ is not a type" error
+		if len(field.Names) == 0 && field.Tag != nil {
+			if ident, ok := field.Type.(*ast.Ident); ok && ident.Name == "_" {
+				emptyStruct := types.NewStruct(nil, nil)
+				fld := types.NewField(ident.NamePos, pkg, "_", emptyStruct, false)
+				fields = append(fields, fld)
+				tags = append(tags, toFieldTag(field.Tag))
+				if rec != nil {
+					rec.Def(ident, fld)
+				}
+				continue
+			}
+		}
+
 		typ := toType(ctx, field.Type)
 		if len(field.Names) == 0 { // embedded
 			name := getTypeName(typ)
@@ -378,13 +394,25 @@ func toStructType(ctx *blockCtx, v *ast.StructType) *types.Struct {
 
 func toFieldTag(v *ast.BasicLit) string {
 	if v != nil {
-		tag, err := strconv.Unquote(v.Value)
+		data := v.Value
+		if len(data) > 0 && data[0] == '"' && noTagKey(data) {
+			return "_:" + data
+		}
+		tag, err := strconv.Unquote(data)
 		if err != nil {
 			log.Panicln("TODO: toFieldTag -", err)
 		}
 		return tag
 	}
 	return ""
+}
+
+func noTagKey(data string) bool {
+	pos := strings.IndexByte(data, ':')
+	if pos < 0 {
+		return true
+	}
+	return strings.IndexByte(data[:pos], ' ') >= 0
 }
 
 func getTypeName(typ types.Type) string {

@@ -248,7 +248,7 @@ func transformConsts(ctx *transformCtx, in []*doc.Value) {
 
 // Transform converts a Go doc package to an XGo doc package.
 func Transform(in *doc.Package) *doc.Package {
-	if isGopPackage(in) {
+	if isXGoPackage(in) {
 		ctx := newCtx(in)
 		transformConsts(ctx, in.Consts)
 		transformFuncs(ctx, nil, in.Funcs, false)
