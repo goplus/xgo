@@ -1827,25 +1827,20 @@ func compileErrWrapExpr(ctx *blockCtx, v *ast.ErrWrapExpr, inFlags int) {
 	cb.If().Val(err).CompareNil(gotoken.NEQ).Then()
 	if v.Default == nil {
 		pos := pkg.Fset.Position(v.Pos())
-		currentFunc := ctx.cb.Func().Ancestor()
-		const newFrameArgs = 5
-
-		currentFuncName := currentFunc.Name()
-		if currentFuncName == "" {
-			currentFuncName = "main"
+		curFn := cb.Func().Ancestor()
+		curFnName := curFn.Name()
+		if curFnName == "" {
+			curFnName = "main"
 		}
 
-		currentFuncName = strings.Join([]string{currentFunc.Pkg().Name(), currentFuncName}, ".")
-
-		cb.
-			VarRef(err).
+		cb.VarRef(err).
 			Val(pkg.Import(errorPkgPath).Ref("NewFrame")).
 			Val(err).
 			Val(sprintAst(pkg.Fset, v.X)).
 			Val(relFile(ctx.relBaseDir, pos.Filename)).
 			Val(pos.Line).
-			Val(currentFuncName).
-			Call(newFrameArgs).
+			Val(curFn.Pkg().Name() + "." + curFnName).
+			Call(5).
 			Assign(1)
 	}
 
