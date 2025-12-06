@@ -1168,12 +1168,11 @@ XGo supports two styles for function and method calls: the traditional function-
 
 #### Function-call style
 
-The traditional Go function-call syntax uses parentheses:
+The traditional function-call syntax uses parentheses:
 
 ```go
 echo("Hello world")
 fmt.Println("Hello, world")
-append(slice, element)
 ```
 
 #### Command-style syntax
@@ -1189,13 +1188,12 @@ Examples:
 ```go
 echo "Hello world"
 fmt.Println "Hello, world"
-println "The answer is", 42
 ```
 
 Command-style calls can be qualified (with package or receiver name) or unqualified:
 
 ```go
-println "unqualified call"
+echo "unqualified call"
 fmt.Println "qualified call"
 os.Exit 1
 ```
@@ -1203,16 +1201,11 @@ os.Exit 1
 Variadic arguments are supported with the `...` operator:
 
 ```go
-slice <- elements...
-append slice, elements...
+echo min(elements...)
 ```
 
 Both styles are equivalent and can be used interchangeably. XGo prefers command-style for its cleaner, more natural appearance, similar to shell commands. The built-in function `echo` is provided as an alias for `println` to emphasize this command-oriented approach.
 
-```go
-echo "Hello world"
-echo("Hello world")
-```
 
 ### Built-in functions
 
