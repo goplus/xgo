@@ -872,16 +872,26 @@ type Bad2 interface {
 
 #### Built-in interfaces
 
-TODO:
+The following interfaces are predeclared in XGo:
 
 ```go
-error
-any
+any    // alias for interface{}, the empty interface
+error  // interface for error handling
 ```
 
-#### Errors
+##### The any interface
 
-The predeclared type `error` is defined as
+The predeclared type `any` is an alias for the empty interface `interface{}`. It represents the set of all types and is useful when you need to work with values of any type:
+
+```go
+var x any  // x is nil and has static type any
+x = 42     // x has value 42 and dynamic type int
+x = "hello" // x has value "hello" and dynamic type string
+```
+
+##### The error interface
+
+The predeclared type `error` is defined as:
 
 ```go
 type error interface {
@@ -889,11 +899,13 @@ type error interface {
 }
 ```
 
-It is the conventional interface for representing an `error` condition, with the nil value representing no error. For instance, a function to read data from a file might be defined:
+It is the conventional interface for representing an error condition, with the nil value representing no error. For instance, a function to read data from a file might be defined:
 
 ```go
 func Read(f *File, b []byte) (n int, err error)
 ```
+
+Any type that implements an `Error()` method returning a string satisfies the `error` interface.
 
 ### Classes
 
