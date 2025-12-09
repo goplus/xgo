@@ -195,6 +195,33 @@ TODO
 
 See [Builtin interfaces](spec-mini.md#builtin-interfaces).
 
+##### The comparable interface
+
+The predeclared interface type `comparable` denotes the set of all non-interface types that are strictly comparable. A type is strictly comparable if values of that type can be compared using the `==` and `!=` operators.
+
+The `comparable` interface is primarily used as a type constraint in generic code and cannot be used as the type of a variable or struct field:
+
+```go
+// Example: using comparable as a type constraint
+func Find[T comparable](slice []T, value T) int {
+	for i, v := range slice {
+		if v == value {
+			return i
+		}
+	}
+	return -1
+}
+```
+
+Types that are strictly comparable include:
+- Boolean, numeric, and string types
+- Pointer types
+- Channel types
+- Array types (if their element type is strictly comparable)
+- Struct types (if all their field types are strictly comparable)
+
+Slice, map, and function types are not comparable and cannot be used with `comparable`.
+
 ### Channel types
 
 TODO
