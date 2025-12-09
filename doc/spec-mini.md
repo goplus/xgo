@@ -872,16 +872,54 @@ type Bad2 interface {
 
 #### Built-in interfaces
 
-TODO:
+The following interfaces are predeclared in XGo:
 
 ```go
-error
-any
+any         // alias for interface{}, the empty interface
+comparable  // interface representing all strictly comparable types
+error       // interface for error handling
 ```
 
-#### Errors
+##### The any interface
 
-The predeclared type `error` is defined as
+The predeclared type `any` is an alias for the empty interface `interface{}`. It represents the set of all types and is useful when you need to work with values of any type:
+
+```go
+var x any  // x is nil and has static type any
+x = 42     // x has value 42 and dynamic type int
+x = "hello" // x has value "hello" and dynamic type string
+```
+
+##### The comparable interface
+
+The predeclared interface type `comparable` denotes the set of all non-interface types that are strictly comparable. A type is strictly comparable if values of that type can be compared using the `==` and `!=` operators.
+
+The `comparable` interface is primarily used as a type constraint in generic code and cannot be used as the type of a variable or struct field:
+
+```go
+// Example: using comparable as a type constraint
+func Find[T comparable](slice []T, value T) int {
+	for i, v := range slice {
+		if v == value {
+			return i
+		}
+	}
+	return -1
+}
+```
+
+Types that are strictly comparable include:
+- Boolean, numeric, and string types
+- Pointer types
+- Channel types
+- Array types (if their element type is strictly comparable)
+- Struct types (if all their field types are strictly comparable)
+
+Slice, map, and function types are not comparable and cannot be used with `comparable`.
+
+##### The error interface
+
+The predeclared type `error` is defined as:
 
 ```go
 type error interface {
@@ -889,11 +927,13 @@ type error interface {
 }
 ```
 
-It is the conventional interface for representing an `error` condition, with the nil value representing no error. For instance, a function to read data from a file might be defined:
+It is the conventional interface for representing an error condition, with the nil value representing no error. For instance, a function to read data from a file might be defined:
 
 ```go
 func Read(f *File, b []byte) (n int, err error)
 ```
+
+Any type that implements an `Error()` method returning a string satisfies the `error` interface.
 
 ### Classes
 
