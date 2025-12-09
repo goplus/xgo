@@ -24,7 +24,7 @@
 
 </div>
 
-XGo is programming that reads like plain English. But it's also incredibly powerful — it lets you leverage assets from C/C++, Go, Python, and JavaScript/TypeScript, creating a unified software engineering ecosystem.
+XGo is a programming language that reads like plain English. But it's also incredibly powerful — it lets you leverage assets from C/C++, Go, Python, and JavaScript/TypeScript, creating a unified software engineering ecosystem.
 
 ```
 XGo := C * Go * Python * JavaScript + Scratch
@@ -39,7 +39,7 @@ Our vision is to **enable everyone to become a builder of the world**.
 
 #### Ready for large projects
 
-* Integrate C/C++, Go, Python, and JavaScript into a unified ecosystem
+* Integrate C/C++, Go, Python, and JavaScript/TypeScript into a unified ecosystem
 * Derived from Go and easy to build large projects from its good engineering foundation
 
 The XGo programming language is designed for engineering, STEM education, and data science.
