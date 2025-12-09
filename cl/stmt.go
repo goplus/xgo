@@ -953,16 +953,13 @@ func compileBranchStmt(ctx *blockCtx, v *ast.BranchStmt) {
 	label := v.Label
 	switch v.Tok {
 	case token.GOTO:
+		// XGo: label lookup is now done in parser, so goto is always a jump statement here
 		cb := ctx.cb
-		if l, ok := cb.LookupLabel(label.Name); ok {
-			cb.Goto(l)
-			return
+		l, ok := cb.LookupLabel(label.Name)
+		if !ok {
+			panic("goto: label not found - should have been converted to function call by parser")
 		}
-		compileCallExpr(ctx, &ast.CallExpr{
-			Fun:        &ast.Ident{NamePos: v.TokPos, Name: "goto", Obj: &ast.Object{Data: label}},
-			Args:       []ast.Expr{label},
-			NoParenEnd: label.End(),
-		}, clIdentGoto)
+		cb.Goto(l)
 	case token.BREAK:
 		ctx.cb.Break(getLabel(ctx, label))
 	case token.CONTINUE:

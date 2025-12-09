@@ -156,19 +156,91 @@ func (p *parser) openLabelScope() {
 	p.targetStack = append(p.targetStack, nil)
 }
 
-func (p *parser) closeLabelScope() {
+func (p *parser) closeLabelScope() map[string]bool {
 	// resolve labels
 	n := len(p.targetStack) - 1
 	scope := p.labelScope
+	unresolvedGoto := make(map[string]bool)
 	for _, ident := range p.targetStack[n] {
 		ident.Obj = scope.Lookup(ident.Name)
-		if ident.Obj == nil && p.mode&DeclarationErrors != 0 {
-			p.error(ident.Pos(), fmt.Sprintf("label %s undefined", ident.Name))
+		if ident.Obj == nil {
+			unresolvedGoto[ident.Name] = true
+			if p.mode&DeclarationErrors != 0 {
+				p.error(ident.Pos(), fmt.Sprintf("label %s undefined", ident.Name))
+			}
 		}
 	}
 	// pop label scope
 	p.targetStack = p.targetStack[0:n]
 	p.labelScope = p.labelScope.Outer
+	return unresolvedGoto
+}
+
+// convertUnresolvedGoto walks through statements and converts BranchStmt with
+// unresolved goto labels to ExprStmt with function calls
+func (p *parser) convertUnresolvedGoto(stmts []ast.Stmt, unresolvedGoto map[string]bool) {
+	for i, stmt := range stmts {
+		if branch, ok := stmt.(*ast.BranchStmt); ok && branch.Tok == token.GOTO && branch.Label != nil {
+			if unresolvedGoto[branch.Label.Name] {
+				// Convert to function call: goto(label)
+				stmts[i] = &ast.ExprStmt{
+					X: &ast.CallExpr{
+						Fun:        &ast.Ident{NamePos: branch.TokPos, Name: "goto", Obj: &ast.Object{Data: branch.Label}},
+						Args:       []ast.Expr{branch.Label},
+						NoParenEnd: branch.Label.End(),
+					},
+				}
+			}
+		} else {
+			// Recursively process nested statements
+			p.convertUnresolvedGotoInStmt(stmt, unresolvedGoto)
+		}
+	}
+}
+
+// convertUnresolvedGotoInStmt recursively processes nested statements
+func (p *parser) convertUnresolvedGotoInStmt(stmt ast.Stmt, unresolvedGoto map[string]bool) {
+	switch s := stmt.(type) {
+	case *ast.BlockStmt:
+		p.convertUnresolvedGoto(s.List, unresolvedGoto)
+	case *ast.LabeledStmt:
+		p.convertUnresolvedGotoInStmt(s.Stmt, unresolvedGoto)
+	case *ast.IfStmt:
+		if s.Init != nil {
+			p.convertUnresolvedGotoInStmt(s.Init, unresolvedGoto)
+		}
+		p.convertUnresolvedGotoInStmt(s.Body, unresolvedGoto)
+		if s.Else != nil {
+			p.convertUnresolvedGotoInStmt(s.Else, unresolvedGoto)
+		}
+	case *ast.ForStmt:
+		if s.Init != nil {
+			p.convertUnresolvedGotoInStmt(s.Init, unresolvedGoto)
+		}
+		if s.Post != nil {
+			p.convertUnresolvedGotoInStmt(s.Post, unresolvedGoto)
+		}
+		p.convertUnresolvedGotoInStmt(s.Body, unresolvedGoto)
+	case *ast.RangeStmt:
+		p.convertUnresolvedGotoInStmt(s.Body, unresolvedGoto)
+	case *ast.SwitchStmt:
+		if s.Init != nil {
+			p.convertUnresolvedGotoInStmt(s.Init, unresolvedGoto)
+		}
+		p.convertUnresolvedGotoInStmt(s.Body, unresolvedGoto)
+	case *ast.TypeSwitchStmt:
+		if s.Init != nil {
+			p.convertUnresolvedGotoInStmt(s.Init, unresolvedGoto)
+		}
+		p.convertUnresolvedGotoInStmt(s.Assign, unresolvedGoto)
+		p.convertUnresolvedGotoInStmt(s.Body, unresolvedGoto)
+	case *ast.CommClause:
+		p.convertUnresolvedGoto(s.Body, unresolvedGoto)
+	case *ast.CaseClause:
+		p.convertUnresolvedGoto(s.Body, unresolvedGoto)
+	case *ast.SelectStmt:
+		p.convertUnresolvedGotoInStmt(s.Body, unresolvedGoto)
+	}
 }
 
 func (p *parser) declare(decl, data any, scope *ast.Scope, kind ast.ObjKind, idents ...*ast.Ident) {
@@ -1630,7 +1702,8 @@ func (p *parser) parseBody(scope *ast.Scope) *ast.BlockStmt {
 	p.topScope = scope // open function scope
 	p.openLabelScope()
 	list := p.parseStmtList()
-	p.closeLabelScope()
+	unresolvedGoto := p.closeLabelScope()
+	p.convertUnresolvedGoto(list, unresolvedGoto)
 	p.closeScope()
 	rbrace := p.expect2(token.RBRACE)
 
@@ -4121,7 +4194,8 @@ func (p *parser) parseGlobalStmts(sync map[token.Token]bool, pos token.Pos, stmt
 	doc := p.leadComment
 	p.openLabelScope()
 	list := p.parseStmtList()
-	p.closeLabelScope()
+	unresolvedGoto := p.closeLabelScope()
+	p.convertUnresolvedGoto(list, unresolvedGoto)
 	p.closeScope()
 	if stmts != nil {
 		list = append(stmts, list...)

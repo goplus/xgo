@@ -730,7 +730,7 @@ foo:
 	i++
 `)
 	codeErrorTest(t,
-		`bar.xgo:2:6: label foo is not defined`,
+		`bar.xgo:2:1: undefined: goto`,
 		`x := 1
 goto foo`)
 	codeErrorTest(t,
