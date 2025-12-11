@@ -371,7 +371,7 @@ func buildGoplusTools(useGoProxy bool) {
 	println("Building XGo tools...\n")
 	os.Chdir(commandsDir)
 
-	buildOutput, err := execCommand("go", "build", "-o", gopBinPath, "-v", "-ldflags", buildFlags, "./...")
+	buildOutput, err := execCommand("go", "build", "-o", gopBinPath, "-v", "-trimpath", "-ldflags", buildFlags, "./...")
 	if err != nil {
 		log.Fatalln(err)
 	}
