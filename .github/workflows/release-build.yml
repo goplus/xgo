@@ -81,6 +81,7 @@ jobs:
         args: release --clean -p 4
       env:
         GITHUB_TOKEN: ${{ github.token }}
+        DOCKER_IMAGE_REPO: ghcr.io/${{ github.repository }}
         WINGET_PKGS_PRIVATE_KEY: ${{ secrets.WINGET_PKGS_PRIVATE_KEY }}
 
     - name: Upload deb/rpm to Fury.io

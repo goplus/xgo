@@ -1,5 +1,8 @@
 version: 2
 
+env:
+  - DOCKER_IMAGE_REPO={{ envOrDefault "DOCKER_IMAGE_REPO" "xgo" }}
+
 dist: .dist
 
 before:
@@ -83,62 +86,24 @@ changelog:
       - "^docs:"
       - "^test:"
 
-dockers:
-  - goarch: "386"
-    image_templates:
-      - ghcr.io/{{ envOrDefault "GITHUB_REPOSITORY" "goplus/xgo" }}:{{ .Version }}-386
-    use: buildx
-    build_flag_templates:
-      - --platform=linux/386
-      - --build-arg=USE_GORELEASER_ARTIFACTS=1
-      - --build-arg=GORELEASER_ARTIFACTS_TARBALL=.dist/{{.ProjectName}}{{.Version}}.linux-386.tar.gz
+dockers_v2:
+  - id: xgo
+    dockerfile: Dockerfile
+    images:
+      - "{{ .Env.DOCKER_IMAGE_REPO }}"
+    tags:
+      - "{{ .Version }}"
+      - "{{ .Major }}.{{ .Minor }}"
+      - "{{ .Major }}"
+      - latest
+    platforms:
+      - linux/386
+      - linux/amd64
+      - linux/arm64
+    build_args:
+      USE_GORELEASER_ARTIFACTS: "1"
     extra_files:
       - ./
-  - goarch: amd64
-    image_templates:
-      - ghcr.io/{{ envOrDefault "GITHUB_REPOSITORY" "goplus/xgo" }}:{{ .Version }}-amd64
-    use: buildx
-    build_flag_templates:
-      - --platform=linux/amd64
-      - --build-arg=USE_GORELEASER_ARTIFACTS=1
-      - --build-arg=GORELEASER_ARTIFACTS_TARBALL=.dist/{{.ProjectName}}{{.Version}}.linux-amd64.tar.gz
-    extra_files:
-      - ./
-  - goarch: arm64
-    image_templates:
-      - ghcr.io/{{ envOrDefault "GITHUB_REPOSITORY" "goplus/xgo" }}:{{ .Version }}-arm64
-    use: buildx
-    build_flag_templates:
-      - --platform=linux/arm64
-      - --build-arg=USE_GORELEASER_ARTIFACTS=1
-      - --build-arg=GORELEASER_ARTIFACTS_TARBALL=.dist/{{.ProjectName}}{{.Version}}.linux-arm64.tar.gz
-    extra_files:
-      - ./
-
-docker_manifests:
-  - name_template: ghcr.io/{{ envOrDefault "GITHUB_REPOSITORY" "goplus/xgo" }}:{{ .Version }}
-    image_templates:
-      - ghcr.io/{{ envOrDefault "GITHUB_REPOSITORY" "goplus/xgo" }}:{{ .Version }}-386
-      - ghcr.io/{{ envOrDefault "GITHUB_REPOSITORY" "goplus/xgo" }}:{{ .Version }}-amd64
-      - ghcr.io/{{ envOrDefault "GITHUB_REPOSITORY" "goplus/xgo" }}:{{ .Version }}-arm64
-  - name_template: ghcr.io/{{ envOrDefault "GITHUB_REPOSITORY" "goplus/xgo" }}:{{ .Major }}.{{ .Minor }}
-    image_templates:
-      - ghcr.io/{{ envOrDefault "GITHUB_REPOSITORY" "goplus/xgo" }}:{{ .Version }}-386
-      - ghcr.io/{{ envOrDefault "GITHUB_REPOSITORY" "goplus/xgo" }}:{{ .Version }}-amd64
-      - ghcr.io/{{ envOrDefault "GITHUB_REPOSITORY" "goplus/xgo" }}:{{ .Version }}-arm64
-    skip_push: auto
-  - name_template: ghcr.io/{{ envOrDefault "GITHUB_REPOSITORY" "goplus/xgo" }}:{{ .Major }}
-    image_templates:
-      - ghcr.io/{{ envOrDefault "GITHUB_REPOSITORY" "goplus/xgo" }}:{{ .Version }}-386
-      - ghcr.io/{{ envOrDefault "GITHUB_REPOSITORY" "goplus/xgo" }}:{{ .Version }}-amd64
-      - ghcr.io/{{ envOrDefault "GITHUB_REPOSITORY" "goplus/xgo" }}:{{ .Version }}-arm64
-    skip_push: auto
-  - name_template: ghcr.io/{{ envOrDefault "GITHUB_REPOSITORY" "goplus/xgo" }}:latest
-    image_templates:
-      - ghcr.io/{{ envOrDefault "GITHUB_REPOSITORY" "goplus/xgo" }}:{{ .Version }}-386
-      - ghcr.io/{{ envOrDefault "GITHUB_REPOSITORY" "goplus/xgo" }}:{{ .Version }}-amd64
-      - ghcr.io/{{ envOrDefault "GITHUB_REPOSITORY" "goplus/xgo" }}:{{ .Version }}-arm64
-    skip_push: auto
 
 winget:
   - name: goplus

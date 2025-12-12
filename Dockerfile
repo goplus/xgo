@@ -2,8 +2,8 @@ ARG BASE_IMAGE=golang:1.24-bookworm
 
 FROM $BASE_IMAGE AS build
 
+ARG TARGETPLATFORM
 ARG USE_GORELEASER_ARTIFACTS=0
-ARG GORELEASER_ARTIFACTS_TARBALL
 
 WORKDIR /usr/local/src/xgo
 COPY . .
@@ -15,7 +15,7 @@ XGOROOT=/usr/local/xgo
 mkdir -p "$XGOROOT"
 
 if [ "$USE_GORELEASER_ARTIFACTS" -eq 1 ]; then
-	tar -xzf "$GORELEASER_ARTIFACTS_TARBALL" -C "$XGOROOT"
+	cp -rp "$TARGETPLATFORM"/* "$XGOROOT"/
 else
 	git ls-tree --full-tree --name-only -r HEAD | grep -vE "^\." | xargs -I {} cp --parents {} "$XGOROOT"/
 	./all.bash
