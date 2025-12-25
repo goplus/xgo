@@ -190,7 +190,7 @@ XGo introduces `classfile` and `class framework` to abstract domain knowledge.
 
 Sound a bit abstract? Let's see some XGo class frameworks.
 
-* STEM Education: [spx: An XGo 2D Game Engine](https://github.com/goplus/spx)
+* STEM Education: [spx: A Scratch Compatible 2D Game Engine](https://github.com/goplus/spx)
 * AI Programming: [mcp: An XGo implementation of the Model Context Protocol (MCP)](https://github.com/goplus/mcp)
 * AI Programming: [mcptest: An XGo MCP Test Framework](https://github.com/goplus/mcp/tree/main/mtest)
 * Web Programming: [yap: Yet Another HTTP Web Framework](https://github.com/goplus/yap)
@@ -245,7 +245,7 @@ Execute `xgo run .` and visit http://localhost:8080/p/123, you will get:
 See [yap: Yet Another HTTP Web Framework](https://github.com/goplus/yap) for more details.
 
 
-### spx: An XGo 2D Game Engine
+### spx: A Scratch Compatible 2D Game Engine
 
 ![Screen Shot1](https://github.com/goplus/spx/blob/v1/tutorial/01-Weather/1.jpg) ![Screen Shot2](https://github.com/goplus/spx/blob/v1/tutorial/01-Weather/2.jpg)
 
@@ -280,7 +280,7 @@ Yes, Jaime recieves the message `1` and says `I come from England.`. Then he bro
 
 The following procedures are very similar. In this way you can implement dialogues between multiple actors.
 
-See [spx: An XGo 2D Game Engine](https://github.com/goplus/spx) for more details.
+See [spx: A Scratch Compatible 2D Game Engine](https://github.com/goplus/spx) for more details.
 
 
 ### gsh: XGo DevOps Tools
@@ -345,9 +345,9 @@ all.bat
 
 ## XGo Applications
 
-### 2D Games powered by XGo
+### Game Programming
 
-* [An XGo 2D Game Engine for STEM education](https://github.com/goplus/spx)
+* [A Scratch Compatible 2D Game Engine](https://github.com/goplus/spx)
 * [Aircraft War](https://github.com/goplus/AircraftWar)
 * [Flappy Bird](https://github.com/goplus/FlappyCalf)
 * [Maze Play](https://github.com/goplus/MazePlay)
