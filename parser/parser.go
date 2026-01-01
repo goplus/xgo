@@ -3709,7 +3709,7 @@ func (p *parser) parseImportSpec(doc *ast.CommentGroup, _ token.Token, _ int) as
 }
 
 func (p *parser) inClassFile() bool {
-	return p.mode&ParseGoPlusClass != 0
+	return p.mode&ParseXGoClass != 0
 }
 
 func (p *parser) parseValueSpec(doc *ast.CommentGroup, keyword token.Token, iota int) ast.Spec {

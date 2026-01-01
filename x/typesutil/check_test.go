@@ -37,7 +37,7 @@ func loadFiles(fset *token.FileSet, file string, src any, goxfile string, goxsrc
 		files = append(files, f)
 	}
 	if goxfile != "" {
-		f, err := parser.ParseFile(fset, goxfile, goxsrc, parser.ParseGoPlusClass)
+		f, err := parser.ParseFile(fset, goxfile, goxsrc, parser.ParseXGoClass)
 		if err != nil {
 			return nil, nil, err
 		}

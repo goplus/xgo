@@ -643,7 +643,7 @@ func testPanic(t *testing.T, panicMsg string, doPanic func()) {
 
 func TestClassFileEnd(t *testing.T) {
 	fset := token.NewFileSet()
-	f, err := parser.ParseFile(fset, "get.yap", `json {"id": ${id} }`, parser.ParseGoPlusClass)
+	f, err := parser.ParseFile(fset, "get.yap", `json {"id": ${id} }`, parser.ParseXGoClass)
 	if err != nil {
 		t.Fatal(err)
 	}

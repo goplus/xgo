@@ -40,7 +40,7 @@ func parse(fset *token.FileSet, filename string, src []byte, class, _ /* fragmen
 ) {
 	mode := parserMode
 	if class {
-		mode |= parser.ParseGoPlusClass
+		mode |= parser.ParseXGoClass
 	}
 	file, err = parser.ParseFile(fset, filename, src, mode)
 	return
