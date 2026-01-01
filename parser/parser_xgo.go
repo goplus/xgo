@@ -152,7 +152,7 @@ func ParseFSDir(fset *token.FileSet, fs FileSystem, dir string, conf Config) (pk
 		}
 		mode := conf.Mode
 		if isClass {
-			mode |= ParseGoPlusClass
+			mode |= ParseXGoClass
 		}
 		if !strings.HasPrefix(fname, "_") && (conf.Filter == nil || filter(d, conf.Filter)) {
 			filename := fs.Join(dir, fname)
@@ -214,7 +214,7 @@ func ParseFSEntry(fset *token.FileSet, fs FileSystem, filename string, src any, 
 	}
 	mode := conf.Mode
 	if isClass {
-		mode |= ParseGoPlusClass
+		mode |= ParseXGoClass
 	}
 	f, err = ParseFSFile(fset, fs, filename, src, mode)
 	if f != nil {

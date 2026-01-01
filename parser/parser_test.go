@@ -94,7 +94,7 @@ func testShadowEntry(t *testing.T, code string, errExp string, decl *ast.FuncDec
 	t.Helper()
 	fset := token.NewFileSet()
 	f, err := ParseEntry(fset, "/foo/bar.xgo", code, Config{
-		Mode: ParseGoPlusClass | ParseComments | AllErrors,
+		Mode: ParseXGoClass | ParseComments | AllErrors,
 	})
 	if err != nil && err.Error() != errExp {
 		t.Fatal("testShadowEntry error:", err)
@@ -136,7 +136,7 @@ func testClassErrCode(t *testing.T, code string, errExp, panicExp string) {
 	}()
 	t.Helper()
 	fset := token.NewFileSet()
-	_, err := Parse(fset, "/foo/bar.gox", code, ParseGoPlusClass)
+	_, err := Parse(fset, "/foo/bar.gox", code, ParseXGoClass)
 	if err == nil || err.Error() != errExp {
 		t.Fatal("testErrCode error:", err)
 	}

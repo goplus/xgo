@@ -143,7 +143,7 @@ func testFrom(t *testing.T, fpath, sel string, mode int) {
 			fset := token.NewFileSet()
 			m := parser.ParseComments
 			if filepath.Ext(fpath) == ".gox" {
-				m |= parser.ParseGoPlusClass
+				m |= parser.ParseXGoClass
 			}
 			f, err := parser.ParseFile(fset, fpath, src, m)
 			if err != nil {

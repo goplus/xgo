@@ -46,12 +46,17 @@ const (
 	// AllErrors - report all errors (not just the first 10 on different lines)
 	AllErrors = Mode(goparser.AllErrors)
 
-	// ParseGoAsGoPlus - parse Go files by gop/parser
-	ParseGoAsGoPlus Mode = 1 << 16
-	// ParserGoPlusClass - parse XGo classfile by gop/parser
-	ParseGoPlusClass Mode = 1 << 17
+	// ParseGoAsXGo - parse Go files by xgo/parser
+	ParseGoAsXGo Mode = 1 << 16
+	// ParseXGoClass - parse XGo classfile by xgo/parser
+	ParseXGoClass Mode = 1 << 17
 	// SaveAbsFile - parse and save absolute path to pkg.Files
 	SaveAbsFile Mode = 1 << 18
+
+	// for backward compatibility
+	ParseGoAsGoPlus = ParseGoAsXGo
+	// for backward compatibility
+	ParseGoPlusClass = ParseXGoClass
 
 	goReservedFlags Mode = ((1 << 16) - 1)
 )
