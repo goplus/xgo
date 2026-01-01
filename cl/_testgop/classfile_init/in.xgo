@@ -1,0 +1,3 @@
+r := &Rect{Width: 10, Height: 20}
+r.Gop_Init()
+echo r.Area()

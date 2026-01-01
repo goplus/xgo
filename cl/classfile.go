@@ -671,6 +671,38 @@ func genClassclone(ctx *blockCtx, classclone *types.Signature) {
 		End()
 }
 
+func genGopInit(ctx *blockCtx, classDecl *ast.GenDecl) {
+	pkg := ctx.pkg
+	recv := toRecv(ctx, ctx.classRecv)
+
+	cb := pkg.NewFunc(recv, "Gop_Init", nil, nil, false).BodyStart(pkg)
+	ctx.cb = cb
+
+	// Generate initialization code for each field with a value
+	for _, v := range classDecl.Specs {
+		spec := v.(*ast.ValueSpec)
+		if len(spec.Values) == 0 {
+			continue
+		}
+
+		// Handle embedded types (no names)
+		if len(spec.Names) == 0 {
+			continue
+		}
+
+		// For each name-value pair, generate: this.Name = value
+		for i, name := range spec.Names {
+			if i < len(spec.Values) {
+				cb.VarVal("this").MemberVal(name.Name)
+				compileExpr(ctx, spec.Values[i])
+				cb.Assign(1)
+			}
+		}
+	}
+
+	cb.End()
+}
+
 func astEmptyEntrypoint(f *ast.File) {
 	var entry = getEntrypoint(f)
 	var hasEntry bool
