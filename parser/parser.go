@@ -3758,7 +3758,8 @@ func (p *parser) parseValueSpec(doc *ast.CommentGroup, keyword token.Token, iota
 				idents = nil
 			}
 			if p.tok == token.ASSIGN {
-				p.error(p.pos, "syntax error: cannot assign value to field in class file")
+				p.next()
+				values = p.parseRHSList()
 			}
 		}
 		if p.tok == token.STRING {

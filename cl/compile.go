@@ -965,6 +965,18 @@ func preloadGopFile(p *gogen.Package, ctx *blockCtx, file string, f *ast.File, c
 	}
 
 	preloadFile(p, ctx, f, goFile, !conf.Outline)
+
+	// Generate Gop_Init method if there are initialization values
+	if classDecl := ctx.classDecl; classDecl != nil && hasInitValues(classDecl) {
+		ld := getTypeLoader(parent, parent.syms, token.NoPos, token.NoPos, classType)
+		ld.methods = append(ld.methods, func() {
+			old, _ := p.SetCurFile(goFile, true)
+			defer p.RestoreCurFile(old)
+			doInitType(ld)
+			genGopInit(ctx, classDecl)
+		})
+	}
+
 	if sp != nil && sp.feats != 0 {
 		spfeats := sp.feats
 		ld := getTypeLoader(parent, parent.syms, token.NoPos, token.NoPos, classType)
@@ -992,6 +1004,16 @@ func preloadGopFile(p *gogen.Package, ctx *blockCtx, file string, f *ast.File, c
 			p.RestoreCurFile(old)
 		})
 	}
+}
+
+func hasInitValues(classDecl *ast.GenDecl) bool {
+	for _, v := range classDecl.Specs {
+		spec := v.(*ast.ValueSpec)
+		if len(spec.Values) > 0 {
+			return true
+		}
+	}
+	return false
 }
 
 func parseTypeEmbedName(typ ast.Expr) *ast.Ident {
