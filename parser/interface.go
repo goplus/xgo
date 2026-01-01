@@ -53,9 +53,9 @@ const (
 	// SaveAbsFile - parse and save absolute path to pkg.Files
 	SaveAbsFile Mode = 1 << 18
 
-	// for backward compatibility
+	// Deprecated: use ParseGoAsXGo instead.
 	ParseGoAsGoPlus = ParseGoAsXGo
-	// for backward compatibility
+	// Deprecated: use ParseXGoClass instead.
 	ParseGoPlusClass = ParseXGoClass
 
 	goReservedFlags Mode = ((1 << 16) - 1)
