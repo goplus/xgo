@@ -63,7 +63,7 @@ Run 'gop help mod init' for more information.`)
 	}
 
 	modPath := args[0]
-	mod, err := modload.Create(".", modPath, goMainVer(), env.MainVersion)
+	mod, err := modload.Create(".", modPath, goMainVer(), env.MainVersion())
 	check(err)
 
 	if *flagLLGo {

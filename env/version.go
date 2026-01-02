@@ -21,15 +21,12 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
 )
 
-const (
-	MainVersion = "1.5"
-)
-
-// buildVersion is the GoPlus tree's version string at build time.
-// This is set by the linker.
+// buildVersion is the XGo tree's version string at build time.
+// This is set by the linker via ldflags for official releases.
 var (
 	buildVersion string
 )
@@ -41,10 +38,6 @@ func init() {
 func initEnv() {
 	if buildVersion == "" {
 		initEnvByXgo()
-		return
-	}
-	if !strings.HasPrefix(buildVersion, "v"+MainVersion+".") {
-		panic("xgo/env: [FATAL] Invalid buildVersion: " + buildVersion)
 	}
 }
 
@@ -73,12 +66,55 @@ func Installed() bool {
 	return buildVersion != ""
 }
 
-// Version returns the GoPlus tree's version string.
+// Version returns the XGo tree's version string.
 // It is either the commit hash and date at the time of the build or,
 // when possible, a release tag like "v1.0.0-rc1".
+//
+// Version detection priority:
+// 1. buildVersion from ldflags (for official releases via goreleaser)
+// 2. debug.ReadBuildInfo() - reads embedded Go module version from VCS
+// 3. "(devel)" for non-VCS builds
 func Version() string {
-	if buildVersion == "" {
-		return "v" + MainVersion + ".x"
+	// Prefer ldflags-injected version (for official releases)
+	if buildVersion != "" {
+		return buildVersion
 	}
-	return buildVersion
+
+	// Fallback to debug.ReadBuildInfo (embedded module version from VCS)
+	if bi, ok := debug.ReadBuildInfo(); ok {
+		if bi.Main.Version != "" && bi.Main.Version != "(devel)" {
+			return bi.Main.Version
+		}
+	}
+
+	// Return devel for non-VCS builds
+	return "(devel)"
+}
+
+// MainVersion extracts the major.minor version from the current version.
+// For example, "v1.5.3" returns "1.5", "v1.5.0-rc1" returns "1.5".
+// For development versions like "(devel)" or pseudo-versions, returns "0.0".
+func MainVersion() string {
+	ver := Version()
+
+	// Handle (devel) and other non-version strings
+	if !strings.HasPrefix(ver, "v") {
+		return "0.0"
+	}
+
+	// Remove 'v' prefix
+	ver = strings.TrimPrefix(ver, "v")
+
+	// Handle pseudo-versions (e.g., "v0.0.0-20240101-abcdef")
+	if strings.HasPrefix(ver, "0.0.0-") {
+		return "0.0"
+	}
+
+	// Extract major.minor from semantic version
+	parts := strings.Split(ver, ".")
+	if len(parts) >= 2 {
+		return parts[0] + "." + parts[1]
+	}
+
+	return "0.0"
 }
