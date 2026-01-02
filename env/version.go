@@ -82,7 +82,7 @@ func Version() string {
 
 	// Fallback to debug.ReadBuildInfo (embedded module version from VCS)
 	if bi, ok := debug.ReadBuildInfo(); ok {
-		if bi.Main.Version != "" && bi.Main.Version != "(devel)" {
+		if bi.Main.Version != "" {
 			return bi.Main.Version
 		}
 	}
