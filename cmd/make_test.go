@@ -6,15 +6,12 @@ package make_test
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
-
-	"github.com/goplus/xgo/env"
 )
 
 const (
