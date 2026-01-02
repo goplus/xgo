@@ -6,15 +6,12 @@ package make_test
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
-
-	"github.com/goplus/xgo/env"
 )
 
 const (
@@ -312,7 +309,7 @@ func TestInstallInNonGitRepo(t *testing.T) {
 	})
 
 	t.Run("install with VERSION file", func(t *testing.T) {
-		version := fmt.Sprintf("v%s.65535", env.MainVersion)
+		version := "v1.5.65535" // Use a test version
 		// Create VERSION file
 		if err := os.WriteFile(versionFile, []byte(version), 0644); err != nil {
 			t.Fatal(err)
