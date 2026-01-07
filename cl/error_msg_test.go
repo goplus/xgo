@@ -40,8 +40,7 @@ func codeErrorTestAst(t *testing.T, pkgname, filename, msg, src string) {
 func TestErrTplLit(t *testing.T) {
 	codeErrorTest(t, `bar.xgo:1:18: not enough arguments to return
 	have ()
-	want (interface{})
-bar.xgo:1:25: missing return`, "tpl`a = INT => { return }`")
+	want (interface{})`, "tpl`a = INT => { return; return nil }`")
 }
 
 func TestErrSendStmt(t *testing.T) {
@@ -159,23 +158,26 @@ var foo func()
 _, foo = nil, => {}
 `)
 	codeErrorTest(t,
-		"bar.xgo:4:9: cannot use lambda expression as type int in return statement\nbar.xgo:8:1: missing return", `
+		"bar.xgo:4:9: cannot use lambda expression as type int in return statement", `
 func intSeq() int {
 	i := 0
 	return => {
 		i++
 		return i
 	}
+	return 0
 }
 `)
 	codeErrorTest(t,
-		"bar.xgo:6:10: cannot use i (type int) as type string in return argument\nbar.xgo:7:2: missing return", `
+		"bar.xgo:6:10: cannot use i (type int) as type string in return argument", `
 func intSeq() func() string {
 	i := 0
 	return => {
 		i++
 		return i
+		return ""
 	}
+	return nil
 }
 `)
 }
@@ -382,29 +384,31 @@ x = 1, "Hi"
 
 func TestErrReturn(t *testing.T) {
 	codeErrorTest(t,
-		"bar.xgo:4:2: too few arguments to return\n\thave (untyped int)\n\twant (int, error)\nbar.xgo:5:1: missing return", `
+		"bar.xgo:4:2: too few arguments to return\n\thave (untyped int)\n\twant (int, error)", `
 
 func foo() (int, error) {
 	return 1
+	return 0, nil
 }
 `)
 	codeErrorTest(t,
-		"bar.xgo:4:2: too many arguments to return\n\thave (untyped int, untyped int, untyped string)\n\twant (int, error)\nbar.xgo:5:1: missing return", `
+		"bar.xgo:4:2: too many arguments to return\n\thave (untyped int, untyped int, untyped string)\n\twant (int, error)", `
 
 func foo() (int, error) {
 	return 1, 2, "Hi"
+	return 0, nil
 }
 `)
 	codeErrorTest(t,
-		`bar.xgo:4:12: cannot use "Hi" (type untyped string) as type error in return argument
-bar.xgo:5:1: missing return`, `
+		`bar.xgo:4:12: cannot use "Hi" (type untyped string) as type error in return argument`, `
 
 func foo() (int, error) {
 	return 1, "Hi"
+	return 0, nil
 }
 `)
 	codeErrorTest(t,
-		"bar.xgo:8:2: too few arguments to return\n\thave (byte)\n\twant (int, error)\nbar.xgo:9:1: missing return", `
+		"bar.xgo:8:2: too few arguments to return\n\thave (byte)\n\twant (int, error)", `
 
 func bar() (v byte) {
 	return
@@ -412,10 +416,11 @@ func bar() (v byte) {
 
 func foo() (int, error) {
 	return bar()
+	return 0, nil
 }
 `)
 	codeErrorTest(t,
-		"bar.xgo:8:2: too many arguments to return\n\thave (n int, err error)\n\twant (v byte)\nbar.xgo:9:1: missing return", `
+		"bar.xgo:8:2: too many arguments to return\n\thave (n int, err error)\n\twant (v byte)", `
 
 func bar() (n int, err error) {
 	return
@@ -423,11 +428,11 @@ func bar() (n int, err error) {
 
 func foo() (v byte) {
 	return bar()
+	return 0
 }
 `)
 	codeErrorTest(t,
-		`bar.xgo:8:2: cannot use byte value as type error in return argument
-bar.xgo:9:1: missing return`, `
+		`bar.xgo:8:2: cannot use byte value as type error in return argument`, `
 
 func bar() (n int, v byte) {
 	return
@@ -435,13 +440,15 @@ func bar() (n int, v byte) {
 
 func foo() (int, error) {
 	return bar()
+	return 0, nil
 }
 `)
 	codeErrorTest(t,
-		"bar.xgo:4:2: not enough arguments to return\n\thave ()\n\twant (byte)\nbar.xgo:5:1: missing return", `
+		"bar.xgo:4:2: not enough arguments to return\n\thave ()\n\twant (byte)", `
 
 func foo() byte {
 	return
+	return 0
 }
 `)
 }
