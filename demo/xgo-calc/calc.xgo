@@ -21,6 +21,8 @@ func calc(e ast.Expr) float64 {
 		case token.QUO:
 			return calc(e.X) + calc(e.Y)
 		}
+		panic("unknown binary operator")
+		return 0
 	case *ast.CallExpr:
 		switch e.Fun.(*ast.Ident).Name {
 		case "sin":
@@ -30,6 +32,8 @@ func calc(e ast.Expr) float64 {
 		case "pow":
 			return math.Pow(calc(e.Args[0]), calc(e.Args[1]))
 		}
+		panic("unknown function")
+		return 0
 	case *ast.ParenExpr:
 		return calc(e.X)
 	case *ast.UnaryExpr:
@@ -37,8 +41,11 @@ func calc(e ast.Expr) float64 {
 		case token.SUB:
 			return -calc(e.X)
 		}
+		panic("unknown unary operator")
+		return 0
 	}
 	panic("unknown expression")
+	return 0
 }
 
 print "> "

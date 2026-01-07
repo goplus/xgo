@@ -14,6 +14,7 @@ expr = operand % ("*" | "/") % ("+" | "-") => {
 		case '/': return x.(float64) / y.(float64)
 		}
 		panic("unexpected")
+		return nil
 	})
 }
 
