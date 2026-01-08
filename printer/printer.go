@@ -103,7 +103,8 @@ type printer struct {
 	cachedPos  token.Pos
 	cachedLine int // line corresponding to cachedPos
 
-	shadowEntry *ast.FuncDecl // ast.File NoEntrypoint
+	shadowEntry    *ast.FuncDecl                  // ast.File NoEntrypoint
+	commentedStmts map[ast.Stmt]*ast.CommentGroup // statements with leading comments (Go+)
 }
 
 func (p *printer) init(cfg *Config, fset *token.FileSet, nodeSizes map[ast.Node]int) {
@@ -1086,9 +1087,12 @@ func getLastComment(n ast.Node) *ast.CommentGroup {
 }
 
 func (p *printer) printNode(node any) error {
-	// unpack *CommentedNode, if any
+	// unpack *CommentedNode or *CommentedNodes, if any
 	var comments []*ast.CommentGroup
-	if cnode, ok := node.(*CommentedNode); ok {
+	if cnodes, ok := node.(*CommentedNodes); ok {
+		node = cnodes.Node
+		p.commentedStmts = cnodes.CommentedStmts
+	} else if cnode, ok := node.(*CommentedNode); ok {
 		node = cnode.Node
 		comments = cnode.Comments
 	}
@@ -1355,9 +1359,16 @@ type CommentedNode struct {
 	Comments []*ast.CommentGroup
 }
 
+// CommentedNodes holds an AST node and a map of statements with their leading comments.
+// This allows attaching diagnostic comments to specific statements during code generation.
+type CommentedNodes struct {
+	Node           any                            // *ast.File, or ast.Expr, ast.Decl, ast.Spec, or ast.Stmt
+	CommentedStmts map[ast.Stmt]*ast.CommentGroup // statements with their leading comments
+}
+
 // Fprint "pretty-prints" an AST node to output for a given configuration cfg.
 // Position information is interpreted relative to the file set fset.
-// The node type must be *ast.File, *CommentedNode, []ast.Decl, []ast.Stmt,
+// The node type must be *ast.File, *CommentedNode, *CommentedNodes, []ast.Decl, []ast.Stmt,
 // or assignment-compatible to ast.Expr, ast.Decl, ast.Spec, or ast.Stmt.
 func (cfg *Config) Fprint(output io.Writer, fset *token.FileSet, node any) error {
 	return cfg.fprint(output, fset, node, make(map[ast.Node]int))
