@@ -652,4 +652,38 @@ func TestClassFileEnd(t *testing.T) {
 	}
 }
 
+func TestUniverse(t *testing.T) {
+	echo := Universe.Lookup("echo")
+	if echo == nil {
+		t.Fatal("not found")
+	}
+	if echo.Parent() != Universe {
+		t.Fatal("bad parent")
+	}
+	if echo.Pos() != token.NoPos {
+		t.Fatal("must nopos")
+	}
+	if echo.Pkg() != nil {
+		t.Fatal("must nil")
+	}
+	if echo.Type() != types.Typ[types.Invalid] {
+		t.Fatal("must invalid")
+	}
+	if echo.Name() != "echo" {
+		t.Fatal("bad name")
+	}
+	if echo.Id() != "_.echo" {
+		t.Fatal("bad id")
+	}
+	if echo.String() != "builtin echo" {
+		t.Fatal("bad string")
+	}
+	if b, ok := echo.(*Builtin); !ok || b.Sym() != "fmt.Println" {
+		t.Fatal("bad sym")
+	}
+	if echo.(*Builtin).Exported() != false {
+		t.Fatal("bad exported")
+	}
+}
+
 // -----------------------------------------------------------------------------
