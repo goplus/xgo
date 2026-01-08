@@ -715,3 +715,181 @@ func TestStripParens(t *testing.T) {
 		t.Fatal("TestStripParens stripParensAlways failed:", x)
 	}
 }
+
+// TestCommentedNodes tests the CommentedNodes type which allows attaching
+// diagnostic comments to specific statements during code generation.
+func TestCommentedNodes(t *testing.T) {
+	const input = `package main
+
+func foo() {
+	x := 1
+	y := 2
+	println(x + y)
+}
+`
+
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, "input.go", input, parser.ParseComments)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Get the function body statements
+	funcDecl := f.Decls[0].(*ast.FuncDecl)
+	stmts := funcDecl.Body.List
+
+	// Test case 1: Single statement with comment
+	t.Run("SingleStatement", func(t *testing.T) {
+		commentedStmts := make(map[ast.Stmt]*ast.CommentGroup)
+		commentedStmts[stmts[0]] = &ast.CommentGroup{
+			List: []*ast.Comment{
+				{Text: "// TYPECHECK(sb2xbp): type inference failed"},
+			},
+		}
+
+		var buf bytes.Buffer
+		node := &CommentedNodes{
+			Node:           stmts[0],
+			CommentedStmts: commentedStmts,
+		}
+
+		err := Fprint(&buf, fset, node)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		got := buf.String()
+		want := "// TYPECHECK(sb2xbp): type inference failed\nx := 1"
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+
+	// Test case 2: Multiple statements with comments
+	t.Run("MultipleStatements", func(t *testing.T) {
+		commentedStmts := make(map[ast.Stmt]*ast.CommentGroup)
+		commentedStmts[stmts[0]] = &ast.CommentGroup{
+			List: []*ast.Comment{
+				{Text: "// FIXME(sb2xbp): unsupported block type"},
+			},
+		}
+		commentedStmts[stmts[2]] = &ast.CommentGroup{
+			List: []*ast.Comment{
+				{Text: "// TYPECHECK(sb2xbp): type mismatch"},
+			},
+		}
+
+		var buf bytes.Buffer
+		node := &CommentedNodes{
+			Node:           stmts,
+			CommentedStmts: commentedStmts,
+		}
+
+		err := Fprint(&buf, fset, node)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		got := buf.String()
+		want := "// FIXME(sb2xbp): unsupported block type\nx := 1\ny := 2\n// TYPECHECK(sb2xbp): type mismatch\nprintln(x + y)"
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+
+	// Test case 3: Complete file with commented statements
+	t.Run("CompleteFile", func(t *testing.T) {
+		commentedStmts := make(map[ast.Stmt]*ast.CommentGroup)
+		commentedStmts[stmts[1]] = &ast.CommentGroup{
+			List: []*ast.Comment{
+				{Text: "// NOTE: converted from Scratch block"},
+			},
+		}
+
+		var buf bytes.Buffer
+		node := &CommentedNodes{
+			Node:           f,
+			CommentedStmts: commentedStmts,
+		}
+
+		err := Fprint(&buf, fset, node)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		got := buf.String()
+		// The output should contain the comment before the second statement
+		if !bytes.Contains([]byte(got), []byte("// NOTE: converted from Scratch block\n\ty := 2")) {
+			t.Errorf("output does not contain expected comment:\n%s", got)
+		}
+	})
+
+	// Test case 4: Empty CommentedStmts map (no comments added)
+	t.Run("EmptyComments", func(t *testing.T) {
+		var buf bytes.Buffer
+		node := &CommentedNodes{
+			Node:           stmts[0],
+			CommentedStmts: make(map[ast.Stmt]*ast.CommentGroup),
+		}
+
+		err := Fprint(&buf, fset, node)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		got := buf.String()
+		want := "x := 1"
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+
+	// Test case 5: Nil CommentedStmts map
+	t.Run("NilComments", func(t *testing.T) {
+		var buf bytes.Buffer
+		node := &CommentedNodes{
+			Node:           stmts[0],
+			CommentedStmts: nil,
+		}
+
+		err := Fprint(&buf, fset, node)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		got := buf.String()
+		want := "x := 1"
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+
+	// Test case 6: Multi-line comment
+	t.Run("MultiLineComment", func(t *testing.T) {
+		commentedStmts := make(map[ast.Stmt]*ast.CommentGroup)
+		commentedStmts[stmts[0]] = &ast.CommentGroup{
+			List: []*ast.Comment{
+				{Text: "// TYPECHECK(sb2xbp): type inference failed"},
+				{Text: "// TODO: manual type annotation required"},
+			},
+		}
+
+		var buf bytes.Buffer
+		node := &CommentedNodes{
+			Node:           stmts[0],
+			CommentedStmts: commentedStmts,
+		}
+
+		err := Fprint(&buf, fset, node)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		got := buf.String()
+		// Should contain both comment lines
+		if !bytes.Contains([]byte(got), []byte("TYPECHECK(sb2xbp)")) ||
+			!bytes.Contains([]byte(got), []byte("TODO: manual type annotation")) {
+			t.Errorf("output does not contain expected multi-line comments:\n%s", got)
+		}
+	})
+}
