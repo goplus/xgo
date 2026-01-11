@@ -16,7 +16,7 @@
 ## Workflow & Collaboration Style
 
 ### Adding New Syntax Features
-When implementing new language syntax, follow this two-phase approach:
+When implementing new language syntax, follow this three-phase approach:
 
 #### Phase 1: Grammar Definition (First Pull Request)
 **Scope**: AST, parser, and printer modifications
