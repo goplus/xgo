@@ -1,0 +1,10 @@
+var (
+	Width  float64 = 100.0
+	Height float64 = 200.0
+	Name   string  = "Rectangle"
+	Count  int     = 0
+)
+
+func Area() float64 {
+	return Width * Height
+}
