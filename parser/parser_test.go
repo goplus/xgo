@@ -267,14 +267,6 @@ func TestClassErrCode(t *testing.T) {
 	v int
 )
 `, `/foo/bar.gox:2:3: expected 'IDENT', found '['`, ``)
-	testClassErrCode(t, `var (
-	v int = 10
-)
-`, `/foo/bar.gox:2:8: syntax error: cannot assign value to field in class file`, ``)
-	testClassErrCode(t, `var (
-	v = 10
-)
-`, `/foo/bar.gox:2:4: syntax error: cannot assign value to field in class file`, ``)
 	testClassErrCode(t, `
 var (
 )

@@ -1,0 +1,78 @@
+package main
+
+file Rect.gox
+ast.GenDecl:
+  Tok: var
+  Specs:
+    ast.ValueSpec:
+      Names:
+        ast.Ident:
+          Name: Width
+      Type:
+        ast.Ident:
+          Name: float64
+      Values:
+        ast.BasicLit:
+          Kind: FLOAT
+          Value: 100.0
+    ast.ValueSpec:
+      Names:
+        ast.Ident:
+          Name: Height
+      Type:
+        ast.Ident:
+          Name: float64
+      Values:
+        ast.BasicLit:
+          Kind: FLOAT
+          Value: 200.0
+    ast.ValueSpec:
+      Names:
+        ast.Ident:
+          Name: Name
+      Type:
+        ast.Ident:
+          Name: string
+      Values:
+        ast.BasicLit:
+          Kind: STRING
+          Value: "Rectangle"
+    ast.ValueSpec:
+      Names:
+        ast.Ident:
+          Name: Count
+      Type:
+        ast.Ident:
+          Name: int
+      Values:
+        ast.BasicLit:
+          Kind: INT
+          Value: 0
+ast.FuncDecl:
+  Name:
+    ast.Ident:
+      Name: Area
+  Type:
+    ast.FuncType:
+      Params:
+        ast.FieldList:
+      Results:
+        ast.FieldList:
+          List:
+            ast.Field:
+              Type:
+                ast.Ident:
+                  Name: float64
+  Body:
+    ast.BlockStmt:
+      List:
+        ast.ReturnStmt:
+          Results:
+            ast.BinaryExpr:
+              X:
+                ast.Ident:
+                  Name: Width
+              Op: *
+              Y:
+                ast.Ident:
+                  Name: Height

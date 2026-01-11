@@ -18,26 +18,35 @@
 ### Adding New Syntax Features
 When implementing new language syntax, follow this three-phase approach:
 
+**IMPORTANT**: Each phase must be implemented in a separate pull request. Do NOT mix phases in a single PR. This separation ensures:
+- Clear review focus (grammar vs semantics vs documentation)
+- Easier rollback if issues are found
+- Better git history and maintainability
+- Allows grammar to be reviewed independently from implementation details
+
 #### Phase 1: Grammar Definition (First Pull Request)
-**Scope**: AST, parser, and printer modifications
-- **AST**: Define new node types in `ast/` directory
-- **Parser**: Implement parsing rules in `parser/` directory
+**Scope**: AST, parser, and printer modifications ONLY
+- **AST**: Define new node types in `ast/` directory (if needed - often existing nodes can be reused)
+- **Parser**: Implement parsing rules in `parser/` directory to recognize the new syntax
 - **Printer**: Add formatting support for new syntax (inverse of parsing) in `printer/` directory
 - **Testing**: Add test cases in `parser/_testdata/` for new syntax
   - **Note**: Printer shares test cases with parser - do NOT create separate test files in `printer/_testdata/`
+- **What NOT to include**: Do NOT add any code generation or semantic logic in `cl/` package - that belongs in Phase 2
 
-#### Phase 2: Semantic Implementation (Second Pull Request)  
-**Scope**: Code generation via `cl` package
+#### Phase 2: Semantic Implementation (Second Pull Request)
+**Scope**: Code generation via `cl` package ONLY
 - **Code Generation**: Implement semantics using `github.com/goplus/gogen` package
 - **Type Safety**: Leverage gogen's type information maintenance for semantic correctness
 - **Testing**: Add comprehensive test cases in `cl/_testgop/` covering various usage scenarios
+- **Prerequisite**: Phase 1 PR must be merged before starting Phase 2
 
 #### Phase 3: Documentation (Third Pull Request)
-**Scope**: User-facing documentation updates
+**Scope**: User-facing documentation updates ONLY
 - **Quick Start Guide**: Add feature documentation to `doc/docs.md` with practical examples
 - **Table of Contents**: Update TOC in quick start to include new feature section
 - **Language Specification**: Update specification documents (see Language Specification Structure below)
 - **Examples**: Provide clear, runnable code examples demonstrating the feature
+- **Prerequisite**: Phase 2 PR must be merged before starting Phase 3
 
 ### Language Specification Structure
 
