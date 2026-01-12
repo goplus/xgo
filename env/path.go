@@ -38,18 +38,14 @@ func XGOROOT() string {
 	return xgoRoot
 }
 
-const (
-	envXGOROOT = "XGOROOT"
-)
-
 func findXgoRoot() (string, error) {
-	envXgoRoot := os.Getenv(envXGOROOT)
+	envXgoRoot := os.Getenv(EnvKeyXGoRoot)
 	if envXgoRoot != "" {
 		// XGOROOT must valid
 		if isValidXgoRoot(envXgoRoot) {
 			return envXgoRoot, nil
 		}
-		log.Panicf("\n%s (%s) is not valid\n", envXGOROOT, envXgoRoot)
+		log.Panicf("\n%s (%s) is not valid\n", EnvKeyXGoRoot, envXgoRoot)
 	}
 
 	// if parent directory is a valid xgo root, use it

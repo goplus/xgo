@@ -22,6 +22,7 @@ import (
 	"os/exec"
 
 	"github.com/goplus/mod/env"
+	xenv "github.com/goplus/xgo/env"
 	"github.com/goplus/xgo/x/xgoenv"
 )
 
@@ -94,7 +95,7 @@ func appendLdflags(exargs []string, env *XGoEnv) []string {
 // It returns value of environment variable `XGO_GOCMD` if not empty.
 // If not found, it returns `go`.
 func Name() string {
-	goCmd := os.Getenv("XGO_GOCMD")
+	goCmd := os.Getenv(xenv.EnvKeyXGoGoCmd)
 	if goCmd == "" {
 		goCmd = "go"
 	}

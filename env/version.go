@@ -25,6 +25,20 @@ import (
 	"strings"
 )
 
+// EnvKey represents environment variable keys
+type EnvKey = string
+
+// Environment variable keys
+const (
+	EnvKeyBuildDate  EnvKey = "BUILDDATE"
+	EnvKeyXGoRoot    EnvKey = "XGOROOT"
+	EnvKeyXGoVersion EnvKey = "XGOVERSION"
+	EnvKeyXGoGoCmd   EnvKey = "XGO_GOCMD"
+	EnvKeyGoModCache EnvKey = "GOMODCACHE"
+	EnvKeyGoXMod     EnvKey = "GOXMOD"
+	EnvKeyHome       EnvKey = "HOME"
+)
+
 // buildVersion is the XGo tree's version string at build time.
 // This is set by the linker via ldflags for official releases.
 var (
@@ -54,7 +68,7 @@ func initEnvByXgo() {
 
 var xgoEnv = func() (string, error) {
 	var b bytes.Buffer
-	cmd := exec.Command("xgo", "env", "GOPVERSION", "BUILDDATE", "XGOROOT")
+	cmd := exec.Command("xgo", "env", EnvKeyXGoVersion, EnvKeyBuildDate, EnvKeyXGoRoot)
 	cmd.Stdout = &b
 	err := cmd.Run()
 	return b.String(), err
