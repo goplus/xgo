@@ -182,6 +182,14 @@ func (p *Checker) Files(goFiles []*goast.File, xgoFiles []*ast.File) (err error)
 		// don't return even if err != nil
 	}
 	if len(files) > 0 {
+		onErr := conf.Error
+		if onErr != nil {
+			conf.Error = func(err error) {
+				if e, ok := convGoErr(err); ok {
+					onErr(e)
+				}
+			}
+		}
 		scope := pkgTypes.Scope()
 		objMap := DeleteObjects(scope, files)
 		checker := types.NewChecker(conf, fset, pkgTypes, p.goInfo)
