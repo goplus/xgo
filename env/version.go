@@ -25,18 +25,32 @@ import (
 	"strings"
 )
 
-// EnvKey represents environment variable keys
+// EnvKey is a type alias for environment variable key names used throughout XGo.
+// Using this type provides semantic clarity and potential for future extensions.
 type EnvKey = string
 
-// Environment variable keys
+// Environment variable keys for XGo configuration.
 const (
-	EnvKeyBuildDate  EnvKey = "BUILDDATE"
-	EnvKeyXGoRoot    EnvKey = "XGOROOT"
+	// EnvKeyBuildDate is the build date (format: YYYYMMDD_HH-MM-SS).
+	EnvKeyBuildDate EnvKey = "BUILDDATE"
+
+	// EnvKeyXGoVersion is the XGo version (semantic version or "(devel)").
+	EnvKeyXGoRoot EnvKey = "XGOROOT"
+
+	// EnvKeyXGoRoot is the XGo installation root directory.
 	EnvKeyXGoVersion EnvKey = "XGOVERSION"
-	EnvKeyXGoGoCmd   EnvKey = "XGO_GOCMD"
+
+	// EnvKeyXGoGoCmd specifies the go command (default: "go").
+	EnvKeyXGoGoCmd EnvKey = "XGO_GOCMD"
+
+	// EnvKeyGoModCache is the Go module cache directory.
 	EnvKeyGoModCache EnvKey = "GOMODCACHE"
-	EnvKeyGoXMod     EnvKey = "GOXMOD"
-	EnvKeyHome       EnvKey = "HOME"
+
+	// EnvKeyGoXMod is the Go X module file name.
+	EnvKeyGoXMod EnvKey = "GOXMOD"
+
+	// EnvKeyHome is the user's home directory.
+	EnvKeyHome EnvKey = "HOME"
 )
 
 // buildVersion is the XGo tree's version string at build time.
