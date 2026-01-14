@@ -105,15 +105,15 @@ func (p *Checker) Files(goFiles []*goast.File, xgoFiles []*ast.File) (err error)
 	conf := p.conf
 
 	// Save original Error handler and restore it on function exit
-	origError := p.conf.Error
+	origError := conf.Error
 	defer func() {
-		p.conf.Error = origError
+		conf.Error = origError
 	}()
 
 	if len(xgoFiles) == 0 {
-		onErr := p.conf.Error
+		onErr := conf.Error
 		if onErr != nil {
-			p.conf.Error = func(err error) {
+			conf.Error = func(err error) {
 				if e, ok := convGoErr(err); ok {
 					onErr(e)
 				}
