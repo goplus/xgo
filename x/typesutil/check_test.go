@@ -359,3 +359,57 @@ if bar == 2 && !gotbar {
 		t.Fatal("too many errors")
 	}
 }
+
+func TestCheckWithGoFiles(t *testing.T) {
+	fset := token.NewFileSet()
+	info, ginfo, err := checkFiles(fset, "main.xgo", `
+import "fmt"
+
+fmt.Println(add(1, 2))
+fmt.Println(gofunc())
+`, "", "", "util.go", `package main
+
+func add(a, b int) int {
+	return a + b
+}
+
+func gofunc() string {
+	return "hello from go"
+}
+`)
+	if err != nil || info == nil || ginfo == nil {
+		t.Fatalf("check failed: %v", err)
+	}
+
+	// Verify that Go file definitions are accessible from XGo
+	foundAdd := false
+	foundGofunc := false
+	for _, obj := range info.Uses {
+		if obj.Name() == "add" {
+			foundAdd = true
+		}
+		if obj.Name() == "gofunc" {
+			foundGofunc = true
+		}
+	}
+	if !foundAdd || !foundGofunc {
+		t.Fatal("Go file functions not found in XGo uses")
+	}
+
+	// Verify that Go file definitions are in ginfo
+	foundAddDef := false
+	foundGofuncDef := false
+	for _, obj := range ginfo.Defs {
+		if obj != nil {
+			if obj.Name() == "add" {
+				foundAddDef = true
+			}
+			if obj.Name() == "gofunc" {
+				foundGofuncDef = true
+			}
+		}
+	}
+	if !foundAddDef || !foundGofuncDef {
+		t.Fatal("Go file functions not found in ginfo defs")
+	}
+}
