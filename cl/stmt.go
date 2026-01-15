@@ -195,6 +195,11 @@ retry:
 }
 
 func compileReturnStmt(ctx *blockCtx, expr *ast.ReturnStmt) {
+	// Use defer to ensure Return is always called, even if argument compilation
+	// fails. This guarantees the return statement is recorded in AST for control
+	// flow analysis, preventing spurious "missing return" errors.
+	defer ctx.cb.Return(len(expr.Results), expr)
+
 	var n = -1
 	var results *types.Tuple
 	for i, ret := range expr.Results {
@@ -235,7 +240,6 @@ func compileReturnStmt(ctx *blockCtx, expr *ast.ReturnStmt) {
 			}
 		}
 	}
-	ctx.cb.Return(len(expr.Results), expr)
 }
 
 func compileIncDecStmt(ctx *blockCtx, expr *ast.IncDecStmt) {

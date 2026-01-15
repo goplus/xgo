@@ -2170,6 +2170,7 @@ type foo struct {
 }
 
 func (p *foo) Gop_Enum() fooIter {
+	return fooIter{}
 }
 
 for k, v <- new(foo) {
@@ -2188,6 +2189,7 @@ func (p fooIter) Next() (key string, val int, ok bool) {
 	return
 }
 func (p *foo) Gop_Enum() fooIter {
+	return fooIter{}
 }
 func main() {
 	for _xgo_it := new(foo).Gop_Enum(); ; {
@@ -3610,10 +3612,12 @@ func TestGoFuncInstr(t *testing.T) {
 //go:noinline
 //go:uintptrescapes
 func test(s string, p, q uintptr, rest ...uintptr) int {
+	return 0
 }`, `package main
 //go:noinline
 //go:uintptrescapes
 func test(s string, p uintptr, q uintptr, rest ...uintptr) int {
+	return 0
 }
 `)
 }

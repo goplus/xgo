@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/goplus/cobra v1.9.12 //gop:class
-	github.com/goplus/gogen v1.19.6
+	github.com/goplus/gogen v1.19.9-0.20260114155758-01b7b91c31d1
 	github.com/goplus/lib v0.3.1
 	github.com/goplus/mod v0.18.0
 	github.com/qiniu/x v1.15.3
