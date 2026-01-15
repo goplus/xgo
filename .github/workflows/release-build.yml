@@ -29,28 +29,12 @@ jobs:
         git checkout $tag_name
         echo "TAG_NAME=${tag_name}" >> $GITHUB_ENV
 
-    - name: Check VERSION consistency
-      run: |
-        tag=$(git describe --tags --dirty)
-        version=$(cat VERSION)
-        if [ "$tag" != "$version" ]; then
-          # if tag is vX.Y.Z-pN and version is vX.Y.Z then it's ok
-          if [[ $tag == $version-p* ]] && [[ ${tag#"$version"} =~ ^-p[0-9]+$ ]]; then
-            echo "This is a patch version"
-            exit 0
-          fi
-          echo "VERSION file is not consistent with tag name"
-          echo "VERSION: $version"
-          echo "TAG: $tag"
-          exit 1
-        fi
-
     - name: Check pre-release
       run: |
-        version=$(cat VERSION)
-        # check stable version format x.x.x
-        if ! [[ $version =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-          echo "This is a pre-release"
+        tag="${TAG_NAME}"
+        # check stable version format vX.Y.Z
+        if ! [[ $tag =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          echo "This is a pre-release: $tag"
           echo "IS_PRERELEASE=true" >> $GITHUB_ENV
         fi
 
