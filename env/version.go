@@ -31,26 +31,26 @@ type EnvKey = string
 
 // Environment variable keys for XGo configuration.
 const (
-	// EnvKeyBuildDate is the build date (format: YYYYMMDD_HH-MM-SS).
-	EnvKeyBuildDate EnvKey = "BUILDDATE"
+	// KeyBUILDDATE is the build date (format: YYYYMMDD_HH-MM-SS).
+	KeyBUILDDATE EnvKey = "BUILDDATE"
 
-	// EnvKeyXGoVersion is the XGo version (semantic version or "(devel)").
-	EnvKeyXGoRoot EnvKey = "XGOROOT"
+	// KeyXGOROOT is the XGo version (semantic version or "(devel)").
+	KeyXGOROOT EnvKey = "XGOROOT"
 
-	// EnvKeyXGoRoot is the XGo installation root directory.
-	EnvKeyXGoVersion EnvKey = "XGOVERSION"
+	// KeyXGOVERSION is the XGo installation root directory.
+	KeyXGOVERSION EnvKey = "XGOVERSION"
 
-	// EnvKeyXGoGoCmd specifies the go command (default: "go").
-	EnvKeyXGoGoCmd EnvKey = "XGO_GOCMD"
+	// KeyXGO_GOCMD specifies the go command (default: "go").
+	KeyXGO_GOCMD EnvKey = "XGO_GOCMD"
 
-	// EnvKeyGoModCache is the Go module cache directory.
-	EnvKeyGoModCache EnvKey = "GOMODCACHE"
+	// KeyGOMODCACHE is the Go module cache directory.
+	KeyGOMODCACHE EnvKey = "GOMODCACHE"
 
-	// EnvKeyGoXMod is the Go X module file name.
-	EnvKeyGoXMod EnvKey = "GOXMOD"
+	// KeyGOXMOD is the Go X module file name.
+	KeyGOXMOD EnvKey = "GOXMOD"
 
-	// EnvKeyHome is the user's home directory.
-	EnvKeyHome EnvKey = "HOME"
+	// KeyHOME is the user's home directory.
+	KeyHOME EnvKey = "HOME"
 )
 
 // buildVersion is the XGo tree's version string at build time.
@@ -82,7 +82,7 @@ func initEnvByXgo() {
 
 var xgoEnv = func() (string, error) {
 	var b bytes.Buffer
-	cmd := exec.Command("xgo", "env", EnvKeyXGoVersion, EnvKeyBuildDate, EnvKeyXGoRoot)
+	cmd := exec.Command("xgo", "env", KeyXGOVERSION, KeyBUILDDATE, KeyXGOROOT)
 	cmd.Stdout = &b
 	err := cmd.Run()
 	return b.String(), err
