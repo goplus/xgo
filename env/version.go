@@ -54,7 +54,7 @@ func initEnvByXgo() {
 
 var xgoEnv = func() (string, error) {
 	var b bytes.Buffer
-	cmd := exec.Command("xgo", "env", "GOPVERSION", "BUILDDATE", "XGOROOT")
+	cmd := exec.Command("xgo", "env", "XGOVERSION", "BUILDDATE", "XGOROOT")
 	cmd.Stdout = &b
 	err := cmd.Run()
 	return b.String(), err
