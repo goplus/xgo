@@ -69,13 +69,13 @@ func runCmd(_ *base.Command, args []string) {
 		log.Fatal("decode json of go env failed:", err)
 	}
 
-	xgoEnv[env.KeyBUILDDATE] = env.BuildDate()
-	xgoEnv[env.KeyXGOVERSION] = env.Version()
-	xgoEnv[env.KeyXGOROOT] = env.XGOROOT()
-	xgoEnv[env.KeyXGO_GOCMD] = gocmd.Name()
-	xgoEnv[env.KeyGOMODCACHE] = modcache.GOMODCACHE
-	xgoEnv[env.KeyGOXMOD], _ = mod.GOXMOD("")
-	xgoEnv[env.KeyHOME] = env.HOME()
+	xgoEnv["BUILDDATE"] = env.BuildDate()
+	xgoEnv["XGOVERSION"] = env.Version()
+	xgoEnv["XGOROOT"] = env.XGOROOT()
+	xgoEnv["XGO_GOCMD"] = gocmd.Name()
+	xgoEnv["GOMODCACHE"] = modcache.GOMODCACHE
+	xgoEnv["GOXMOD"], _ = mod.GOXMOD("")
+	xgoEnv["HOME"] = env.HOME()
 
 	vars := flag.Args()
 

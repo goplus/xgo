@@ -28,7 +28,6 @@ import (
 	"github.com/goplus/mod/xgomod"
 	"github.com/goplus/xgo/ast"
 	"github.com/goplus/xgo/cl"
-	xenv "github.com/goplus/xgo/env"
 	"github.com/goplus/xgo/parser"
 	"github.com/goplus/xgo/token"
 	"github.com/goplus/xgo/x/gocmd"
@@ -174,8 +173,8 @@ func NewDefaultConf(dir string, flags ConfFlags, tags ...string) (conf *Config, 
 
 func (conf *Config) NewGoCmdConf() *gocmd.Config {
 	if cl := conf.Mod.Opt.Compiler; cl != nil {
-		if os.Getenv(xenv.KeyXGO_GOCMD) == "" {
-			os.Setenv(xenv.KeyXGO_GOCMD, cl.Name)
+		if os.Getenv("XGO_GOCMD") == "" {
+			os.Setenv("XGO_GOCMD", cl.Name)
 		}
 	}
 	return &gocmd.Config{

@@ -25,34 +25,6 @@ import (
 	"strings"
 )
 
-// EnvKey is a type alias for environment variable key names used throughout XGo.
-// Using this type provides semantic clarity and potential for future extensions.
-type EnvKey = string
-
-// Environment variable keys for XGo configuration.
-const (
-	// KeyBUILDDATE is the build date (format: YYYYMMDD_HH-MM-SS).
-	KeyBUILDDATE EnvKey = "BUILDDATE"
-
-	// KeyXGOROOT is the XGo version (semantic version or "(devel)").
-	KeyXGOROOT EnvKey = "XGOROOT"
-
-	// KeyXGOVERSION is the XGo installation root directory.
-	KeyXGOVERSION EnvKey = "XGOVERSION"
-
-	// KeyXGO_GOCMD specifies the go command (default: "go").
-	KeyXGO_GOCMD EnvKey = "XGO_GOCMD"
-
-	// KeyGOMODCACHE is the Go module cache directory.
-	KeyGOMODCACHE EnvKey = "GOMODCACHE"
-
-	// KeyGOXMOD is the Go X module file name.
-	KeyGOXMOD EnvKey = "GOXMOD"
-
-	// KeyHOME is the user's home directory.
-	KeyHOME EnvKey = "HOME"
-)
-
 // buildVersion is the XGo tree's version string at build time.
 // This is set by the linker via ldflags for official releases.
 var (
@@ -82,7 +54,7 @@ func initEnvByXgo() {
 
 var xgoEnv = func() (string, error) {
 	var b bytes.Buffer
-	cmd := exec.Command("xgo", "env", KeyXGOVERSION, KeyBUILDDATE, KeyXGOROOT)
+	cmd := exec.Command("xgo", "env", "GOPVERSION", "BUILDDATE", "XGOROOT")
 	cmd.Stdout = &b
 	err := cmd.Run()
 	return b.String(), err
