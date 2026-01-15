@@ -370,6 +370,48 @@ type pkgImp struct {
 	pkgName *types.PkgName
 }
 
+type deferredVar struct {
+	obj      *types.Var
+	pos      token.Pos
+	initExpr ast.Expr
+}
+
+func isUntypedLiteral(expr ast.Expr) bool {
+	switch e := expr.(type) {
+	case *ast.BasicLit:
+		return true
+	case *ast.SliceLit:
+		return len(e.Elts) == 0
+	case *ast.CompositeLit:
+		if _, ok := e.Type.(*ast.MapType); ok {
+			return len(e.Elts) == 0
+		}
+		return false
+	default:
+		return false
+	}
+}
+
+func (ctx *blockCtx) addDeferredVar(name string, obj *types.Var, pos token.Pos, initExpr ast.Expr) {
+	if ctx.deferredVars == nil {
+		ctx.deferredVars = make(map[string]*deferredVar)
+	}
+	ctx.deferredVars[name] = &deferredVar{
+		obj:      obj,
+		pos:      pos,
+		initExpr: initExpr,
+	}
+}
+
+func (ctx *blockCtx) resolveDeferredVar(name string, inferredType types.Type) {
+	if _, ok := ctx.deferredVars[name]; ok {
+		delete(ctx.deferredVars, name)
+		if debugLoad {
+			log.Printf("==> Resolved deferred var %s to type %v\n", name, inferredType)
+		}
+	}
+}
+
 type blockCtx struct {
 	*pkgCtx
 	proj       *gmxProject
@@ -389,6 +431,8 @@ type blockCtx struct {
 
 	fileScope *types.Scope // available when isGopFile
 	rec       *goxRecorder
+
+	deferredVars map[string]*deferredVar
 
 	fileLine   bool
 	isClass    bool
@@ -657,6 +701,7 @@ func NewPackage(pkgPath string, pkg *ast.Package, conf *Config) (p *gogen.Packag
 			pkg: p, pkgCtx: ctx, cb: p.CB(), relBaseDir: relBaseDir, fileScope: fileScope,
 			fileLine: fileLine, isClass: f.IsClass, rec: rec, imports: make(map[string]pkgImp),
 			isXgoFile: true, typesAlias: ctx.featTypesAlias,
+			deferredVars: make(map[string]*deferredVar),
 		}
 		if rec := ctx.rec; rec != nil {
 			rec.Scope(f.File, fileScope)
@@ -678,6 +723,7 @@ func NewPackage(pkgPath string, pkg *ast.Package, conf *Config) (p *gogen.Packag
 		ctx := &blockCtx{
 			pkg: p, pkgCtx: ctx, cb: p.CB(), relBaseDir: relBaseDir,
 			imports: make(map[string]pkgImp), typesAlias: ctx.featTypesAlias,
+			deferredVars: make(map[string]*deferredVar),
 		}
 		preloadFile(p, ctx, f, skippingGoFile, false)
 	}
@@ -1659,6 +1705,17 @@ func loadVars(ctx *blockCtx, v *ast.ValueSpec, doc *ast.CommentGroup, global boo
 	} else {
 		scope = ctx.cb.Scope()
 	}
+
+	shouldDefer := false
+	if typ == nil && len(v.Values) == 1 && len(v.Names) == 1 {
+		if isUntypedLiteral(v.Values[0]) {
+			shouldDefer = true
+			if debugLoad {
+				log.Printf("==> Deferring type for var %s\n", names[0])
+			}
+		}
+	}
+
 	varDefs := ctx.pkg.NewVarDefs(scope).SetComments(doc)
 	varDecl := varDefs.New(v.Names[0].Pos(), typ, names...)
 	if nv := len(v.Values); nv > 0 {
@@ -1698,6 +1755,13 @@ func loadVars(ctx *blockCtx, v *ast.ValueSpec, doc *ast.CommentGroup, global boo
 		cb.EndInit(nv)
 	}
 	defNames(ctx, v.Names, scope)
+
+	if shouldDefer {
+		obj := scope.Lookup(names[0])
+		if varObj, ok := obj.(*types.Var); ok {
+			ctx.addDeferredVar(names[0], varObj, v.Names[0].Pos(), v.Values[0])
+		}
+	}
 }
 
 func defNames(ctx *blockCtx, names []*ast.Ident, scope *types.Scope) {
