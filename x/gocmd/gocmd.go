@@ -95,7 +95,7 @@ func appendLdflags(exargs []string, env *XGoEnv) []string {
 // It returns value of environment variable `XGO_GOCMD` if not empty.
 // If not found, it returns `go`.
 func Name() string {
-	goCmd := os.Getenv(xenv.EnvKeyXGoGoCmd)
+	goCmd := os.Getenv(xenv.KeyXGO_GOCMD)
 	if goCmd == "" {
 		goCmd = "go"
 	}
