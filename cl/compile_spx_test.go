@@ -223,7 +223,7 @@ func main() {
 `)
 }
 
-func TestSpxGopEnv(t *testing.T) {
+func TestSpxXGoEnv(t *testing.T) {
 	gopSpxTest(t, `
 echo "${PATH}"
 `, ``, `package main
@@ -256,7 +256,7 @@ func main() {
 `)
 }
 
-func TestSpxGopExec(t *testing.T) {
+func TestSpxXGoExec(t *testing.T) {
 	gopSpxTest(t, `
 vim "a.txt"
 vim
@@ -1042,7 +1042,7 @@ func Test_foo(t *testing.T) {
 `, "main.gox", "foo_xtest.gox", "_test")
 }
 
-func TestGopxNoFunc(t *testing.T) {
+func TestGoxNoFunc(t *testing.T) {
 	gopClTestFile(t, `
 var (
 	a int
@@ -1055,7 +1055,7 @@ type foo struct {
 `, "foo.gox")
 }
 
-func TestGopxOverload(t *testing.T) {
+func TestGoxOverload(t *testing.T) {
 	gopClTestFile(t, `
 func addString(a, b string) string {
 	return a + b
@@ -1074,7 +1074,7 @@ func add = (
 )
 `, `package main
 
-const Gopo_Rect_add = ".addInt,,.addString"
+const XGoo_Rect_add = ".addInt,,.addString"
 
 type Rect struct {
 }
@@ -1091,7 +1091,7 @@ func (this *Rect) add__1(a float64, b float64) float64 {
 `, "Rect.gox")
 }
 
-func TestClassFileGopx(t *testing.T) {
+func TestClassFileGox(t *testing.T) {
 	gopClTestFile(t, `
 var (
 	BaseClass

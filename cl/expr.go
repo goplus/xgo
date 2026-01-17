@@ -328,7 +328,7 @@ func compileExpr(ctx *blockCtx, expr ast.Expr, inFlags ...int) {
 				if err == nil {
 					return
 				}
-				if !(ctx.isClass && tryGopExec(cb, v)) {
+				if !(ctx.isClass && tryXGoExec(cb, v)) {
 					panic(err)
 				}
 			}
@@ -848,15 +848,15 @@ func builtinOrGopExec(ctx *blockCtx, ifn *ast.Ident, v *ast.CallExpr, flags goge
 		cb.Val(ctx.pkg.Builtin().Ref(name), ifn)
 		return fnCall(ctx, v, flags, 0)
 	default:
-		// for support Gop_Exec, see TestSpxGopExec
-		if v.IsCommand() && ctx.isClass && tryGopExec(cb, ifn) {
+		// for support XGo_Exec, see TestSpxXGoExec
+		if v.IsCommand() && ctx.isClass && tryXGoExec(cb, ifn) {
 			return fnCall(ctx, v, flags, 1)
 		}
 	}
 	return syscall.ENOENT
 }
 
-func tryGopExec(cb *gogen.CodeBuilder, ifn *ast.Ident) bool {
+func tryXGoExec(cb *gogen.CodeBuilder, ifn *ast.Ident) bool {
 	if recv := classRecv(cb); recv != nil {
 		cb.InternalStack().PopN(1)
 		if xgoMember(cb, recv, "Gop_Exec", ifn) == nil {

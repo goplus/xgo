@@ -350,7 +350,7 @@ type pkgCtx struct {
 	overpos  map[string]token.Pos // overload => pos
 	fset     *token.FileSet
 	syms     map[string]loader
-	lbinames []any // names that should load before initGopPkg (can be string/func or *ast.Ident/type)
+	lbinames []any // names that should load before initXGoPkg (can be string/func or *ast.Ident/type)
 	inits    []func()
 	tylds    []*typeLoader
 	errs     errors.List
@@ -387,7 +387,7 @@ type blockCtx struct {
 	classRecv *ast.FieldList // available when isClass
 	baseClass types.Object   // available when isClass
 
-	fileScope *types.Scope // available when isGopFile
+	fileScope *types.Scope // available when isXGoFile
 	rec       *goxRecorder
 
 	fileLine   bool
@@ -661,7 +661,7 @@ func NewPackage(pkgPath string, pkg *ast.Package, conf *Config) (p *gogen.Packag
 		if rec := ctx.rec; rec != nil {
 			rec.Scope(f.File, fileScope)
 		}
-		preloadGopFile(p, ctx, f.path, f.File, conf)
+		preloadXGoFile(p, ctx, f.path, f.File, conf)
 	}
 
 	proj, multi := gmxCheckProjs(p, ctx)
@@ -682,7 +682,7 @@ func NewPackage(pkgPath string, pkg *ast.Package, conf *Config) (p *gogen.Packag
 		preloadFile(p, ctx, f, skippingGoFile, false)
 	}
 
-	initGopPkg(ctx, p, gopSyms)
+	initXGoPkg(ctx, p, gopSyms)
 
 	// genMain = true if it is main package and no main func
 	var genMain bool
@@ -741,7 +741,7 @@ func isOverloadFunc(name string) bool {
 	return n > 3 && name[n-3:n-1] == "__"
 }
 
-func initGopPkg(ctx *pkgCtx, pkg *gogen.Package, gopSyms map[string]bool) {
+func initXGoPkg(ctx *pkgCtx, pkg *gogen.Package, gopSyms map[string]bool) {
 	for name, f := range ctx.syms {
 		if gopSyms[name] {
 			continue
@@ -805,7 +805,7 @@ func genGoFile(file string, goxTestFile bool) string {
 	return defaultGoFile
 }
 
-func preloadGopFile(p *gogen.Package, ctx *blockCtx, file string, f *ast.File, conf *Config) {
+func preloadXGoFile(p *gogen.Package, ctx *blockCtx, file string, f *ast.File, conf *Config) {
 	var proj *gmxProject
 	var c *gmxClass
 	var classType, gameClass string
@@ -944,7 +944,7 @@ func preloadGopFile(p *gogen.Package, ctx *blockCtx, file string, f *ast.File, c
 			parent.tylds = append(parent.tylds, ld)
 		}
 
-		// bugfix: see TestGopxNoFunc
+		// bugfix: see TestGoxNoFunc
 		parent.lbinames = append(parent.lbinames, classType)
 
 		ctx.classRecv = &ast.FieldList{List: []*ast.Field{{
@@ -1042,7 +1042,7 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 					log.Println("==> Preload func", fname)
 				}
 				if initLoader(parent, syms, name.Pos(), name.End(), fname, fn, genFnBody) {
-					if strings.HasPrefix(fname, "Gopx_") { // Gopx_xxx func
+					if strings.HasPrefix(fname, "XGox_") { // XGox_xxx func
 						ctx.lbinames = append(ctx.lbinames, fname)
 					}
 				}
@@ -1281,7 +1281,7 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 						break LoopFunc
 					}
 					name1 := overloadFuncName(name.Name, idx)
-					onames = append(onames, "") // const Gopo_xxx = "xxxInt,,xxxFloat"
+					onames = append(onames, "") // const XGoo_xxx = "xxxInt,,xxxFloat"
 					ctx.lbinames = append(ctx.lbinames, name1)
 					id := &ast.Ident{NamePos: expr.Pos(), Name: name1}
 					if ctx.rec != nil {
@@ -1298,7 +1298,7 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 					break LoopFunc
 				}
 			}
-			if exov { // need Gopo_xxx
+			if exov { // need XGoo_xxx
 				oname, err := overloadName(recv, name.Name, d.Operator)
 				if err != nil {
 					ctx.handleErrorf(name.Pos(), name.End(), "%v", err)
@@ -1356,7 +1356,7 @@ func overloadFuncName(name string, idx int) string {
 
 func overloadName(recv *ast.Ident, name string, isOp bool) (string, error) {
 	if isOp {
-		if oname, ok := binaryGopNames[name]; ok {
+		if oname, ok := binaryXGoNames[name]; ok {
 			name = oname
 		} else {
 			return "", fmt.Errorf("invalid overload operator %v", name)
@@ -1370,7 +1370,7 @@ func overloadName(recv *ast.Ident, name string, isOp bool) (string, error) {
 	if recv != nil {
 		typ = recv.Name + sep
 	}
-	return "Gopo" + sep + typ + name, nil
+	return "XGoo" + sep + typ + name, nil
 }
 
 func staticMethod(tname, name string) string {
@@ -1378,7 +1378,7 @@ func staticMethod(tname, name string) string {
 	if strings.ContainsRune(name, '_') || strings.ContainsRune(tname, '_') {
 		sep = "__"
 	}
-	return "Gops" + sep + tname + sep + name
+	return "XGos" + sep + tname + sep + name
 }
 
 func stringLit(val string) *ast.BasicLit {
@@ -1439,11 +1439,11 @@ func loadFunc(ctx *blockCtx, recv *types.Var, name string, d *ast.FuncDecl, genB
 		}
 	} else if d.Operator {
 		if recv != nil { // binary op
-			if v, ok := binaryGopNames[name]; ok {
+			if v, ok := binaryXGoNames[name]; ok {
 				name = v
 			}
 		} else { // unary op
-			if v, ok := unaryGopNames[name]; ok {
+			if v, ok := unaryXGoNames[name]; ok {
 				name = v
 				at := pkg.Types
 				arg1 := d.Type.Params.List[0]
@@ -1487,57 +1487,57 @@ func loadFunc(ctx *blockCtx, recv *types.Var, name string, d *ast.FuncDecl, genB
 	}
 }
 
-var binaryGopNames = map[string]string{
-	"+": "Gop_Add",
-	"-": "Gop_Sub",
-	"*": "Gop_Mul",
-	"/": "Gop_Quo",
-	"%": "Gop_Rem",
+var binaryXGoNames = map[string]string{
+	"+": "XGo_Add",
+	"-": "XGo_Sub",
+	"*": "XGo_Mul",
+	"/": "XGo_Quo",
+	"%": "XGo_Rem",
 
-	"&":  "Gop_And",
-	"|":  "Gop_Or",
-	"^":  "Gop_Xor",
-	"<<": "Gop_Lsh",
-	">>": "Gop_Rsh",
-	"&^": "Gop_AndNot",
+	"&":  "XGo_And",
+	"|":  "XGo_Or",
+	"^":  "XGo_Xor",
+	"<<": "XGo_Lsh",
+	">>": "XGo_Rsh",
+	"&^": "XGo_AndNot",
 
-	"+=": "Gop_AddAssign",
-	"-=": "Gop_SubAssign",
-	"*=": "Gop_MulAssign",
-	"/=": "Gop_QuoAssign",
-	"%=": "Gop_RemAssign",
+	"+=": "XGo_AddAssign",
+	"-=": "XGo_SubAssign",
+	"*=": "XGo_MulAssign",
+	"/=": "XGo_QuoAssign",
+	"%=": "XGo_RemAssign",
 
-	"&=":  "Gop_AndAssign",
-	"|=":  "Gop_OrAssign",
-	"^=":  "Gop_XorAssign",
-	"<<=": "Gop_LshAssign",
-	">>=": "Gop_RshAssign",
-	"&^=": "Gop_AndNotAssign",
+	"&=":  "XGo_AndAssign",
+	"|=":  "XGo_OrAssign",
+	"^=":  "XGo_XorAssign",
+	"<<=": "XGo_LshAssign",
+	">>=": "XGo_RshAssign",
+	"&^=": "XGo_AndNotAssign",
 
-	"==": "Gop_EQ",
-	"!=": "Gop_NE",
-	"<=": "Gop_LE",
-	"<":  "Gop_LT",
-	">=": "Gop_GE",
-	">":  "Gop_GT",
+	"==": "XGo_EQ",
+	"!=": "XGo_NE",
+	"<=": "XGo_LE",
+	"<":  "XGo_LT",
+	">=": "XGo_GE",
+	">":  "XGo_GT",
 
-	"->": "Gop_PointTo",
-	"<>": "Gop_PointBi",
+	"->": "XGo_PointTo",
+	"<>": "XGo_PointBi",
 
-	"&&": "Gop_LAnd",
-	"||": "Gop_LOr",
+	"&&": "XGo_LAnd",
+	"||": "XGo_LOr",
 
-	"<-": "Gop_Send",
+	"<-": "XGo_Send",
 }
 
-var unaryGopNames = map[string]string{
-	"++": "Gop_Inc",
-	"--": "Gop_Dec",
-	"-":  "Gop_Neg",
-	"+":  "Gop_Dup",
-	"^":  "Gop_Not",
-	"!":  "Gop_LNot",
-	"<-": "Gop_Recv",
+var unaryXGoNames = map[string]string{
+	"++": "XGo_Inc",
+	"--": "XGo_Dec",
+	"-":  "XGo_Neg",
+	"+":  "XGo_Dup",
+	"^":  "XGo_Not",
+	"!":  "XGo_LNot",
+	"<-": "XGo_Recv",
 }
 
 func loadFuncBody(ctx *blockCtx, fn *gogen.Func, body *ast.BlockStmt, sigBase *types.Signature, src ast.Node) {

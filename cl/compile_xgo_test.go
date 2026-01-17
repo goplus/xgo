@@ -40,10 +40,10 @@ import "fmt"
 type foo struct {
 }
 
-func (a foo) Gop_PointTo(b foo) {
+func (a foo) XGo_PointTo(b foo) {
 	fmt.Println("a -> b")
 }
-func (a foo) Gop_PointBi(b foo) {
+func (a foo) XGo_PointBi(b foo) {
 	fmt.Println("a <> b")
 }
 `)
@@ -181,29 +181,29 @@ import "fmt"
 type foo struct {
 }
 
-func (a *foo) Gop_Add(b *foo) *foo {
+func (a *foo) XGo_Add(b *foo) *foo {
 	fmt.Println("a + b")
 	return &foo{}
 }
-func (a foo) Gop_Sub(b foo) foo {
+func (a foo) XGo_Sub(b foo) foo {
 	fmt.Println("a - b")
 	return foo{}
 }
-func (a foo) Gop_NE(b foo) bool {
+func (a foo) XGo_NE(b foo) bool {
 	fmt.Println("a!=b")
 	return true
 }
-func (a foo) Gop_Neg() {
+func (a foo) XGo_Neg() {
 	fmt.Println("-a")
 }
-func (a foo) Gop_Inc() {
+func (a foo) XGo_Inc() {
 	fmt.Println("a++")
 }
 
 var a, b foo
-var c = (foo).Gop_Sub(a, b)
-var d = a.Gop_Neg()
-var e = (foo).Gop_NE(a, b)
+var c = (foo).XGo_Sub(a, b)
+var d = a.XGo_Neg()
+var e = (foo).XGo_NE(a, b)
 `)
 }
 
@@ -242,7 +242,7 @@ import "fmt"
 type foo struct {
 }
 
-const Gopo__foo__Gop_Mul = ".mulInt,.mulFoo,intMulFoo"
+const XGoo__foo__XGo_Mul = ".mulInt,.mulFoo,intMulFoo"
 
 func (a foo) mulInt(b int) (ret foo) {
 	return
@@ -294,7 +294,7 @@ import "fmt"
 type foo struct {
 }
 
-const Gopo_foo_mul = ".mulInt,.mulFoo"
+const XGoo_foo_mul = ".mulInt,.mulFoo"
 
 func (a *foo) mulInt(b int) *foo {
 	fmt.Println("mulInt")
@@ -362,7 +362,7 @@ println mul(1.2, 3.14)
 
 import "fmt"
 
-const Gopo_mul = "mulInt,mulFloat"
+const XGoo_mul = "mulInt,mulFloat"
 
 func mulInt(a int, b int) int {
 	return a * b
@@ -399,7 +399,7 @@ println add(1.2, 3.14)
 
 import "fmt"
 
-const Gopo_add = ",addInt,addFloat"
+const XGoo_add = ",addInt,addFloat"
 
 func add__0(a string, b string) string {
 	return a + b
@@ -731,23 +731,23 @@ import "fmt"
 type foo struct {
 }
 
-func (a *foo) Gop_Add(b *foo) *foo {
+func (a *foo) XGo_Add(b *foo) *foo {
 	fmt.Println("a + b")
 	return &foo{}
 }
-func (a foo) Gop_Sub(b foo) foo {
+func (a foo) XGo_Sub(b foo) foo {
 	fmt.Println("a - b")
 	return foo{}
 }
-func (a foo) Gop_NE(b foo) bool {
+func (a foo) XGo_NE(b foo) bool {
 	fmt.Println("a!=b")
 	return true
 }
-func (a foo) Gop_Neg() *foo {
+func (a foo) XGo_Neg() *foo {
 	fmt.Println("-a")
 	return &foo{}
 }
-func (a foo) Gop_Inc() {
+func (a foo) XGo_Inc() {
 	fmt.Println("a++")
 }
 `, `
@@ -758,9 +758,9 @@ var e = a!=b
 `, `package main
 
 var a, b foo
-var c = (foo).Gop_Sub(a, b)
-var d = a.Gop_Neg()
-var e = (foo).Gop_NE(a, b)
+var c = (foo).XGo_Sub(a, b)
+var d = a.XGo_Neg()
+var e = (foo).XGo_NE(a, b)
 `)
 }
 
@@ -769,22 +769,22 @@ func TestMixedVector3(t *testing.T) {
 type Vector3 struct {
 	x, y, z float64
 }
-func (a Vector3) Gop_Add__0(n int) Vector3 {
+func (a Vector3) XGo_Add__0(n int) Vector3 {
 	return Vector3{}
 }
-func (a Vector3) Gop_Add__1(n float64) Vector3 {
+func (a Vector3) XGo_Add__1(n float64) Vector3 {
 	return Vector3{}
 }
-func (a Vector3) Gop_Add__2(n Vector3) Vector3 {
+func (a Vector3) XGo_Add__2(n Vector3) Vector3 {
 	return Vector3{}
 }
-func (a *Vector3) Gop_AddAssign(n Vector3) {
+func (a *Vector3) XGo_AddAssign(n Vector3) {
 }
 
-func (a Vector3) Gop_Rcast__0() int {
+func (a Vector3) XGo_Rcast__0() int {
 	return 0
 }
-func (a Vector3) Gop_Rcast__1() float64 {
+func (a Vector3) XGo_Rcast__1() float64 {
 	return 0
 }
 
@@ -819,14 +819,14 @@ var b int
 var c float64
 
 func main() {
-	_ = (Vector3).Gop_Add__0(a, b)
-	_ = (Vector3).Gop_Add__0(a, 100)
-	_ = (Vector3).Gop_Add__1(a, c)
-	_ = (Vector3).Gop_Add__2(Vector3_Init__0(100), a)
-	_ = (Vector3).Gop_Add__2(Vector3_Cast__0(b), a)
-	_ = b + a.Gop_Rcast__0()
-	a.Gop_AddAssign(Vector3_Init__0(b))
-	a.Gop_AddAssign(Vector3_Init__1(c))
+	_ = (Vector3).XGo_Add__0(a, b)
+	_ = (Vector3).XGo_Add__0(a, 100)
+	_ = (Vector3).XGo_Add__1(a, c)
+	_ = (Vector3).XGo_Add__2(Vector3_Init__0(100), a)
+	_ = (Vector3).XGo_Add__2(Vector3_Cast__0(b), a)
+	_ = b + a.XGo_Rcast__0()
+	a.XGo_AddAssign(Vector3_Init__0(b))
+	a.XGo_AddAssign(Vector3_Init__1(c))
 }
 `)
 }
@@ -943,8 +943,8 @@ var a bar.Var__0[int]
 var b bar.Var__1[bar.M]
 
 func main() {
-	c := bar.Gopx_Var_Cast__0[string]()
-	d := bar.Gopx_Var_Cast__1[bar.M]()
+	c := bar.XGox_Var_Cast__0[string]()
+	d := bar.XGox_Var_Cast__1[bar.M]()
 }
 `
 	} else {
@@ -956,8 +956,8 @@ var a bar.Var__0[int]
 var b bar.Var__1[map[string]any]
 
 func main() {
-	c := bar.Gopx_Var_Cast__0[string]()
-	d := bar.Gopx_Var_Cast__1[map[string]any]()
+	c := bar.XGox_Var_Cast__0[string]()
+	d := bar.XGox_Var_Cast__1[map[string]any]()
 }
 `
 	}
