@@ -404,7 +404,7 @@ func reset() {
 onStart => {
 	reset()
 }
-`, `/foo/bar.xgo:2:10: expected 'IDENT', found '=' (and 21 more errors)`, &ast.FuncDecl{
+`, `/foo/bar.xgo:2:10: expected 'IDENT', found '=' (and 19 more errors)`, &ast.FuncDecl{
 		Body: &ast.BlockStmt{
 			Lbrace: 119,
 			Rbrace: 121,

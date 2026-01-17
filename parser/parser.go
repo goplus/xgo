@@ -1587,15 +1587,218 @@ func (p *parser) tryIdentOrType(state int, len ast.Expr) (ast.Expr, int) {
 	case token.CHAN, token.ARROW:
 		return p.parseChanType(), resultType
 	case token.LPAREN:
-		lparen := p.pos
-		p.next()
-		typ := p.parseType()
-		rparen := p.expect(token.RPAREN)
-		return &ast.ParenExpr{Lparen: lparen, X: typ, Rparen: rparen}, resultParenType
+		return p.parseTupleType()
 	}
 
 	// no type found
 	return nil, resultNone
+}
+
+// parseTupleType parses a tuple type or parenthesized type expression.
+//
+// Syntax:
+//
+//	()                              - empty tuple, equivalent to struct{}
+//	(T)                             - parenthesized type, degenerates to T (not a tuple)
+//	(T1, T2, ..., TN)               - anonymous tuple type
+//	(name1 T1, name2 T2, ...)       - named tuple type (names are compile-time only)
+//	(x, y T)                        - type shorthand, equivalent to (x T, y T)
+//
+// Returns the parsed type and result code.
+func (p *parser) parseTupleType() (ast.Expr, int) {
+	if p.trace {
+		defer un(trace(p, "TupleType"))
+	}
+
+	lparen := p.pos
+	p.next() // consume '('
+
+	// Handle empty tuple: ()
+	if p.tok == token.RPAREN {
+		rparen := p.pos
+		p.next()
+		return &ast.TupleType{
+			Lparen: lparen,
+			Fields: &ast.FieldList{Opening: lparen, Closing: rparen},
+			Rparen: rparen,
+		}, resultType
+	}
+
+	// Parse tuple fields similar to parameter list parsing
+	fields := p.parseTupleFieldList()
+
+	rparen := p.expect(token.RPAREN)
+
+	// Single-element tuple with no name degenerates to the type itself
+	// (T) is just a parenthesized type expression, not a tuple
+	if len(fields) == 1 && len(fields[0].Names) == 0 {
+		return &ast.ParenExpr{Lparen: lparen, X: fields[0].Type, Rparen: rparen}, resultParenType
+	}
+
+	// Multi-element or named tuple
+	return &ast.TupleType{
+		Lparen: lparen,
+		Fields: &ast.FieldList{Opening: lparen, List: fields, Closing: rparen},
+		Rparen: rparen,
+	}, resultType
+}
+
+// parseTupleFieldList parses a comma-separated list of tuple fields.
+// Each field can be:
+//   - A type alone: int, string, etc.
+//   - A named field: x int, name string, etc.
+//   - Multiple names with shared type: x, y int (shorthand for x int, y int)
+//
+// The function handles type distribution similar to Go's function parameter syntax.
+func (p *parser) parseTupleFieldList() []*ast.Field {
+	if p.trace {
+		defer un(trace(p, "TupleFieldList"))
+	}
+
+	// Use shared field struct for type distribution
+	var list []field
+	var named int // count of fields with explicit name and type
+
+	for p.tok != token.RPAREN && p.tok != token.EOF {
+		var f field
+
+		switch p.tok {
+		case token.IDENT:
+			// Could be a name or a type
+			f.name = p.parseIdent()
+
+			// Check what follows the identifier
+			switch p.tok {
+			case token.IDENT, token.MUL, token.ARROW, token.FUNC, token.CHAN, token.MAP, token.STRUCT, token.INTERFACE, token.LPAREN:
+				// name followed by type: "x int" or "x *int" etc.
+				f.typ = p.parseType()
+				named++
+
+			case token.LBRACK:
+				// Could be "name [n]T" or "name []T" or just an array/slice type
+				f.name, f.typ = p.parseArrayFieldOrTypeInstance(f.name, stateType)
+				if f.typ != nil {
+					named++
+				}
+
+			case token.PERIOD:
+				// Qualified type name: "pkg.Type"
+				f.typ = p.parseQualifiedIdent(f.name)
+				f.name = nil
+
+			default:
+				// Just an identifier - could be a type name or a field name
+				// Will be resolved later during type distribution
+			}
+
+		case token.MUL, token.ARROW, token.FUNC, token.LBRACK, token.CHAN, token.MAP, token.STRUCT, token.INTERFACE, token.LPAREN:
+			// Type without name
+			f.typ = p.parseType()
+
+		default:
+			// Not a valid tuple element - don't produce additional error here,
+			// let the caller handle it. Just break out of the loop.
+			break
+		}
+
+		if f.typ == nil && f.name == nil {
+			break // Not a valid tuple field, stop parsing
+		}
+
+		list = append(list, f)
+
+		if !p.atComma("tuple type", token.RPAREN) {
+			break
+		}
+		p.next() // consume ','
+	}
+
+	if len(list) == 0 {
+		return nil
+	}
+
+	// Distribute types across fields using Go's type shorthand syntax
+	// For example, (x, y int) becomes (x int, y int)
+	var distributedNamed int
+	for i := range list {
+		if list[i].name != nil && list[i].typ != nil {
+			distributedNamed++
+		}
+	}
+
+	if distributedNamed == 0 {
+		// All unnamed => identifiers are type names
+		for i := range list {
+			if list[i].name != nil && list[i].typ == nil {
+				list[i].typ = list[i].name
+				list[i].name = nil
+			}
+		}
+	} else if distributedNamed != len(list) {
+		// Some named => apply type distribution (Go's shorthand syntax)
+		// e.g., (x, y int) => x gets type int, y gets type int
+		var typ ast.Expr
+		for i := len(list) - 1; i >= 0; i-- {
+			if list[i].typ != nil {
+				typ = list[i].typ
+			} else if typ != nil {
+				list[i].typ = typ
+			}
+		}
+		// Recount after distribution
+		distributedNamed = 0
+		for i := range list {
+			if list[i].name != nil && list[i].typ != nil {
+				distributedNamed++
+			}
+		}
+	}
+
+	// Handle tuple-specific error recovery: treat untyped names as types
+	if named != 0 && distributedNamed != len(list) {
+		for i := range list {
+			if list[i].typ == nil && list[i].name != nil {
+				list[i].typ = list[i].name
+				list[i].name = nil
+			}
+		}
+	}
+
+	// Convert to []*ast.Field
+	// For named fields, group by type as Go does with parameters
+	if distributedNamed == 0 {
+		// All unnamed - one Field per type
+		result := make([]*ast.Field, len(list))
+		for i, f := range list {
+			result[i] = &ast.Field{Type: f.typ}
+		}
+		return result
+	}
+
+	// Named fields - group consecutive names with the same type
+	var result []*ast.Field
+	var names []*ast.Ident
+	var currentType ast.Expr
+
+	addField := func() {
+		if currentType != nil && len(names) > 0 {
+			result = append(result, &ast.Field{Names: names, Type: currentType})
+			names = nil
+		}
+	}
+
+	for _, f := range list {
+		if f.typ != currentType {
+			addField()
+			currentType = f.typ
+		}
+		if f.name != nil {
+			names = append(names, f.name)
+		}
+	}
+	addField()
+
+	return result
 }
 
 func (p *parser) tryType() ast.Expr {

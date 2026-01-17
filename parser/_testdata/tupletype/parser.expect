@@ -1,0 +1,688 @@
+package main
+
+file tupletype.xgo
+ast.GenDecl:
+  Tok: import
+  Specs:
+    ast.ImportSpec:
+      Path:
+        ast.BasicLit:
+          Kind: STRING
+          Value: "io"
+ast.GenDecl:
+  Doc:
+    ast.CommentGroup:
+      List:
+        ast.Comment:
+          Text: // Empty tuple
+  Tok: type
+  Specs:
+    ast.TypeSpec:
+      Name:
+        ast.Ident:
+          Name: Empty
+      Type:
+        ast.TupleType:
+          Fields:
+            ast.FieldList:
+ast.GenDecl:
+  Doc:
+    ast.CommentGroup:
+      List:
+        ast.Comment:
+          Text: // Anonymous tuple types
+  Tok: type
+  Specs:
+    ast.TypeSpec:
+      Name:
+        ast.Ident:
+          Name: Pair
+      Type:
+        ast.TupleType:
+          Fields:
+            ast.FieldList:
+              List:
+                ast.Field:
+                  Type:
+                    ast.Ident:
+                      Name: int
+                ast.Field:
+                  Type:
+                    ast.Ident:
+                      Name: string
+ast.GenDecl:
+  Tok: type
+  Specs:
+    ast.TypeSpec:
+      Name:
+        ast.Ident:
+          Name: Triple
+      Type:
+        ast.TupleType:
+          Fields:
+            ast.FieldList:
+              List:
+                ast.Field:
+                  Type:
+                    ast.Ident:
+                      Name: int
+                ast.Field:
+                  Type:
+                    ast.Ident:
+                      Name: string
+                ast.Field:
+                  Type:
+                    ast.Ident:
+                      Name: bool
+ast.GenDecl:
+  Doc:
+    ast.CommentGroup:
+      List:
+        ast.Comment:
+          Text: // Named tuple types
+  Tok: type
+  Specs:
+    ast.TypeSpec:
+      Name:
+        ast.Ident:
+          Name: Point
+      Type:
+        ast.TupleType:
+          Fields:
+            ast.FieldList:
+              List:
+                ast.Field:
+                  Names:
+                    ast.Ident:
+                      Name: x
+                  Type:
+                    ast.Ident:
+                      Name: int
+                ast.Field:
+                  Names:
+                    ast.Ident:
+                      Name: y
+                  Type:
+                    ast.Ident:
+                      Name: int
+ast.GenDecl:
+  Tok: type
+  Specs:
+    ast.TypeSpec:
+      Name:
+        ast.Ident:
+          Name: Person
+      Type:
+        ast.TupleType:
+          Fields:
+            ast.FieldList:
+              List:
+                ast.Field:
+                  Names:
+                    ast.Ident:
+                      Name: name
+                  Type:
+                    ast.Ident:
+                      Name: string
+                ast.Field:
+                  Names:
+                    ast.Ident:
+                      Name: age
+                  Type:
+                    ast.Ident:
+                      Name: int
+ast.GenDecl:
+  Doc:
+    ast.CommentGroup:
+      List:
+        ast.Comment:
+          Text: // Type shorthand syntax
+  Tok: type
+  Specs:
+    ast.TypeSpec:
+      Name:
+        ast.Ident:
+          Name: Point3D
+      Type:
+        ast.TupleType:
+          Fields:
+            ast.FieldList:
+              List:
+                ast.Field:
+                  Names:
+                    ast.Ident:
+                      Name: x
+                    ast.Ident:
+                      Name: y
+                    ast.Ident:
+                      Name: z
+                  Type:
+                    ast.Ident:
+                      Name: int
+ast.GenDecl:
+  Tok: type
+  Specs:
+    ast.TypeSpec:
+      Name:
+        ast.Ident:
+          Name: Mixed
+      Type:
+        ast.TupleType:
+          Fields:
+            ast.FieldList:
+              List:
+                ast.Field:
+                  Names:
+                    ast.Ident:
+                      Name: a
+                    ast.Ident:
+                      Name: b
+                  Type:
+                    ast.Ident:
+                      Name: string
+                ast.Field:
+                  Names:
+                    ast.Ident:
+                      Name: c
+                  Type:
+                    ast.Ident:
+                      Name: int
+ast.GenDecl:
+  Doc:
+    ast.CommentGroup:
+      List:
+        ast.Comment:
+          Text: // Tuple as channel element type
+  Tok: var
+  Specs:
+    ast.ValueSpec:
+      Names:
+        ast.Ident:
+          Name: ch
+      Type:
+        ast.ChanType:
+          Value:
+            ast.TupleType:
+              Fields:
+                ast.FieldList:
+                  List:
+                    ast.Field:
+                      Type:
+                        ast.Ident:
+                          Name: int
+                    ast.Field:
+                      Type:
+                        ast.Ident:
+                          Name: error
+ast.GenDecl:
+  Doc:
+    ast.CommentGroup:
+      List:
+        ast.Comment:
+          Text: // Tuple as map value type
+  Tok: var
+  Specs:
+    ast.ValueSpec:
+      Names:
+        ast.Ident:
+          Name: cache
+      Type:
+        ast.MapType:
+          Key:
+            ast.Ident:
+              Name: string
+          Value:
+            ast.TupleType:
+              Fields:
+                ast.FieldList:
+                  List:
+                    ast.Field:
+                      Type:
+                        ast.Ident:
+                          Name: int
+                    ast.Field:
+                      Type:
+                        ast.Ident:
+                          Name: bool
+ast.GenDecl:
+  Doc:
+    ast.CommentGroup:
+      List:
+        ast.Comment:
+          Text: // Tuple as slice element type
+  Tok: var
+  Specs:
+    ast.ValueSpec:
+      Names:
+        ast.Ident:
+          Name: pairs
+      Type:
+        ast.ArrayType:
+          Elt:
+            ast.TupleType:
+              Fields:
+                ast.FieldList:
+                  List:
+                    ast.Field:
+                      Type:
+                        ast.Ident:
+                          Name: string
+                    ast.Field:
+                      Type:
+                        ast.Ident:
+                          Name: int
+ast.GenDecl:
+  Doc:
+    ast.CommentGroup:
+      List:
+        ast.Comment:
+          Text: // Tuple with array types (covers token.LBRACK case)
+  Tok: type
+  Specs:
+    ast.TypeSpec:
+      Name:
+        ast.Ident:
+          Name: WithArray
+      Type:
+        ast.TupleType:
+          Fields:
+            ast.FieldList:
+              List:
+                ast.Field:
+                  Names:
+                    ast.Ident:
+                      Name: arr
+                  Type:
+                    ast.ArrayType:
+                      Elt:
+                        ast.Ident:
+                          Name: int
+                ast.Field:
+                  Names:
+                    ast.Ident:
+                      Name: data
+                  Type:
+                    ast.ArrayType:
+                      Len:
+                        ast.BasicLit:
+                          Kind: INT
+                          Value: 5
+                      Elt:
+                        ast.Ident:
+                          Name: string
+ast.GenDecl:
+  Doc:
+    ast.CommentGroup:
+      List:
+        ast.Comment:
+          Text: // Tuple with pointer types (covers token.MUL case)
+  Tok: type
+  Specs:
+    ast.TypeSpec:
+      Name:
+        ast.Ident:
+          Name: WithPointers
+      Type:
+        ast.TupleType:
+          Fields:
+            ast.FieldList:
+              List:
+                ast.Field:
+                  Type:
+                    ast.StarExpr:
+                      X:
+                        ast.Ident:
+                          Name: int
+                ast.Field:
+                  Type:
+                    ast.StarExpr:
+                      X:
+                        ast.Ident:
+                          Name: string
+ast.GenDecl:
+  Doc:
+    ast.CommentGroup:
+      List:
+        ast.Comment:
+          Text: // Tuple with function types (covers token.FUNC case)
+  Tok: type
+  Specs:
+    ast.TypeSpec:
+      Name:
+        ast.Ident:
+          Name: WithFunc
+      Type:
+        ast.TupleType:
+          Fields:
+            ast.FieldList:
+              List:
+                ast.Field:
+                  Names:
+                    ast.Ident:
+                      Name: fn
+                  Type:
+                    ast.FuncType:
+                      Params:
+                        ast.FieldList:
+                          List:
+                            ast.Field:
+                              Type:
+                                ast.Ident:
+                                  Name: int
+                      Results:
+                        ast.FieldList:
+                          List:
+                            ast.Field:
+                              Type:
+                                ast.Ident:
+                                  Name: string
+                ast.Field:
+                  Names:
+                    ast.Ident:
+                      Name: callback
+                  Type:
+                    ast.FuncType:
+                      Params:
+                        ast.FieldList:
+ast.GenDecl:
+  Doc:
+    ast.CommentGroup:
+      List:
+        ast.Comment:
+          Text: // Tuple with channel types (covers token.CHAN case)
+  Tok: type
+  Specs:
+    ast.TypeSpec:
+      Name:
+        ast.Ident:
+          Name: WithChan
+      Type:
+        ast.TupleType:
+          Fields:
+            ast.FieldList:
+              List:
+                ast.Field:
+                  Names:
+                    ast.Ident:
+                      Name: ch
+                  Type:
+                    ast.ChanType:
+                      Value:
+                        ast.Ident:
+                          Name: int
+                ast.Field:
+                  Names:
+                    ast.Ident:
+                      Name: recv
+                  Type:
+                    ast.ChanType:
+                      Value:
+                        ast.Ident:
+                          Name: string
+ast.GenDecl:
+  Doc:
+    ast.CommentGroup:
+      List:
+        ast.Comment:
+          Text: // Tuple with map types (covers token.MAP case)
+  Tok: type
+  Specs:
+    ast.TypeSpec:
+      Name:
+        ast.Ident:
+          Name: WithMap
+      Type:
+        ast.TupleType:
+          Fields:
+            ast.FieldList:
+              List:
+                ast.Field:
+                  Names:
+                    ast.Ident:
+                      Name: m
+                  Type:
+                    ast.MapType:
+                      Key:
+                        ast.Ident:
+                          Name: string
+                      Value:
+                        ast.Ident:
+                          Name: int
+                ast.Field:
+                  Names:
+                    ast.Ident:
+                      Name: lookup
+                  Type:
+                    ast.MapType:
+                      Key:
+                        ast.Ident:
+                          Name: int
+                      Value:
+                        ast.Ident:
+                          Name: bool
+ast.GenDecl:
+  Doc:
+    ast.CommentGroup:
+      List:
+        ast.Comment:
+          Text: // Tuple with struct types (covers token.STRUCT case)
+  Tok: type
+  Specs:
+    ast.TypeSpec:
+      Name:
+        ast.Ident:
+          Name: WithStruct
+      Type:
+        ast.TupleType:
+          Fields:
+            ast.FieldList:
+              List:
+                ast.Field:
+                  Names:
+                    ast.Ident:
+                      Name: s
+                  Type:
+                    ast.StructType:
+                      Fields:
+                        ast.FieldList:
+                          List:
+                            ast.Field:
+                              Names:
+                                ast.Ident:
+                                  Name: x
+                              Type:
+                                ast.Ident:
+                                  Name: int
+                ast.Field:
+                  Names:
+                    ast.Ident:
+                      Name: data
+                  Type:
+                    ast.StructType:
+                      Fields:
+                        ast.FieldList:
+                          List:
+                            ast.Field:
+                              Names:
+                                ast.Ident:
+                                  Name: name
+                              Type:
+                                ast.Ident:
+                                  Name: string
+ast.GenDecl:
+  Doc:
+    ast.CommentGroup:
+      List:
+        ast.Comment:
+          Text: // Tuple with interface types (covers token.INTERFACE case)
+  Tok: type
+  Specs:
+    ast.TypeSpec:
+      Name:
+        ast.Ident:
+          Name: WithInterface
+      Type:
+        ast.TupleType:
+          Fields:
+            ast.FieldList:
+              List:
+                ast.Field:
+                  Names:
+                    ast.Ident:
+                      Name: i
+                  Type:
+                    ast.InterfaceType:
+                      Methods:
+                        ast.FieldList:
+                ast.Field:
+                  Names:
+                    ast.Ident:
+                      Name: reader
+                  Type:
+                    ast.InterfaceType:
+                      Methods:
+                        ast.FieldList:
+                          List:
+                            ast.Field:
+                              Names:
+                                ast.Ident:
+                                  Name: Read
+                              Type:
+                                ast.FuncType:
+                                  Params:
+                                    ast.FieldList:
+                                      List:
+                                        ast.Field:
+                                          Type:
+                                            ast.ArrayType:
+                                              Elt:
+                                                ast.Ident:
+                                                  Name: byte
+                                  Results:
+                                    ast.FieldList:
+                                      List:
+                                        ast.Field:
+                                          Type:
+                                            ast.Ident:
+                                              Name: int
+ast.GenDecl:
+  Doc:
+    ast.CommentGroup:
+      List:
+        ast.Comment:
+          Text: // Tuple with parenthesized types (covers token.LPAREN case)
+  Tok: type
+  Specs:
+    ast.TypeSpec:
+      Name:
+        ast.Ident:
+          Name: WithParen
+      Type:
+        ast.TupleType:
+          Fields:
+            ast.FieldList:
+              List:
+                ast.Field:
+                  Type:
+                    ast.ParenExpr:
+                      X:
+                        ast.Ident:
+                          Name: int
+                ast.Field:
+                  Type:
+                    ast.ParenExpr:
+                      X:
+                        ast.Ident:
+                          Name: string
+ast.GenDecl:
+  Doc:
+    ast.CommentGroup:
+      List:
+        ast.Comment:
+          Text: // Tuple with qualified type names (covers token.PERIOD case)
+  Tok: type
+  Specs:
+    ast.TypeSpec:
+      Name:
+        ast.Ident:
+          Name: WithQualified
+      Type:
+        ast.TupleType:
+          Fields:
+            ast.FieldList:
+              List:
+                ast.Field:
+                  Type:
+                    ast.SelectorExpr:
+                      X:
+                        ast.Ident:
+                          Name: io
+                      Sel:
+                        ast.Ident:
+                          Name: Reader
+                ast.Field:
+                  Type:
+                    ast.SelectorExpr:
+                      X:
+                        ast.Ident:
+                          Name: io
+                      Sel:
+                        ast.Ident:
+                          Name: Writer
+ast.GenDecl:
+  Doc:
+    ast.CommentGroup:
+      List:
+        ast.Comment:
+          Text: // Tuple with mixed named and array types
+  Tok: type
+  Specs:
+    ast.TypeSpec:
+      Name:
+        ast.Ident:
+          Name: MixedArray
+      Type:
+        ast.TupleType:
+          Fields:
+            ast.FieldList:
+              List:
+                ast.Field:
+                  Names:
+                    ast.Ident:
+                      Name: items
+                  Type:
+                    ast.ArrayType:
+                      Elt:
+                        ast.Ident:
+                          Name: int
+                ast.Field:
+                  Names:
+                    ast.Ident:
+                      Name: count
+                  Type:
+                    ast.Ident:
+                      Name: int
+ast.GenDecl:
+  Doc:
+    ast.CommentGroup:
+      List:
+        ast.Comment:
+          Text: // Single named field tuple
+  Tok: type
+  Specs:
+    ast.TypeSpec:
+      Name:
+        ast.Ident:
+          Name: SingleNamed
+      Type:
+        ast.TupleType:
+          Fields:
+            ast.FieldList:
+              List:
+                ast.Field:
+                  Names:
+                    ast.Ident:
+                      Name: value
+                  Type:
+                    ast.Ident:
+                      Name: int
