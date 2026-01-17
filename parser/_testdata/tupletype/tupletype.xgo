@@ -1,0 +1,28 @@
+// Test cases for tuple types
+
+// Empty tuple
+type Empty ()
+
+// Anonymous tuple types
+type Pair (int, string)
+
+type Triple (int, string, bool)
+
+// Named tuple types
+type Point (x int, y int)
+
+type Person (name string, age int)
+
+// Type shorthand syntax
+type Point3D (x, y, z int)
+
+type Mixed (a, b string, c int)
+
+// Tuple as channel element type
+var ch chan (int, error)
+
+// Tuple as map value type
+var cache map[string](int, bool)
+
+// Tuple as slice element type
+var pairs [](string, int)

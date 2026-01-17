@@ -599,6 +599,43 @@ func (p *printer) fieldList(fields *ast.FieldList, isStruct, isIncomplete bool) 
 	p.print(unindent, formfeed, rbrace, token.RBRACE)
 }
 
+// tupleType prints a tuple type.
+// Tuple types are printed as (type1, type2, ...) or (name1 type1, name2 type2, ...)
+func (p *printer) tupleType(x *ast.TupleType) {
+	list := x.Fields.List
+
+	// Print opening paren (without position to avoid line tracking issues)
+	p.print(token.LPAREN)
+
+	// Check if this is an empty tuple
+	if len(list) == 0 {
+		p.print(token.RPAREN)
+		return
+	}
+
+	// Print tuple fields
+	for i, f := range list {
+		if i > 0 {
+			p.print(token.COMMA, blank)
+		}
+		// Print names if present
+		if len(f.Names) > 0 {
+			for j, name := range f.Names {
+				if j > 0 {
+					p.print(token.COMMA, blank)
+				}
+				p.expr(name)
+			}
+			p.print(blank)
+		}
+		// Print type
+		p.expr(f.Type)
+	}
+
+	// Print closing paren (without position)
+	p.print(token.RPAREN)
+}
+
 // ----------------------------------------------------------------------------
 // Expressions
 
@@ -1049,6 +1086,9 @@ func (p *printer) expr1(expr ast.Expr, prec1, depth int) {
 		}
 		p.print(blank)
 		p.expr(x.Value)
+
+	case *ast.TupleType:
+		p.tupleType(x)
 		/*	case *ast.TernaryExpr:
 			p.expr1(x.X, token.HighestPrec, 1)
 			p.expr0(x.Cond, 1)

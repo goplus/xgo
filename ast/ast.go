@@ -337,6 +337,20 @@ type (
 		Dir   ChanDir   // channel direction
 		Value Expr      // value type
 	}
+
+	// A TupleType node represents a tuple type.
+	// Tuple types are syntactic sugar for anonymous structs with ordinal field names.
+	// Examples:
+	//   ()                                     ≡ struct{}
+	//   (T)                                    ≡ T (degenerates to the type itself)
+	//   (T0, T1, ..., TN)                      ≡ struct{ _0 T0; _1 T1; ...; _N TN }
+	//   (name0 T0, name1 T1, ..., nameN TN)    ≡ struct{ _0 T0; _1 T1; ...; _N TN }
+	// Named fields are compile-time aliases only; runtime uses ordinal fields.
+	TupleType struct {
+		Lparen token.Pos  // position of "("
+		Fields *FieldList // tuple element types (and optional names)
+		Rparen token.Pos  // position of ")"
+	}
 )
 
 // Pos and End implementations for expression/type nodes.
@@ -413,6 +427,9 @@ func (x *MapType) Pos() token.Pos { return x.Map }
 
 // Pos returns position of first character belonging to the node.
 func (x *ChanType) Pos() token.Pos { return x.Begin }
+
+// Pos returns position of first character belonging to the node.
+func (x *TupleType) Pos() token.Pos { return x.Lparen }
 
 // End returns position of first character immediately after the node.
 func (x *BadExpr) End() token.Pos { return x.To }
@@ -498,6 +515,9 @@ func (x *MapType) End() token.Pos { return x.Value.End() }
 // End returns position of first character immediately after the node.
 func (x *ChanType) End() token.Pos { return x.Value.End() }
 
+// End returns position of first character immediately after the node.
+func (x *TupleType) End() token.Pos { return x.Rparen + 1 }
+
 // exprNode() ensures that only expression/type nodes can be
 // assigned to an Expr.
 func (*BadExpr) exprNode()        {}
@@ -522,6 +542,7 @@ func (*FuncType) exprNode()      {}
 func (*InterfaceType) exprNode() {}
 func (*MapType) exprNode()       {}
 func (*ChanType) exprNode()      {}
+func (*TupleType) exprNode()     {}
 
 // ----------------------------------------------------------------------------
 // Convenience functions for Idents

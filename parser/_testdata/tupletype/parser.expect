@@ -1,0 +1,265 @@
+package main
+
+file tupletype.xgo
+ast.GenDecl:
+  Doc:
+    ast.CommentGroup:
+      List:
+        ast.Comment:
+          Text: // Empty tuple
+  Tok: type
+  Specs:
+    ast.TypeSpec:
+      Name:
+        ast.Ident:
+          Name: Empty
+      Type:
+        ast.TupleType:
+          Fields:
+            ast.FieldList:
+ast.GenDecl:
+  Doc:
+    ast.CommentGroup:
+      List:
+        ast.Comment:
+          Text: // Anonymous tuple types
+  Tok: type
+  Specs:
+    ast.TypeSpec:
+      Name:
+        ast.Ident:
+          Name: Pair
+      Type:
+        ast.TupleType:
+          Fields:
+            ast.FieldList:
+              List:
+                ast.Field:
+                  Type:
+                    ast.Ident:
+                      Name: int
+                ast.Field:
+                  Type:
+                    ast.Ident:
+                      Name: string
+ast.GenDecl:
+  Tok: type
+  Specs:
+    ast.TypeSpec:
+      Name:
+        ast.Ident:
+          Name: Triple
+      Type:
+        ast.TupleType:
+          Fields:
+            ast.FieldList:
+              List:
+                ast.Field:
+                  Type:
+                    ast.Ident:
+                      Name: int
+                ast.Field:
+                  Type:
+                    ast.Ident:
+                      Name: string
+                ast.Field:
+                  Type:
+                    ast.Ident:
+                      Name: bool
+ast.GenDecl:
+  Doc:
+    ast.CommentGroup:
+      List:
+        ast.Comment:
+          Text: // Named tuple types
+  Tok: type
+  Specs:
+    ast.TypeSpec:
+      Name:
+        ast.Ident:
+          Name: Point
+      Type:
+        ast.TupleType:
+          Fields:
+            ast.FieldList:
+              List:
+                ast.Field:
+                  Names:
+                    ast.Ident:
+                      Name: x
+                  Type:
+                    ast.Ident:
+                      Name: int
+                ast.Field:
+                  Names:
+                    ast.Ident:
+                      Name: y
+                  Type:
+                    ast.Ident:
+                      Name: int
+ast.GenDecl:
+  Tok: type
+  Specs:
+    ast.TypeSpec:
+      Name:
+        ast.Ident:
+          Name: Person
+      Type:
+        ast.TupleType:
+          Fields:
+            ast.FieldList:
+              List:
+                ast.Field:
+                  Names:
+                    ast.Ident:
+                      Name: name
+                  Type:
+                    ast.Ident:
+                      Name: string
+                ast.Field:
+                  Names:
+                    ast.Ident:
+                      Name: age
+                  Type:
+                    ast.Ident:
+                      Name: int
+ast.GenDecl:
+  Doc:
+    ast.CommentGroup:
+      List:
+        ast.Comment:
+          Text: // Type shorthand syntax
+  Tok: type
+  Specs:
+    ast.TypeSpec:
+      Name:
+        ast.Ident:
+          Name: Point3D
+      Type:
+        ast.TupleType:
+          Fields:
+            ast.FieldList:
+              List:
+                ast.Field:
+                  Names:
+                    ast.Ident:
+                      Name: x
+                    ast.Ident:
+                      Name: y
+                    ast.Ident:
+                      Name: z
+                  Type:
+                    ast.Ident:
+                      Name: int
+ast.GenDecl:
+  Tok: type
+  Specs:
+    ast.TypeSpec:
+      Name:
+        ast.Ident:
+          Name: Mixed
+      Type:
+        ast.TupleType:
+          Fields:
+            ast.FieldList:
+              List:
+                ast.Field:
+                  Names:
+                    ast.Ident:
+                      Name: a
+                    ast.Ident:
+                      Name: b
+                  Type:
+                    ast.Ident:
+                      Name: string
+                ast.Field:
+                  Names:
+                    ast.Ident:
+                      Name: c
+                  Type:
+                    ast.Ident:
+                      Name: int
+ast.GenDecl:
+  Doc:
+    ast.CommentGroup:
+      List:
+        ast.Comment:
+          Text: // Tuple as channel element type
+  Tok: var
+  Specs:
+    ast.ValueSpec:
+      Names:
+        ast.Ident:
+          Name: ch
+      Type:
+        ast.ChanType:
+          Value:
+            ast.TupleType:
+              Fields:
+                ast.FieldList:
+                  List:
+                    ast.Field:
+                      Type:
+                        ast.Ident:
+                          Name: int
+                    ast.Field:
+                      Type:
+                        ast.Ident:
+                          Name: error
+ast.GenDecl:
+  Doc:
+    ast.CommentGroup:
+      List:
+        ast.Comment:
+          Text: // Tuple as map value type
+  Tok: var
+  Specs:
+    ast.ValueSpec:
+      Names:
+        ast.Ident:
+          Name: cache
+      Type:
+        ast.MapType:
+          Key:
+            ast.Ident:
+              Name: string
+          Value:
+            ast.TupleType:
+              Fields:
+                ast.FieldList:
+                  List:
+                    ast.Field:
+                      Type:
+                        ast.Ident:
+                          Name: int
+                    ast.Field:
+                      Type:
+                        ast.Ident:
+                          Name: bool
+ast.GenDecl:
+  Doc:
+    ast.CommentGroup:
+      List:
+        ast.Comment:
+          Text: // Tuple as slice element type
+  Tok: var
+  Specs:
+    ast.ValueSpec:
+      Names:
+        ast.Ident:
+          Name: pairs
+      Type:
+        ast.ArrayType:
+          Elt:
+            ast.TupleType:
+              Fields:
+                ast.FieldList:
+                  List:
+                    ast.Field:
+                      Type:
+                        ast.Ident:
+                          Name: string
+                    ast.Field:
+                      Type:
+                        ast.Ident:
+                          Name: int
