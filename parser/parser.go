@@ -1110,6 +1110,43 @@ type field struct {
 	optional token.Pos
 }
 
+// distributeFieldTypes distributes types across a list of fields using Go's type shorthand syntax.
+// For example, (x, y int) becomes (x int, y int).
+// If all fields are unnamed, the names are treated as types.
+// Returns the count of named fields (fields with both name and type).
+func distributeFieldTypes(list []field) int {
+	var named int
+	for i := range list {
+		if list[i].name != nil && list[i].typ != nil {
+			named++
+		}
+	}
+
+	if named == 0 {
+		// All unnamed => identifiers are type names
+		for i := range list {
+			if list[i].name != nil && list[i].typ == nil {
+				list[i].typ = list[i].name
+				list[i].name = nil
+			}
+		}
+	} else if named != len(list) {
+		// Some named => apply type distribution (Go's shorthand syntax)
+		// e.g., (x, y int) => x gets type int, y gets type int
+		var typ ast.Expr
+		for i := len(list) - 1; i >= 0; i-- {
+			if list[i].typ != nil {
+				typ = list[i].typ
+			} else if typ != nil {
+				list[i].typ = typ
+			}
+			// Note: error handling for missing types is done by the caller
+		}
+	}
+
+	return named
+}
+
 func (p *parser) parseParameterList(scope *ast.Scope, name0 *ast.Ident, typ0 ast.Expr, closing token.Token) (params []*ast.Field) {
 	if p.trace {
 		defer un(trace(p, "ParameterList"))
@@ -1155,26 +1192,24 @@ func (p *parser) parseParameterList(scope *ast.Scope, name0 *ast.Ident, typ0 ast
 	// TODO(gri) parameter distribution and conversion to []*ast.Field
 	//           can be combined and made more efficient
 
-	// distribute parameter types
+	// First, perform basic type distribution using shared helper
+	distributedNamed := distributeFieldTypes(list)
+
+	// Handle parameter-specific error cases
 	if named == 0 {
-		// all unnamed => found names are type names
-		for i := 0; i < len(list); i++ {
-			par := &list[i]
-			if typ := par.name; typ != nil {
-				par.typ = typ
-				par.name = nil
-			}
-		}
+		// all unnamed => found names are type names (already handled by distributeFieldTypes)
 		if tparams {
 			p.error(pos, "type parameters must be named")
 		}
 	} else if named != len(list) {
 		// some named => all must be named
+		// Check for missing names and types, insert placeholders for error recovery
 		ok := true
 		var typ ast.Expr
 		missingName := pos
 		for i := len(list) - 1; i >= 0; i-- {
-			if par := &list[i]; par.typ != nil {
+			par := &list[i]
+			if par.typ != nil {
 				typ = par.typ
 				if par.name == nil {
 					ok = false
@@ -1184,7 +1219,7 @@ func (p *parser) parseParameterList(scope *ast.Scope, name0 *ast.Ident, typ0 ast
 					par.name = n
 				}
 			} else if typ != nil {
-				par.typ = typ
+				// Type already distributed by helper
 			} else {
 				// par.typ == nil && typ == nil => we only have a par.name
 				ok = false
@@ -1200,6 +1235,8 @@ func (p *parser) parseParameterList(scope *ast.Scope, name0 *ast.Ident, typ0 ast
 			}
 		}
 	}
+	// Update named count after distribution
+	_ = distributedNamed
 
 	// convert list []*ast.Field
 	if named == 0 {
@@ -1655,16 +1692,12 @@ func (p *parser) parseTupleFieldList() []*ast.Field {
 		defer un(trace(p, "TupleFieldList"))
 	}
 
-	type tupleField struct {
-		name *ast.Ident
-		typ  ast.Expr
-	}
-
-	var list []tupleField
+	// Use shared field struct for type distribution
+	var list []field
 	var named int // count of fields with explicit name and type
 
 	for p.tok != token.RPAREN && p.tok != token.EOF {
-		var f tupleField
+		var f field
 
 		switch p.tok {
 		case token.IDENT:
@@ -1721,27 +1754,13 @@ func (p *parser) parseTupleFieldList() []*ast.Field {
 		return nil
 	}
 
-	// Distribute types similar to parameter list handling
-	if named == 0 {
-		// All unnamed => identifiers are type names
+	// Use shared type distribution helper
+	distributedNamed := distributeFieldTypes(list)
+
+	// Handle tuple-specific error recovery: treat untyped names as types
+	if named != 0 && distributedNamed != len(list) {
 		for i := range list {
-			if list[i].name != nil && list[i].typ == nil {
-				list[i].typ = list[i].name
-				list[i].name = nil
-			}
-		}
-	} else if named != len(list) {
-		// Some named => apply type distribution (Go's shorthand syntax)
-		// e.g., (x, y int) => x gets type int, y gets type int
-		var typ ast.Expr
-		for i := len(list) - 1; i >= 0; i-- {
-			if list[i].typ != nil {
-				typ = list[i].typ
-			} else if typ != nil {
-				list[i].typ = typ
-			} else {
-				// Error: name without type and no type to inherit
-				// Treat the name as the type
+			if list[i].typ == nil && list[i].name != nil {
 				list[i].typ = list[i].name
 				list[i].name = nil
 			}
@@ -1750,7 +1769,7 @@ func (p *parser) parseTupleFieldList() []*ast.Field {
 
 	// Convert to []*ast.Field
 	// For named fields, group by type as Go does with parameters
-	if named == 0 {
+	if distributedNamed == 0 {
 		// All unnamed - one Field per type
 		result := make([]*ast.Field, len(list))
 		for i, f := range list {

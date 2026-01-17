@@ -1,5 +1,7 @@
 // Test cases for tuple types
 
+import "io"
+
 // Empty tuple
 type Empty ()
 
@@ -26,3 +28,36 @@ var cache map[string](int, bool)
 
 // Tuple as slice element type
 var pairs [](string, int)
+
+// Tuple with array types (covers token.LBRACK case)
+type WithArray (arr []int, data [5]string)
+
+// Tuple with pointer types (covers token.MUL case)
+type WithPointers (*int, *string)
+
+// Tuple with function types (covers token.FUNC case)
+type WithFunc (fn func(int) string, callback func())
+
+// Tuple with channel types (covers token.CHAN case)
+type WithChan (ch chan int, recv <-chan string)
+
+// Tuple with map types (covers token.MAP case)
+type WithMap (m map[string]int, lookup map[int]bool)
+
+// Tuple with struct types (covers token.STRUCT case)
+type WithStruct (s struct{ x int }, data struct{ name string })
+
+// Tuple with interface types (covers token.INTERFACE case)
+type WithInterface (i interface{}, reader interface{ Read([]byte) int })
+
+// Tuple with parenthesized types (covers token.LPAREN case)
+type WithParen ((int), (string))
+
+// Tuple with qualified type names (covers token.PERIOD case)
+type WithQualified (io.Reader, io.Writer)
+
+// Tuple with mixed named and array types
+type MixedArray (items []int, count int)
+
+// Single named field tuple
+type SingleNamed (value int)
