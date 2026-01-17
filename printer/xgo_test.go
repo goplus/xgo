@@ -159,7 +159,7 @@ func testFrom(t *testing.T, fpath, sel string, mode int) {
 	}
 }
 
-func TestFromGopPrinter(t *testing.T) {
+func TestFromXGoPrinter(t *testing.T) {
 	testFrom(t, "nodes.go", "", 0)
 	testFrom(t, "printer.go", "", 0)
 	testFrom(t, "printer_test.go", "", 0)

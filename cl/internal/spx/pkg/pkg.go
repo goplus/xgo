@@ -1,7 +1,7 @@
 package pkg
 
 const (
-	GopPackage = true
+	XGoPackage = true
 )
 
 type Vector struct {

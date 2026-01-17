@@ -124,7 +124,7 @@ type Config struct {
 	Filter func(fs.FileInfo) bool
 
 	// If not nil, it is used for returning result of checks XGo dependencies.
-	// see https://pkg.go.dev/github.com/goplus/gogen#File.CheckGopDeps
+	// see https://pkg.go.dev/github.com/goplus/gogen#File.CheckXGoDeps
 	XGoDeps *int
 
 	// CacheFile specifies the file path of the cache.
@@ -319,13 +319,13 @@ func afterLoad(mod *xgomod.Module, xgo *env.XGo, out, test *gogen.Package, conf 
 	}
 	updateMod := !conf.DontUpdateGoMod && mod.HasModfile()
 	if updateMod || conf.XGoDeps != nil {
-		flags := checkGopDeps(out)
+		flags := checkXGoDeps(out)
 		if conf.XGoDeps != nil { // for `xgo run`
 			*conf.XGoDeps = flags
 		}
 		if updateMod {
 			if test != nil {
-				flags |= checkGopDeps(test)
+				flags |= checkXGoDeps(test)
 			}
 			if flags != 0 {
 				mod.SaveWithXGoMod(xgo, flags)
@@ -334,9 +334,9 @@ func afterLoad(mod *xgomod.Module, xgo *env.XGo, out, test *gogen.Package, conf 
 	}
 }
 
-func checkGopDeps(pkg *gogen.Package) (flags int) {
+func checkXGoDeps(pkg *gogen.Package) (flags int) {
 	pkg.ForEachFile(func(fname string, file *gogen.File) {
-		flags |= file.CheckGopDeps(pkg)
+		flags |= file.CheckXGoDeps(pkg)
 	})
 	return
 }

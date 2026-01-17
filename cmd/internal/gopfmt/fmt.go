@@ -69,7 +69,7 @@ func gopfmt(path string, class, smart, mvgo bool) (err error) {
 	}
 	var target []byte
 	if smart {
-		target, err = xformat.GopstyleSource(src, path)
+		target, err = xformat.XGostyleSource(src, path)
 	} else {
 		if !mvgo && filepath.Ext(path) == ".go" {
 			fset := token.NewFileSet()

@@ -21,7 +21,7 @@ func (this *Game) MainEntry() {
 }
 func (this *Game) Main() {
 	_xgo_obj0 := &Kai{Game: this}
-	spx3.Gopt_Game_Main(this, _xgo_obj0)
+	spx3.XGot_Game_Main(this, _xgo_obj0)
 }
 func (this *Kai) Main(_xgo_arg0 string) {
 	this.Sprite.Main(_xgo_arg0)

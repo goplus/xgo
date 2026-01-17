@@ -259,7 +259,7 @@ func getBuildVer() string {
 	return fmt.Sprintf("%s devel", trimRight(stdout))
 }
 
-func getGopBuildFlags() string {
+func getXGoBuildFlags() string {
 	defaultXGoRoot := xgoRoot
 	if gopRootFinal := os.Getenv("GOPROOT_FINAL"); gopRootFinal != "" {
 		defaultXGoRoot = gopRootFinal
@@ -273,7 +273,7 @@ func getGopBuildFlags() string {
 	return buildFlags
 }
 
-func detectGopBinPath() string {
+func detectXGoBinPath() string {
 	return filepath.Join(xgoRoot, "bin")
 }
 
@@ -296,10 +296,10 @@ func detectGoBinPath() string {
 	return filepath.Join(homeDir, "go", "bin")
 }
 
-func linkGoplusToLocalBin() string {
+func linkXGolusToLocalBin() string {
 	println("Start Linking.")
 
-	gopBinPath := detectGopBinPath()
+	gopBinPath := detectXGoBinPath()
 	goBinPath := detectGoBinPath()
 	if !checkPathExist(gopBinPath, true) {
 		log.Fatalf("Error: %s is not existed, you should build XGo before linking.\n", gopBinPath)
@@ -336,9 +336,9 @@ func linkGoplusToLocalBin() string {
 	return goBinPath
 }
 
-func buildGoplusTools(useGoProxy bool) {
+func buildXGolusTools(useGoProxy bool) {
 	commandsDir := filepath.Join(xgoRoot, "cmd")
-	buildFlags := getGopBuildFlags()
+	buildFlags := getXGoBuildFlags()
 
 	if useGoProxy {
 		println("Info: we will use goproxy.cn as a Go proxy to accelerate installing process.")
@@ -348,7 +348,7 @@ func buildGoplusTools(useGoProxy bool) {
 	}
 
 	// Install XGo binary files under current ./bin directory.
-	gopBinPath := detectGopBinPath()
+	gopBinPath := detectXGoBinPath()
 	if err := os.Mkdir(gopBinPath, 0755); err != nil && !os.IsExist(err) {
 		println("Error: XGo can't create ./bin directory to put build assets.")
 		log.Fatalln(err)
@@ -378,7 +378,7 @@ func buildGoplusTools(useGoProxy bool) {
 	print(buildOutput)
 
 	// Clear xgo run cache
-	cleanGopRunCache()
+	cleanXGoRunCache()
 
 	println("\nXGo tools built successfully!")
 }
@@ -408,7 +408,7 @@ we recommend you add the above install directory into your PATH environment vari
 
 // Install XGo tools
 func install() {
-	installPath := linkGoplusToLocalBin()
+	installPath := linkXGolusToLocalBin()
 
 	println("\nXGo tools installed successfully!")
 
@@ -422,7 +422,7 @@ func runTestcases() {
 	os.Chdir(xgoRoot)
 
 	coverage := "-coverprofile=coverage.txt"
-	gopCommand := filepath.Join(detectGopBinPath(), xgoBinFiles[1])
+	gopCommand := filepath.Join(detectXGoBinPath(), xgoBinFiles[1])
 	if !checkPathExist(gopCommand, false) {
 		println("Error: XGo must be installed before running testcases.")
 		os.Exit(1)
@@ -438,7 +438,7 @@ func runTestcases() {
 }
 
 func clean() {
-	gopBinPath := detectGopBinPath()
+	gopBinPath := detectXGoBinPath()
 	goBinPath := detectGoBinPath()
 
 	// Clean links
@@ -458,10 +458,10 @@ func clean() {
 		}
 	}
 
-	cleanGopRunCache()
+	cleanXGoRunCache()
 }
 
-func cleanGopRunCache() {
+func cleanXGoRunCache() {
 	homeDir, _ := os.UserHomeDir()
 	runCacheDir := filepath.Join(homeDir, ".xgo", "run")
 	files := []string{"go.mod", "go.sum"}
@@ -614,9 +614,9 @@ func main() {
 		useGoProxy = isInChina()
 	}
 	flagActionMap := map[*bool]func(){
-		isBuild: func() { buildGoplusTools(useGoProxy) },
+		isBuild: func() { buildXGolusTools(useGoProxy) },
 		isInstall: func() {
-			buildGoplusTools(useGoProxy)
+			buildXGolusTools(useGoProxy)
 			install()
 		},
 		isUninstall: uninstall,

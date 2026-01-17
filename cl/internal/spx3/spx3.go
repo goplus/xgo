@@ -17,7 +17,7 @@
 package spx3
 
 const (
-	GopPackage = true
+	XGoPackage = true
 )
 
 type Game struct {
@@ -46,5 +46,5 @@ type Handler interface {
 	Classclone() Handler
 }
 
-func Gopt_Game_Main(game interface{ initGame() }, workers ...Handler) {
+func XGot_Game_Main(game interface{ initGame() }, workers ...Handler) {
 }

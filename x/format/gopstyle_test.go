@@ -22,7 +22,7 @@ import (
 
 func testFormat(t *testing.T, name string, src, expect string) {
 	t.Run(name, func(t *testing.T) {
-		result, err := GopstyleSource([]byte(src), name)
+		result, err := XGostyleSource([]byte(src), name)
 		if err != nil {
 			t.Fatal("format.Source failed:", err)
 		}

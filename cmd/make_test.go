@@ -92,7 +92,7 @@ func init() {
 	}
 }
 
-func cleanGopRunCacheFiles(t *testing.T) {
+func cleanXGoRunCacheFiles(t *testing.T) {
 	homeDir, _ := os.UserHomeDir()
 	runCacheDir := filepath.Join(homeDir, ".xgo", "run")
 	files := []string{"go.mod", "go.sum"}
@@ -125,7 +125,7 @@ func TestAllScript(t *testing.T) {
 		}
 	}
 
-	cleanGopRunCacheFiles(t)
+	cleanXGoRunCacheFiles(t)
 
 	cmd = exec.Command(filepath.Join(gopRoot, "bin", xgoBinFiles[1]), "version")
 	if output, err := cmd.CombinedOutput(); err != nil {

@@ -181,7 +181,7 @@ func (this *index) onInit() {
 func (this *index) MainEntry() {
 }
 func (this *index) Main() {
-	spx.Gopt_MyGame_Main(this)
+	spx.XGot_MyGame_Main(this)
 }
 func (this *bar) Main() {
 }
@@ -210,10 +210,10 @@ type index struct {
 }
 
 func (this *index) MainEntry() {
-	fmt.Println(this.Gop_Env("PATH"), this.Gop_Env("id"))
+	fmt.Println(this.XGo_Env("PATH"), this.XGo_Env("id"))
 }
 func (this *index) Main() {
-	spx.Gopt_MyGame_Main(this)
+	spx.XGot_MyGame_Main(this)
 }
 func (this *bar) Main() {
 }
@@ -223,7 +223,7 @@ func main() {
 `)
 }
 
-func TestSpxGopEnv(t *testing.T) {
+func TestSpxXGoEnv(t *testing.T) {
 	gopSpxTest(t, `
 echo "${PATH}"
 `, ``, `package main
@@ -243,10 +243,10 @@ type index struct {
 }
 
 func (this *index) MainEntry() {
-	fmt.Println(strconv.Itoa(this.Gop_Env("PATH")))
+	fmt.Println(strconv.Itoa(this.XGo_Env("PATH")))
 }
 func (this *index) Main() {
-	spx.Gopt_MyGame_Main(this)
+	spx.XGot_MyGame_Main(this)
 }
 func (this *bar) Main() {
 }
@@ -256,7 +256,7 @@ func main() {
 `)
 }
 
-func TestSpxGopExec(t *testing.T) {
+func TestSpxXGoExec(t *testing.T) {
 	gopSpxTest(t, `
 vim "a.txt"
 vim
@@ -276,18 +276,18 @@ type index struct {
 }
 
 func (this *index) MainEntry() {
-	this.Gop_Exec("vim", "a.txt")
-	this.Gop_Exec("vim")
+	this.XGo_Exec("vim", "a.txt")
+	this.XGo_Exec("vim")
 	this.Ls(10)
 	this.Capout(func() {
-		this.Gop_Exec("ls")
+		this.XGo_Exec("ls")
 	})
 	this.Capout(func() {
-		this.Gop_Exec("ls", "-l")
+		this.XGo_Exec("ls", "-l")
 	})
 }
 func (this *index) Main() {
-	spx.Gopt_MyGame_Main(this)
+	spx.XGot_MyGame_Main(this)
 }
 func (this *bar) Main() {
 }
@@ -336,7 +336,7 @@ func (this *Game) onInit() {
 func (this *Game) MainEntry() {
 }
 func (this *Game) Main() {
-	spx.Gopt_MyGame_Main(this)
+	spx.XGot_MyGame_Main(this)
 }
 func (this *bar) onInit() {
 	this.SetCostume("kai-a")
@@ -389,13 +389,13 @@ type Kai struct {
 }
 
 func (this *Game) onInit() {
-	spx.Gopt_Sprite_Clone__0(this.Kai)
+	spx.XGot_Sprite_Clone__0(this.Kai)
 	this.Broadcast__0("msg1")
 }
 func (this *Game) MainEntry() {
 }
 func (this *Game) Main() {
-	spx.Gopt_MyGame_Main(this)
+	spx.XGot_MyGame_Main(this)
 }
 func (this *Kai) onInit() {
 	this.a = 1
@@ -443,10 +443,10 @@ type index struct {
 var x float64 = spx.Rand__1(1.2)
 
 func (this *index) MainEntry() {
-	spx.Gopt_MyGame_Run(this, "hzip://open.qiniu.us/weather/res.zip")
+	spx.XGot_MyGame_Run(this, "hzip://open.qiniu.us/weather/res.zip")
 }
 func (this *index) Main() {
-	spx.Gopt_MyGame_Main(this)
+	spx.XGot_MyGame_Main(this)
 }
 func (this *Kai) Main() {
 	fmt.Println("Hi")
@@ -632,7 +632,7 @@ func (this *Game) onInit() {
 func (this *Game) MainEntry() {
 }
 func (this *Game) Main() {
-	spx.Gopt_MyGame_Main(this)
+	spx.XGot_MyGame_Main(this)
 }
 func (this *Kai) onMsg(msg string) {
 	for {
@@ -697,19 +697,19 @@ type Kai struct {
 }
 
 func (this *Game) onInit() {
-	spx.Gopt_Sprite_Clone__0(this.Kai)
+	spx.XGot_Sprite_Clone__0(this.Kai)
 	this.Broadcast__0("msg1")
 }
 func (this *Game) MainEntry() {
 }
 func (this *Game) Main() {
-	spx.Gopt_MyGame_Main(this)
+	spx.XGot_MyGame_Main(this)
 }
 func (this *Kai) onInit() {
 	this.a = 1
-	spx.Gopt_Sprite_Clone__0(this)
-	spx.Gopt_Sprite_Clone__1(this, info{1, 2})
-	spx.Gopt_Sprite_Clone__1(this, &info{1, 2})
+	spx.XGot_Sprite_Clone__0(this)
+	spx.XGot_Sprite_Clone__1(this, info{1, 2})
+	spx.XGot_Sprite_Clone__1(this, &info{1, 2})
 }
 func (this *Kai) onCloned() {
 	this.Say("Hi")
@@ -752,7 +752,7 @@ func (this *Game) MainEntry() {
 	this.SendMessage("Hi")
 }
 func (this *Game) Main() {
-	spx.Gopt_MyGame_Main(this)
+	spx.XGot_MyGame_Main(this)
 }
 func (this *Kai) onMsg(msg string) {
 }
@@ -790,7 +790,7 @@ func (this *Game) MainEntry() {
 	fmt.Println("Hi")
 }
 func (this *Game) Main() {
-	spx.Gopt_MyGame_Main(this)
+	spx.XGot_MyGame_Main(this)
 }
 func (this *Kai) onMsg(msg string) {
 	this.Position().Add__0(100, 200)
@@ -842,7 +842,7 @@ func (this *Game) MainEntry() {
 	fmt.Println("hi")
 }
 func (this *Game) Main() {
-	spx.Gopt_MyGame_Main(this)
+	spx.XGot_MyGame_Main(this)
 }
 func (this *Kai) onMsg(msg string) {
 	fmt.Println(msg)
@@ -932,13 +932,13 @@ type Kai struct {
 }
 
 func (this *Game) onInit() {
-	spx.Gopt_Sprite_OnKey__1(this.Kai, "hello", func(key string) {
+	spx.XGot_Sprite_OnKey__1(this.Kai, "hello", func(key string) {
 	})
 }
 func (this *Game) MainEntry() {
 }
 func (this *Game) Main() {
-	spx.Gopt_MyGame_Main(this)
+	spx.XGot_MyGame_Main(this)
 }
 func (p *Mesh) Name() string {
 	return "hello"
@@ -948,26 +948,26 @@ var m1 = &Mesh{}
 var m2 = &Mesh{}
 
 func (this *Kai) Main() {
-	spx.Gopt_Sprite_OnKey__0(this, "hello", func() {
+	spx.XGot_Sprite_OnKey__0(this, "hello", func() {
 	})
-	spx.Gopt_Sprite_OnKey__1(this, "hello", func(key string) {
+	spx.XGot_Sprite_OnKey__1(this, "hello", func(key string) {
 	})
-	spx.Gopt_Sprite_OnKey__2(this, []string{"1"}, func() {
+	spx.XGot_Sprite_OnKey__2(this, []string{"1"}, func() {
 	})
-	spx.Gopt_Sprite_OnKey__3(this, []string{"2"}, func(key string) {
+	spx.XGot_Sprite_OnKey__3(this, []string{"2"}, func(key string) {
 	})
-	spx.Gopt_Sprite_OnKey__4(this, []spx.Mesher{m1, m2}, func() {
+	spx.XGot_Sprite_OnKey__4(this, []spx.Mesher{m1, m2}, func() {
 	})
-	spx.Gopt_Sprite_OnKey__5(this, []spx.Mesher{m1, m2}, func(key spx.Mesher) {
+	spx.XGot_Sprite_OnKey__5(this, []spx.Mesher{m1, m2}, func(key spx.Mesher) {
 	})
-	spx.Gopt_Sprite_OnKey__6(this, []string{"a"}, []string{"b"}, func(key string) {
+	spx.XGot_Sprite_OnKey__6(this, []string{"a"}, []string{"b"}, func(key string) {
 	})
-	spx.Gopt_Sprite_OnKey__7(this, []string{"a"}, []spx.Mesher{m1, m2}, func(key string) {
+	spx.XGot_Sprite_OnKey__7(this, []string{"a"}, []spx.Mesher{m1, m2}, func(key string) {
 	})
-	spx.Gopt_Sprite_OnKey__6(this, []string{"a"}, nil, func(key string) {
+	spx.XGot_Sprite_OnKey__6(this, []string{"a"}, nil, func(key string) {
 	})
-	spx.Gopt_Sprite_OnKey__8(this, 100, 200)
-	spx.Gopt_Sprite_OnKey2(this, "hello", func(key string) {
+	spx.XGot_Sprite_OnKey__8(this, 100, 200)
+	spx.XGot_Sprite_OnKey2(this, "hello", func(key string) {
 	})
 }
 func main() {
@@ -1009,10 +1009,10 @@ func (this *caseFoo) Main() {
 	})
 }
 func TestFoo(t *testing.T) {
-	test.Gopt_Case_TestMain(new(caseFoo), t)
+	test.XGot_Case_TestMain(new(caseFoo), t)
 }
 func TestMain(m *testing.M) {
-	test.Gopt_App_TestMain(new(App), m)
+	test.XGot_App_TestMain(new(App), m)
 }
 `, "main_xtest.gox", "Foo_xtest.gox", "_test")
 }
@@ -1037,12 +1037,12 @@ func (this *case_foo) Main() {
 	this.T().Log("Hi")
 }
 func Test_foo(t *testing.T) {
-	test.Gopt_Case_TestMain(new(case_foo), t)
+	test.XGot_Case_TestMain(new(case_foo), t)
 }
 `, "main.gox", "foo_xtest.gox", "_test")
 }
 
-func TestGopxNoFunc(t *testing.T) {
+func TestXGoxNoFunc(t *testing.T) {
 	gopClTestFile(t, `
 var (
 	a int
@@ -1055,7 +1055,7 @@ type foo struct {
 `, "foo.gox")
 }
 
-func TestGopxOverload(t *testing.T) {
+func TestXGoxOverload(t *testing.T) {
 	gopClTestFile(t, `
 func addString(a, b string) string {
 	return a + b
@@ -1074,7 +1074,7 @@ func add = (
 )
 `, `package main
 
-const Gopo_Rect_add = ".addInt,,.addString"
+const XGoo_Rect_add = ".addInt,,.addString"
 
 type Rect struct {
 }
@@ -1091,7 +1091,7 @@ func (this *Rect) add__1(a float64, b float64) float64 {
 `, "Rect.gox")
 }
 
-func TestClassFileGopx(t *testing.T) {
+func TestClassFileXGox(t *testing.T) {
 	gopClTestFile(t, `
 var (
 	BaseClass

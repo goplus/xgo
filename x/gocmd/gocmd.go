@@ -70,11 +70,11 @@ func runCmd(cmd *exec.Cmd) (err error) {
 const (
 	ldFlagVersion   = "-X \"github.com/goplus/xgo/env.buildVersion=%s\""
 	ldFlagBuildDate = "-X \"github.com/goplus/xgo/env.buildDate=%s\""
-	ldFlagGopRoot   = "-X \"github.com/goplus/xgo/env.defaultXGoRoot=%s\""
+	ldFlagXGoRoot   = "-X \"github.com/goplus/xgo/env.defaultXGoRoot=%s\""
 )
 
 const (
-	ldFlagAll = ldFlagVersion + " " + ldFlagBuildDate + " " + ldFlagGopRoot
+	ldFlagAll = ldFlagVersion + " " + ldFlagBuildDate + " " + ldFlagXGoRoot
 )
 
 func loadFlags(env *XGoEnv) string {

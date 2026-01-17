@@ -1474,7 +1474,7 @@ var z uint128 = x + y
 import "github.com/qiniu/x/xgo/ng"
 
 var x, y ng.Uint128
-var z ng.Uint128 = (ng.Uint128).Gop_Add__1(x, y)
+var z ng.Uint128 = (ng.Uint128).XGo_Add__1(x, y)
 `)
 }
 
@@ -1487,7 +1487,7 @@ var z int128 = x + y
 import "github.com/qiniu/x/xgo/ng"
 
 var x, y ng.Int128
-var z ng.Int128 = (ng.Int128).Gop_Add__1(x, y)
+var z ng.Int128 = (ng.Int128).XGo_Add__1(x, y)
 `)
 }
 
@@ -1500,7 +1500,7 @@ var z bigint = x + y
 import "github.com/qiniu/x/xgo/ng"
 
 var x, y ng.Bigint
-var z ng.Bigint = (ng.Bigint).Gop_Add(x, y)
+var z ng.Bigint = (ng.Bigint).XGo_Add(x, y)
 `)
 }
 
@@ -1582,8 +1582,8 @@ import (
 )
 
 var x = ng.Bigrat_Init__2(big.NewRat(7, 2))
-var y = (ng.Bigrat).Gop_Add(x, ng.Bigrat_Init__0(100))
-var z = (ng.Bigrat).Gop_Add(ng.Bigrat_Init__0(100), y)
+var y = (ng.Bigrat).XGo_Add(x, ng.Bigrat_Init__0(100))
+var z = (ng.Bigrat).XGo_Add(ng.Bigrat_Init__0(100), y)
 `)
 }
 
@@ -1695,7 +1695,7 @@ import "github.com/qiniu/x/xgo/ng"
 var x ng.Bigint
 
 func main() {
-	x.Gop_AddAssign(ng.Bigint_Init__0(3))
+	x.XGo_AddAssign(ng.Bigint_Init__0(3))
 }
 `)
 }
@@ -1713,7 +1713,7 @@ import (
 
 func main() {
 	x := ng.Bigint_Init__1(big.NewInt(3))
-	x.Gop_MulAssign(ng.Bigint_Init__0(2))
+	x.XGo_MulAssign(ng.Bigint_Init__0(2))
 }
 `)
 }
@@ -1731,7 +1731,7 @@ import (
 
 func main() {
 	x := ng.Bigint_Init__1(big.NewInt(3))
-	x.Gop_MulAssign(ng.Bigint_Init__1(big.NewInt(2)))
+	x.XGo_MulAssign(ng.Bigint_Init__1(big.NewInt(2)))
 }
 `)
 }
@@ -2106,7 +2106,7 @@ func TestRangeStmtUDT(t *testing.T) {
 type foo struct {
 }
 
-func (p *foo) Gop_Enum(c func(key int, val string)) {
+func (p *foo) XGo_Enum(c func(key int, val string)) {
 }
 
 for k, v := range new(foo) {
@@ -2119,10 +2119,10 @@ import "fmt"
 type foo struct {
 }
 
-func (p *foo) Gop_Enum(c func(key int, val string)) {
+func (p *foo) XGo_Enum(c func(key int, val string)) {
 }
 func main() {
-	new(foo).Gop_Enum(func(k int, v string) {
+	new(foo).XGo_Enum(func(k int, v string) {
 		fmt.Println(k, v)
 	})
 }
@@ -2134,7 +2134,7 @@ func TestForPhraseUDT(t *testing.T) {
 type foo struct {
 }
 
-func (p *foo) Gop_Enum(c func(val string)) {
+func (p *foo) XGo_Enum(c func(val string)) {
 }
 
 for v <- new(foo) {
@@ -2147,10 +2147,10 @@ import "fmt"
 type foo struct {
 }
 
-func (p *foo) Gop_Enum(c func(val string)) {
+func (p *foo) XGo_Enum(c func(val string)) {
 }
 func main() {
-	new(foo).Gop_Enum(func(v string) {
+	new(foo).XGo_Enum(func(v string) {
 		fmt.Println(v)
 	})
 }
@@ -2169,7 +2169,7 @@ func (p fooIter) Next() (key string, val int, ok bool) {
 type foo struct {
 }
 
-func (p *foo) Gop_Enum() fooIter {
+func (p *foo) XGo_Enum() fooIter {
 	return fooIter{}
 }
 
@@ -2188,11 +2188,11 @@ type foo struct {
 func (p fooIter) Next() (key string, val int, ok bool) {
 	return
 }
-func (p *foo) Gop_Enum() fooIter {
+func (p *foo) XGo_Enum() fooIter {
 	return fooIter{}
 }
 func main() {
-	for _xgo_it := new(foo).Gop_Enum(); ; {
+	for _xgo_it := new(foo).XGo_Enum(); ; {
 		var _xgo_ok bool
 		k, v, _xgo_ok := _xgo_it.Next()
 		if !_xgo_ok {
@@ -2209,7 +2209,7 @@ func TestForPhraseUDT3(t *testing.T) {
 type foo struct {
 }
 
-func (p *foo) Gop_Enum(c func(val string)) {
+func (p *foo) XGo_Enum(c func(val string)) {
 }
 
 println([v for v <- new(foo)])
@@ -2220,11 +2220,11 @@ import "fmt"
 type foo struct {
 }
 
-func (p *foo) Gop_Enum(c func(val string)) {
+func (p *foo) XGo_Enum(c func(val string)) {
 }
 func main() {
 	fmt.Println(func() (_xgo_ret []string) {
-		new(foo).Gop_Enum(func(v string) {
+		new(foo).XGo_Enum(func(v string) {
 			_xgo_ret = append(_xgo_ret, v)
 		})
 		return
@@ -2257,7 +2257,7 @@ func newFoo() *foo {
 	return &foo{key: [3, 7], val: ["Hi", "XGo"]}
 }
 
-func (p *foo) Gop_Enum() *fooIter {
+func (p *foo) XGo_Enum() *fooIter {
 	return &fooIter{data: p}
 }
 
@@ -2284,14 +2284,14 @@ func (p *fooIter) Next() (key int, val string, ok bool) {
 	}
 	return
 }
-func (p *foo) Gop_Enum() *fooIter {
+func (p *foo) XGo_Enum() *fooIter {
 	return &fooIter{data: p}
 }
 func newFoo() *foo {
 	return &foo{key: []int{3, 7}, val: []string{"Hi", "XGo"}}
 }
 func main() {
-	for _xgo_it := newFoo().Gop_Enum(); ; {
+	for _xgo_it := newFoo().XGo_Enum(); ; {
 		var _xgo_ok bool
 		k, v, _xgo_ok := _xgo_it.Next()
 		if !_xgo_ok {
@@ -3519,7 +3519,7 @@ func removeAutogenFiles() {
 	os.Remove("./internal/gop-in-go/foo/gop_autogen2_test.go")
 }
 
-func TestImportGopPkg(t *testing.T) {
+func TestImportXGoPkg(t *testing.T) {
 	autogen.Lock()
 	defer autogen.Unlock()
 

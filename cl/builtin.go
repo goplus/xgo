@@ -97,7 +97,7 @@ func (ctx *pkgCtx) newBuiltinDefault(pkg *gogen.Package, conf *gogen.Config) *ty
 	if ng.Types != nil {
 		initMathBig(pkg, conf, ng)
 		if typesalias.Support {
-			if obj := ng.Types.Scope().Lookup("Gop_ninteger"); obj != nil {
+			if obj := ng.Types.Scope().Lookup("XGo_ninteger"); obj != nil {
 				if _, ok := obj.Type().(*types.Basic); !ok {
 					conf.EnableTypesalias = true
 					ctx.featTypesAlias = true

@@ -1,6 +1,6 @@
 package foo
 
-const GopPackage = true
+const XGoPackage = true
 
 type Mesher interface {
 	Name() string

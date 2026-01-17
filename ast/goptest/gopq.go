@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	GopPackage = "github.com/goplus/xgo/ast/gopq"
+	XGoPackage = "github.com/goplus/xgo/ast/gopq"
 )
 
 // -----------------------------------------------------------------------------

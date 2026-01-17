@@ -161,15 +161,15 @@ func parseGoSource(fset *token.FileSet, filename string, src any, mode goparser.
 	return pkg, info, err
 }
 
-func testGopInfo(t *testing.T, src string, gosrc string, expect string) {
-	testGopInfoEx(t, xgomod.Default, "main.xgo", src, "main.go", gosrc, expect, parser.Config{})
+func testXGoInfo(t *testing.T, src string, gosrc string, expect string) {
+	testXGoInfoEx(t, xgomod.Default, "main.xgo", src, "main.go", gosrc, expect, parser.Config{})
 }
 
 func testSpxInfo(t *testing.T, name string, src string, expect string) {
-	testGopInfoEx(t, spxMod, name, src, "main.go", "", expect, spxParserConf())
+	testXGoInfoEx(t, spxMod, name, src, "main.go", "", expect, spxParserConf())
 }
 
-func testGopInfoEx(t *testing.T, mod *xgomod.Module, name string, src string, goname string, gosrc string, expect string, parseConf parser.Config) {
+func testXGoInfoEx(t *testing.T, mod *xgomod.Module, name string, src string, goname string, gosrc string, expect string, parseConf parser.Config) {
 	fset := token.NewFileSet()
 	_, info, _, err := parseMixedSource(mod, fset, name, src, goname, gosrc, parseConf, false)
 	if err != nil {
@@ -578,7 +578,7 @@ func test() {
 }
 
 func TestSliceLit(t *testing.T) {
-	testGopInfo(t, `
+	testXGoInfo(t, `
 a := [100,200]
 println a
 `, ``, `== types ==
@@ -596,7 +596,7 @@ println a
 }
 
 func TestForPhrase1(t *testing.T) {
-	testGopInfo(t, `
+	testXGoInfo(t, `
 sum := 0
 for x <- [1, 3, 5, 7, 11, 13, 17], x > 3 {
 	sum = sum + x
@@ -635,7 +635,7 @@ println sum
 }
 
 func TestForPhrase2(t *testing.T) {
-	testGopInfo(t, `
+	testXGoInfo(t, `
 sum := 0
 for i, x <- [1, 3, 5, 7, 11, 13, 17], i%2 == 1 && x > 3 {
 	sum = sum + x
@@ -682,7 +682,7 @@ println sum
 }
 
 func TestMapComprehension(t *testing.T) {
-	testGopInfo(t, `
+	testXGoInfo(t, `
 y := {x: i for i, x <- ["1", "3", "5", "7", "11"]}
 println y
 `, ``, `== types ==
@@ -709,7 +709,7 @@ println y
 }
 
 func TestListComprehension(t *testing.T) {
-	testGopInfo(t, `
+	testXGoInfo(t, `
 a := [1, 3.4, 5]
 b := [x*x for x <- a]
 _ = b
@@ -735,7 +735,7 @@ _ = b
 }
 
 func TestListComprehensionMultiLevel(t *testing.T) {
-	testGopInfo(t, `
+	testXGoInfo(t, `
 arr := [1, 2, 3, 4.1, 5, 6]
 x := [[a, b] for a <- arr, a < b for b <- arr, b > 2]
 println("x:", x)
@@ -779,7 +779,7 @@ println("x:", x)
 }
 
 func TestFileEnumLines(t *testing.T) {
-	testGopInfo(t, `
+	testXGoInfo(t, `
 import "os"
 
 for line <- os.Stdin {
@@ -801,7 +801,7 @@ for line <- os.Stdin {
 }
 
 func TestLambdaExpr(t *testing.T) {
-	testGopInfo(t, `package main
+	testXGoInfo(t, `package main
 func Map(c []float64, t func(float64) float64) {
 	// ...
 }
@@ -872,7 +872,7 @@ Map2([1.2, 3.5, 6], x => (x * x, x + x))
 }
 
 func TestLambdaExpr2(t *testing.T) {
-	testGopInfo(t, `package main
+	testXGoInfo(t, `package main
 func Map(c []float64, t func(float64) float64) {
 	// ...
 }
@@ -951,7 +951,7 @@ Map2([1.2, 3.5, 6], x => {
 }
 
 func TestMixedOverload1(t *testing.T) {
-	testGopInfo(t, `
+	testXGoInfo(t, `
 type Mesh struct {
 }
 
@@ -1202,7 +1202,7 @@ func OnKey__a(a, b string, v ...int) {
 }
 
 func TestMixedOverload2(t *testing.T) {
-	testGopInfo(t, `
+	testXGoInfo(t, `
 type Mesh struct {
 }
 
@@ -1437,7 +1437,7 @@ func OnKey__a(a, b string, v ...int) {
 }
 
 func TestMixedOverload3(t *testing.T) {
-	testGopInfo(t, `
+	testXGoInfo(t, `
 Test
 Test 100
 var n N
@@ -1517,10 +1517,10 @@ func TestOverloadNamed(t *testing.T) {
 005:  5:15 | bar                 | package bar ("github.com/goplus/xgo/cl/internal/overload/bar")
 006:  5:19 | M                   | type github.com/goplus/xgo/cl/internal/overload/bar.M = map[string]any
 007:  6: 6 | bar                 | package bar ("github.com/goplus/xgo/cl/internal/overload/bar")
-008:  6:10 | Var                 | func github.com/goplus/xgo/cl/internal/overload/bar.Gopx_Var_Cast__0[T github.com/goplus/xgo/cl/internal/overload/bar.basetype]() *github.com/goplus/xgo/cl/internal/overload/bar.Var__0[T]
+008:  6:10 | Var                 | func github.com/goplus/xgo/cl/internal/overload/bar.XGox_Var_Cast__0[T github.com/goplus/xgo/cl/internal/overload/bar.basetype]() *github.com/goplus/xgo/cl/internal/overload/bar.Var__0[T]
 009:  6:14 | string              | type string
 010:  7: 6 | bar                 | package bar ("github.com/goplus/xgo/cl/internal/overload/bar")
-011:  7:10 | Var                 | func github.com/goplus/xgo/cl/internal/overload/bar.Gopx_Var_Cast__1[T map[string]any]() *github.com/goplus/xgo/cl/internal/overload/bar.Var__1[T]
+011:  7:10 | Var                 | func github.com/goplus/xgo/cl/internal/overload/bar.XGox_Var_Cast__1[T map[string]any]() *github.com/goplus/xgo/cl/internal/overload/bar.Var__1[T]
 012:  7:14 | bar                 | package bar ("github.com/goplus/xgo/cl/internal/overload/bar")
 013:  7:18 | M                   | type github.com/goplus/xgo/cl/internal/overload/bar.M = map[string]any
 == overloads ==
@@ -1557,10 +1557,10 @@ func TestOverloadNamed(t *testing.T) {
 005:  5:15 | bar                 | package bar ("github.com/goplus/xgo/cl/internal/overload/bar")
 006:  5:19 | M                   | type github.com/goplus/xgo/cl/internal/overload/bar.M = map[string]any
 007:  6: 6 | bar                 | package bar ("github.com/goplus/xgo/cl/internal/overload/bar")
-008:  6:10 | Var                 | func github.com/goplus/xgo/cl/internal/overload/bar.Gopx_Var_Cast__0[T github.com/goplus/xgo/cl/internal/overload/bar.basetype]() *github.com/goplus/xgo/cl/internal/overload/bar.Var__0[T]
+008:  6:10 | Var                 | func github.com/goplus/xgo/cl/internal/overload/bar.XGox_Var_Cast__0[T github.com/goplus/xgo/cl/internal/overload/bar.basetype]() *github.com/goplus/xgo/cl/internal/overload/bar.Var__0[T]
 009:  6:14 | string              | type string
 010:  7: 6 | bar                 | package bar ("github.com/goplus/xgo/cl/internal/overload/bar")
-011:  7:10 | Var                 | func github.com/goplus/xgo/cl/internal/overload/bar.Gopx_Var_Cast__1[T map[string]any]() *github.com/goplus/xgo/cl/internal/overload/bar.Var__1[T]
+011:  7:10 | Var                 | func github.com/goplus/xgo/cl/internal/overload/bar.XGox_Var_Cast__1[T map[string]any]() *github.com/goplus/xgo/cl/internal/overload/bar.Var__1[T]
 012:  7:14 | bar                 | package bar ("github.com/goplus/xgo/cl/internal/overload/bar")
 013:  7:18 | M                   | type github.com/goplus/xgo/cl/internal/overload/bar.M = map[string]any
 == overloads ==
@@ -1569,7 +1569,7 @@ func TestOverloadNamed(t *testing.T) {
 002:  6:10 | Var                 | type github.com/goplus/xgo/cl/internal/overload/bar.Var = func(__xgo_overload_args__ interface{_()})
 003:  7:10 | Var                 | type github.com/goplus/xgo/cl/internal/overload/bar.Var = func(__xgo_overload_args__ interface{_()})`
 	}
-	testGopInfo(t, `
+	testXGoInfo(t, `
 import "github.com/goplus/xgo/cl/internal/overload/bar"
 
 var a bar.Var[int]
@@ -1606,9 +1606,9 @@ func TestMixedOverloadNamed(t *testing.T) {
 001:  2:11 | int                 | type int
 002:  3: 7 | Var                 | type main.Var__1[T map[string]any] struct{val T}
 003:  3:11 | M                   | type main.M = map[string]any
-004:  4: 6 | Var                 | func main.Gopx_Var_Cast__0[T main.basetype]() *main.Var__0[T]
+004:  4: 6 | Var                 | func main.XGox_Var_Cast__0[T main.basetype]() *main.Var__0[T]
 005:  4:10 | string              | type string
-006:  5: 6 | Var                 | func main.Gopx_Var_Cast__1[T map[string]any]() *main.Var__1[T]
+006:  5: 6 | Var                 | func main.XGox_Var_Cast__1[T map[string]any]() *main.Var__1[T]
 007:  5:10 | M                   | type main.M = map[string]any
 == overloads ==
 000:  2: 7 | Var                 | type main.Var = func(__xgo_overload_args__ interface{_()})
@@ -1640,9 +1640,9 @@ func TestMixedOverloadNamed(t *testing.T) {
 001:  2:11 | int                 | type int
 002:  3: 7 | Var                 | type main.Var__1[T map[string]any] struct{val T}
 003:  3:11 | M                   | type main.M = map[string]any
-004:  4: 6 | Var                 | func main.Gopx_Var_Cast__0[T main.basetype]() *main.Var__0[T]
+004:  4: 6 | Var                 | func main.XGox_Var_Cast__0[T main.basetype]() *main.Var__0[T]
 005:  4:10 | string              | type string
-006:  5: 6 | Var                 | func main.Gopx_Var_Cast__1[T map[string]any]() *main.Var__1[T]
+006:  5: 6 | Var                 | func main.XGox_Var_Cast__1[T map[string]any]() *main.Var__1[T]
 007:  5:10 | M                   | type main.M = map[string]any
 == overloads ==
 000:  2: 7 | Var                 | type main.Var = func(__xgo_overload_args__ interface{_()})
@@ -1651,7 +1651,7 @@ func TestMixedOverloadNamed(t *testing.T) {
 003:  5: 6 | Var                 | type main.Var = func(__xgo_overload_args__ interface{_()})`
 	}
 
-	testGopInfo(t, `
+	testXGoInfo(t, `
 var a Var[int]
 var b Var[M]
 c := Var(string)
@@ -1673,11 +1673,11 @@ type Var__1[T map[string]any] struct {
 	val T
 }
 
-func Gopx_Var_Cast__0[T basetype]() *Var__0[T] {
+func XGox_Var_Cast__0[T basetype]() *Var__0[T] {
 	return new(Var__0[T])
 }
 
-func Gopx_Var_Cast__1[T map[string]any]() *Var__1[T] {
+func XGox_Var_Cast__1[T map[string]any]() *Var__1[T] {
 	return new(Var__1[T])
 }
 `, expect)
@@ -1693,11 +1693,11 @@ func TestMixedRawNamed(t *testing.T) {
 003:  3: 7 | Var__1              *ast.Ident                     | type    : main.Var__1[main.M] | type
 004:  3: 7 | Var__1[M]           *ast.IndexExpr                 | type    : main.Var__1[main.M] | type
 005:  3:14 | M                   *ast.Ident                     | type    : main.M | type
-006:  4: 6 | Gopx_Var_Cast__0    *ast.Ident                     | value   : func[T main.basetype]() *main.Var__0[T] | value
-007:  4: 6 | Gopx_Var_Cast__0[string] *ast.IndexExpr                 | var     : func() *main.Var__0[string] | variable
+006:  4: 6 | XGox_Var_Cast__0    *ast.Ident                     | value   : func[T main.basetype]() *main.Var__0[T] | value
+007:  4: 6 | XGox_Var_Cast__0[string] *ast.IndexExpr                 | var     : func() *main.Var__0[string] | variable
 008:  4:23 | string              *ast.Ident                     | type    : string | type
-009:  5: 6 | Gopx_Var_Cast__1    *ast.Ident                     | value   : func[T map[string]interface{}]() *main.Var__1[T] | value
-010:  5: 6 | Gopx_Var_Cast__1[M] *ast.IndexExpr                 | var     : func() *main.Var__1[main.M] | variable
+009:  5: 6 | XGox_Var_Cast__1    *ast.Ident                     | value   : func[T map[string]interface{}]() *main.Var__1[T] | value
+010:  5: 6 | XGox_Var_Cast__1[M] *ast.IndexExpr                 | var     : func() *main.Var__1[main.M] | variable
 011:  5:23 | M                   *ast.Ident                     | type    : main.M | type
 == defs ==
 000:  2: 5 | a                   | var main.a main.Var__0[int]
@@ -1710,9 +1710,9 @@ func TestMixedRawNamed(t *testing.T) {
 001:  2:14 | int                 | type int
 002:  3: 7 | Var__1              | type main.Var__1[T map[string]any] struct{val T}
 003:  3:14 | M                   | type main.M = map[string]any
-004:  4: 6 | Gopx_Var_Cast__0    | func main.Gopx_Var_Cast__0[T main.basetype]() *main.Var__0[T]
+004:  4: 6 | XGox_Var_Cast__0    | func main.XGox_Var_Cast__0[T main.basetype]() *main.Var__0[T]
 005:  4:23 | string              | type string
-006:  5: 6 | Gopx_Var_Cast__1    | func main.Gopx_Var_Cast__1[T map[string]any]() *main.Var__1[T]
+006:  5: 6 | XGox_Var_Cast__1    | func main.XGox_Var_Cast__1[T map[string]any]() *main.Var__1[T]
 007:  5:23 | M                   | type main.M = map[string]any`
 	} else {
 		expect = `== types ==
@@ -1722,11 +1722,11 @@ func TestMixedRawNamed(t *testing.T) {
 003:  3: 7 | Var__1              *ast.Ident                     | type    : main.Var__1[map[string]interface{}] | type
 004:  3: 7 | Var__1[M]           *ast.IndexExpr                 | type    : main.Var__1[map[string]interface{}] | type
 005:  3:14 | M                   *ast.Ident                     | type    : map[string]interface{} | type
-006:  4: 6 | Gopx_Var_Cast__0    *ast.Ident                     | value   : func[T main.basetype]() *main.Var__0[T] | value
-007:  4: 6 | Gopx_Var_Cast__0[string] *ast.IndexExpr                 | var     : func() *main.Var__0[string] | variable
+006:  4: 6 | XGox_Var_Cast__0    *ast.Ident                     | value   : func[T main.basetype]() *main.Var__0[T] | value
+007:  4: 6 | XGox_Var_Cast__0[string] *ast.IndexExpr                 | var     : func() *main.Var__0[string] | variable
 008:  4:23 | string              *ast.Ident                     | type    : string | type
-009:  5: 6 | Gopx_Var_Cast__1    *ast.Ident                     | value   : func[T map[string]interface{}]() *main.Var__1[T] | value
-010:  5: 6 | Gopx_Var_Cast__1[M] *ast.IndexExpr                 | var     : func() *main.Var__1[map[string]interface{}] | variable
+009:  5: 6 | XGox_Var_Cast__1    *ast.Ident                     | value   : func[T map[string]interface{}]() *main.Var__1[T] | value
+010:  5: 6 | XGox_Var_Cast__1[M] *ast.IndexExpr                 | var     : func() *main.Var__1[map[string]interface{}] | variable
 011:  5:23 | M                   *ast.Ident                     | type    : map[string]interface{} | type
 == defs ==
 000:  2: 5 | a                   | var main.a main.Var__0[int]
@@ -1739,16 +1739,16 @@ func TestMixedRawNamed(t *testing.T) {
 001:  2:14 | int                 | type int
 002:  3: 7 | Var__1              | type main.Var__1[T map[string]any] struct{val T}
 003:  3:14 | M                   | type main.M = map[string]any
-004:  4: 6 | Gopx_Var_Cast__0    | func main.Gopx_Var_Cast__0[T main.basetype]() *main.Var__0[T]
+004:  4: 6 | XGox_Var_Cast__0    | func main.XGox_Var_Cast__0[T main.basetype]() *main.Var__0[T]
 005:  4:23 | string              | type string
-006:  5: 6 | Gopx_Var_Cast__1    | func main.Gopx_Var_Cast__1[T map[string]any]() *main.Var__1[T]
+006:  5: 6 | XGox_Var_Cast__1    | func main.XGox_Var_Cast__1[T map[string]any]() *main.Var__1[T]
 007:  5:23 | M                   | type main.M = map[string]any`
 	}
-	testGopInfo(t, `
+	testXGoInfo(t, `
 var a Var__0[int]
 var b Var__1[M]
-c := Gopx_Var_Cast__0[string]
-d := Gopx_Var_Cast__1[M]
+c := XGox_Var_Cast__0[string]
+d := XGox_Var_Cast__1[M]
 `, `
 package main
 
@@ -1766,11 +1766,11 @@ type Var__1[T map[string]any] struct {
 	val T
 }
 
-func Gopx_Var_Cast__0[T basetype]() *Var__0[T] {
+func XGox_Var_Cast__0[T basetype]() *Var__0[T] {
 	return new(Var__0[T])
 }
 
-func Gopx_Var_Cast__1[T map[string]any]() *Var__1[T] {
+func XGox_Var_Cast__1[T map[string]any]() *Var__1[T] {
 	return new(Var__1[T])
 }
 `, expect)
@@ -1842,10 +1842,10 @@ func onCloned() {
 003:  7: 4 | int                 | type int
 004:  8: 4 | int                 | type int
 005: 12: 2 | a                   | field a int
-006: 13: 2 | clone               | func github.com/goplus/xgo/cl/internal/spx.Gopt_Sprite_Clone__0(sprite any)
-007: 14: 2 | clone               | func github.com/goplus/xgo/cl/internal/spx.Gopt_Sprite_Clone__1(sprite any, data any)
+006: 13: 2 | clone               | func github.com/goplus/xgo/cl/internal/spx.XGot_Sprite_Clone__0(sprite any)
+007: 14: 2 | clone               | func github.com/goplus/xgo/cl/internal/spx.XGot_Sprite_Clone__1(sprite any, data any)
 008: 14: 8 | info                | type main.info struct{x int; y int}
-009: 15: 2 | clone               | func github.com/goplus/xgo/cl/internal/spx.Gopt_Sprite_Clone__1(sprite any, data any)
+009: 15: 2 | clone               | func github.com/goplus/xgo/cl/internal/spx.XGot_Sprite_Clone__1(sprite any, data any)
 010: 15: 9 | info                | type main.info struct{x int; y int}
 011: 19: 2 | say                 | func (*github.com/goplus/xgo/cl/internal/spx.Sprite).Say(msg string, secs ...float64)
 == overloads ==
@@ -2162,8 +2162,8 @@ func (p *N) Test__1(n int) {
 	}
 }
 
-func TestGopOverloadUses(t *testing.T) {
-	testGopInfo(t, `
+func TestXGoOverloadUses(t *testing.T) {
+	testXGoInfo(t, `
 func MulInt(a, b int) int {
 	return a * b
 }
@@ -2215,7 +2215,7 @@ Mul 100,200,300
 027: 19: 9 | 200                 *ast.BasicLit                  | value   : untyped int = 200 | constant
 028: 19:13 | 300                 *ast.BasicLit                  | value   : untyped int = 300 | constant
 == defs ==
-000:  0: 0 | Gopo_Mul            | const main.Gopo_Mul untyped string
+000:  0: 0 | XGoo_Mul            | const main.XGoo_Mul untyped string
 001:  2: 6 | MulInt              | func main.MulInt(a int, b int) int
 002:  2:13 | a                   | var a int
 003:  2:16 | b                   | var b int
@@ -2250,7 +2250,7 @@ Mul 100,200,300
 000: 18: 1 | Mul                 | func main.Mul(__xgo_overload_args__ interface{_()})
 001: 19: 1 | Mul                 | func main.Mul(__xgo_overload_args__ interface{_()})`)
 
-	testGopInfo(t, `
+	testXGoInfo(t, `
 type foo struct {
 }
 
@@ -2296,7 +2296,7 @@ var d = a.mul(c)
 021: 20: 9 | a.mul(c)            *ast.CallExpr                  | value   : *main.foo | value
 022: 20:15 | c                   *ast.Ident                     | var     : *main.foo | variable
 == defs ==
-000:  0: 0 | Gopo_foo_mul        | const main.Gopo_foo_mul untyped string
+000:  0: 0 | XGoo_foo_mul        | const main.XGoo_foo_mul untyped string
 001:  2: 6 | foo                 | type main.foo struct{}
 002:  5: 7 | a                   | var a *main.foo
 003:  5:15 | mulInt              | func (*main.foo).mulInt(b int) *main.foo
@@ -2335,8 +2335,8 @@ var d = a.mul(c)
 
 }
 
-func TestGopOverloadDecl(t *testing.T) {
-	testGopInfo(t, `
+func TestXGoOverloadDecl(t *testing.T) {
+	testXGoInfo(t, `
 func addInt0() {
 }
 
@@ -2395,7 +2395,7 @@ func init() {
 024: 27: 6 | "hello"             *ast.BasicLit                  | value   : untyped string = "hello" | constant
 025: 27:15 | "world"             *ast.BasicLit                  | value   : untyped string = "world" | constant
 == defs ==
-000:  0: 0 | Gopo_add            | const main.Gopo_add untyped string
+000:  0: 0 | XGoo_add            | const main.XGoo_add untyped string
 001:  2: 6 | addInt0             | func main.addInt0()
 002:  5: 6 | addInt1             | func main.addInt1(i int)
 003:  5:14 | i                   | var i int
@@ -2431,7 +2431,7 @@ func init() {
 001: 26: 2 | add                 | func main.add(__xgo_overload_args__ interface{_()})
 002: 27: 2 | add                 | func main.add(__xgo_overload_args__ interface{_()})`)
 
-	testGopInfo(t, `
+	testXGoInfo(t, `
 func add = (
 	func(a, b int) int {
 		return a + b
@@ -2533,7 +2533,7 @@ func add = (
 015: 13:10 | a + b               *ast.BinaryExpr                | value   : float64 | value
 016: 13:14 | b                   *ast.Ident                     | var     : float64 | variable
 == defs ==
-000:  0: 0 | Gopo_Rect_add       | const main.Gopo_Rect_add untyped string
+000:  0: 0 | XGoo_Rect_add       | const main.XGoo_Rect_add untyped string
 001:  1: 1 | this                | var this *main.Rect
 002:  2: 6 | addInt              | func (*main.Rect).addInt(a int, b int) int
 003:  2:13 | a                   | var a int

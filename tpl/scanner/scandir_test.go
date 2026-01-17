@@ -53,7 +53,7 @@ func testFrom(t *testing.T, pkgDir, sel string) {
 	}
 	testScan(t, pkgDir, in, "tpl.expect", scannertest.Scan)
 	testScan(t, pkgDir, in, "go.expect", scannertest.GoScan)
-	testScan(t, pkgDir, in, "gop.expect", scannertest.GopScan)
+	testScan(t, pkgDir, in, "gop.expect", scannertest.XGoScan)
 }
 
 func testFromDir(t *testing.T, sel, relDir string) {

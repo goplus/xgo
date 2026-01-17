@@ -1,8 +1,8 @@
 package foo
 
-const GopPackage = true
+const XGoPackage = true
 
-const Gopo__T__Gop_Add = ".AddInt,AddString"
+const XGoo__T__XGo_Add = ".AddInt,AddString"
 
 type T int
 

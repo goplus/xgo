@@ -1,8 +1,8 @@
 package foo
 
-const GopPackage = true
+const XGoPackage = true
 
-const Gopo_Add = "AddInt,,AddString"
+const XGoo_Add = "AddInt,,AddString"
 
 // Add doc
 func Add__1(a, b float64) float64 {

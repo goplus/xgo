@@ -28,8 +28,8 @@ import (
 
 const (
 	autoGenFileSuffix   = "_autogen.go"
-	autoGenGopTestFile  = "gop_autogen_test.go"
-	autoGen2GopTestFile = "gop_autogen2_test.go"
+	autoGenXGoTestFile  = "gop_autogen_test.go"
+	autoGen2XGoTestFile = "gop_autogen2_test.go"
 	autoGenXgoTestFile  = "xgo_autogen_test.go"
 	autoGen2XgoTestFile = "xgo_autogen2_test.go"
 )
@@ -49,7 +49,7 @@ func cleanAGFiles(dir string, execAct bool) {
 		if fi.IsDir() {
 			pkgDir := filepath.Join(dir, fname)
 			if fname == ".xgo" || fname == ".gop" {
-				removeGopDir(pkgDir, execAct)
+				removeXGoDir(pkgDir, execAct)
 			} else {
 				cleanAGFiles(pkgDir, execAct)
 			}
@@ -64,7 +64,7 @@ func cleanAGFiles(dir string, execAct bool) {
 		}
 	}
 	autogens := []string{
-		autoGenGopTestFile, autoGen2GopTestFile,
+		autoGenXGoTestFile, autoGen2XGoTestFile,
 		autoGenXgoTestFile, autoGen2XgoTestFile,
 	}
 	for _, autogen := range autogens {
@@ -78,7 +78,7 @@ func cleanAGFiles(dir string, execAct bool) {
 	}
 }
 
-func removeGopDir(dir string, execAct bool) {
+func removeXGoDir(dir string, execAct bool) {
 	fis, err := os.ReadDir(dir)
 	if err != nil {
 		return

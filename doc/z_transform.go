@@ -201,7 +201,7 @@ func transformTypes(ctx *transformCtx, in []*doc.Type) {
 	}
 }
 
-func transformGopo(ctx *transformCtx, name, val string) {
+func transformXGoo(ctx *transformCtx, name, val string) {
 	overload := checkTypeMethod(name[len(gopoPrefix):])
 	parts := strings.Split(val, ",")
 	for idx, part := range parts {
@@ -220,11 +220,11 @@ func transformGopo(ctx *transformCtx, name, val string) {
 
 func transformConstSpec(ctx *transformCtx, vspec *ast.ValueSpec) {
 	name := vspec.Names[0].Name
-	if isGopoConst(name) {
+	if isXGooConst(name) {
 		if lit, ok := vspec.Values[0].(*ast.BasicLit); ok {
 			if lit.Kind == token.STRING {
 				if val, e := strconv.Unquote(lit.Value); e == nil {
-					transformGopo(ctx, name, val)
+					transformXGoo(ctx, name, val)
 				}
 			}
 		}
@@ -232,7 +232,7 @@ func transformConstSpec(ctx *transformCtx, vspec *ast.ValueSpec) {
 }
 
 func transformConst(ctx *transformCtx, in *doc.Value) {
-	if hasGopoConst(in) {
+	if hasXGooConst(in) {
 		for _, spec := range in.Decl.Specs {
 			vspec := spec.(*ast.ValueSpec)
 			transformConstSpec(ctx, vspec)

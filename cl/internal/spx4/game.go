@@ -17,8 +17,8 @@
 package spx4
 
 const (
-	GopPackage = "github.com/goplus/xgo/cl/internal/spx/pkg"
-	Gop_sched  = "Sched,SchedNow"
+	XGoPackage = "github.com/goplus/xgo/cl/internal/spx/pkg"
+	XGo_sched  = "Sched,SchedNow"
 )
 
 type Sound string
@@ -26,7 +26,7 @@ type Sound string
 type MyGame struct {
 }
 
-func Gopt_MyGame_Main(game any, sprites ...Sprite) {
+func XGot_MyGame_Main(game any, sprites ...Sprite) {
 }
 
 func (p *MyGame) Ls(n int) {}
@@ -35,11 +35,11 @@ func (p *MyGame) Capout(doSth func()) (string, error) {
 	return "", nil
 }
 
-func (p *MyGame) Gop_Env(name string) int {
+func (p *MyGame) XGo_Env(name string) int {
 	return 0
 }
 
-func (p *MyGame) Gop_Exec(name string, args ...any) {
+func (p *MyGame) XGo_Exec(name string, args ...any) {
 }
 
 func (p *MyGame) InitGameApp(args ...string) {
@@ -68,7 +68,7 @@ func (p *MyGame) SendMessage(data any) {
 	p.sendMessage(data)
 }
 
-func Gopt_MyGame_Run(game any, resource string) error {
+func XGot_MyGame_Run(game any, resource string) error {
 	return nil
 }
 

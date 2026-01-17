@@ -316,7 +316,7 @@ func TestSaveAbsFile(t *testing.T) {
 	})
 }
 
-func TestGopAutoGen(t *testing.T) {
+func TestXGoAutoGen(t *testing.T) {
 	fset := token.NewFileSet()
 	fs := memfs.SingleFile("/foo", "gop_autogen.go", ``)
 	pkgs, err := ParseFSDir(fset, fs, "/foo", Config{})
@@ -324,7 +324,7 @@ func TestGopAutoGen(t *testing.T) {
 		t.Fatal("ParseFSDir:", err)
 	}
 	if len(pkgs) != 0 {
-		t.Fatal("TestGopAutoGen:", len(pkgs))
+		t.Fatal("TestXGoAutoGen:", len(pkgs))
 	}
 }
 

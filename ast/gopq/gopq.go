@@ -30,7 +30,7 @@ import (
 // -----------------------------------------------------------------------------
 
 const (
-	GopPackage = true
+	XGoPackage = true
 )
 
 var (
@@ -272,7 +272,7 @@ func (p NodeSet) CompositeLit__1(name string) NodeSet {
 
 // -----------------------------------------------------------------------------
 
-func (p NodeSet) Gop_Enum(callback func(node NodeSet)) {
+func (p NodeSet) XGo_Enum(callback func(node NodeSet)) {
 	if p.Err == nil {
 		p.Data.ForEach(func(node Node) error {
 			t := NodeSet{Data: &oneNode{node}}
@@ -283,7 +283,7 @@ func (p NodeSet) Gop_Enum(callback func(node NodeSet)) {
 }
 
 func (p NodeSet) ForEach(callback func(node NodeSet)) {
-	p.Gop_Enum(callback)
+	p.XGo_Enum(callback)
 }
 
 // -----------------------------------------------------------------------------

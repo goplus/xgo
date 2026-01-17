@@ -43,7 +43,7 @@ func gopIdents(name string) []*ast.Ident {
 	return []*ast.Ident{{Name: name}}
 }
 
-func TestGopFormat(t *testing.T) {
+func TestXGoFormat(t *testing.T) {
 	const (
 		mode = printer.UseSpaces | printer.TabIndent
 	)

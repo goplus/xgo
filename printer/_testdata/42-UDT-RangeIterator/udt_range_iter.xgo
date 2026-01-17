@@ -20,7 +20,7 @@ func newFoo() *foo {
 	return &foo{key: [3, 7], val: ["Hi", "XGo"]}
 }
 
-func (p *foo) Gop_Enum() *fooIter {
+func (p *foo) XGo_Enum() *fooIter {
 	return &fooIter{data: p}
 }
 

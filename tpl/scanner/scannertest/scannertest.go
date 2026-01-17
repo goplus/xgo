@@ -49,9 +49,9 @@ func Scan(w io.Writer, in []byte) {
 
 // -----------------------------------------------------------------------------
 
-// GopScan scans the input using the XGo standard library scanner and
+// XGoScan scans the input using the XGo standard library scanner and
 // writes the tokens to the writer.
-func GopScan(w io.Writer, in []byte) {
+func XGoScan(w io.Writer, in []byte) {
 	var s gopscanner.Scanner
 	fset := gotoken.NewFileSet()
 	f := fset.AddFile("", -1, len(in))

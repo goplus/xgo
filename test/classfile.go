@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	GopPackage = true
+	XGoPackage = true
 )
 
 // -----------------------------------------------------------------------------
@@ -48,8 +48,8 @@ func (p Case) Run(name string, f func(t *testing.T)) bool {
 	return p.t.Run(name, f)
 }
 
-// Gopt_Case_TestMain is required by XGo compiler as the test case entry.
-func Gopt_Case_TestMain(c interface{ initCase(t *testing.T) }, t *testing.T) {
+// XGot_Case_TestMain is required by XGo compiler as the test case entry.
+func XGot_Case_TestMain(c interface{ initCase(t *testing.T) }, t *testing.T) {
 	c.initCase(t)
 	c.(interface{ Main() }).Main()
 }
@@ -68,8 +68,8 @@ func (p *App) initApp(m *testing.M) {
 // M returns the *testing.M object.
 func (p App) M() *testing.M { return p.m }
 
-// Gopt_App_TestMain is required by XGo compiler as the entry of an XGo testing project.
-func Gopt_App_TestMain(app interface{ initApp(m *testing.M) }, m *testing.M) {
+// XGot_App_TestMain is required by XGo compiler as the entry of an XGo testing project.
+func XGot_App_TestMain(app interface{ initApp(m *testing.M) }, m *testing.M) {
 	app.initApp(m)
 	if me, ok := app.(interface{ MainEntry() }); ok {
 		me.MainEntry()

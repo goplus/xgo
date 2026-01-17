@@ -1,7 +1,7 @@
 package mcp
 
 const (
-	GopPackage = true
+	XGoPackage = true
 )
 
 type Game struct {
@@ -47,5 +47,5 @@ type ResourceProto interface {
 	Main()
 }
 
-func Gopt_Game_Main(game interface{ initGame() }, resources []ResourceProto, tools []ToolProto, prompts []PromptProto) {
+func XGot_Game_Main(game interface{ initGame() }, resources []ResourceProto, tools []ToolProto, prompts []PromptProto) {
 }

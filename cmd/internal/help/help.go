@@ -33,7 +33,7 @@ import (
 
 // Help implements the 'help' command.
 func Help(w io.Writer, args []string) {
-	cmd := base.Gop
+	cmd := base.XGo
 Args:
 	for i, arg := range args {
 		for _, sub := range cmd.Commands {

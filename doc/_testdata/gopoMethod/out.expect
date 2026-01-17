@@ -8,13 +8,13 @@ Recv: T
 Doc: AddInt doc
 
 func (p T) AddInt(b int) *T
-- Method Gop_Add -
+- Method XGo_Add -
 Recv: T
 Doc: AddInt doc
 
-func (p T) Gop_Add(b int) *T
-- Method Gop_Add -
+func (p T) XGo_Add(b int) *T
+- Method XGo_Add -
 Recv: *T
 Doc: AddString doc
 
-func (this *T) Gop_Add(b string) *T
+func (this *T) XGo_Add(b string) *T

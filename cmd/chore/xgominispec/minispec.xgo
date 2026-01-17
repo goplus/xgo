@@ -24,7 +24,7 @@ import (
 	"xgo/x/xgoprojs"
 )
 
-func isGopFile(file string) bool {
+func isXGoFile(file string) bool {
 	if len(file) > 4 {
 		switch file[len(file)-4:] {
 		case ".xgo", ".gop", ".gox", ".gsh", ".spx", ".yap":
@@ -60,7 +60,7 @@ func parseDir(dir string, recursively, dumpAST bool) (nErr int) {
 			} else if file != dir {
 				return filepath.SkipDir
 			}
-		} else if !fname.hasPrefix("_") && isGopFile(fname) {
+		} else if !fname.hasPrefix("_") && isXGoFile(fname) {
 			fprintln os.Stderr, "\n==> Parsing ${file}"
 			f, err := mini.parseFile(nil, file, nil)
 			if err != nil {

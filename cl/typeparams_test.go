@@ -768,7 +768,7 @@ func main() {
 `)
 }
 
-func TestGoptLambdaFunc(t *testing.T) {
+func TestXGotLambdaFunc(t *testing.T) {
 	gopClTest(t, `
 import "github.com/goplus/xgo/cl/internal/overload/bar"
 
@@ -797,11 +797,11 @@ type Message struct {
 
 func main() {
 	p := &bar.Player{}
-	bar.Gopt_Player_Gopx_OnCmd__0[Message](p, func(msg Message) error {
+	bar.XGot_Player_XGox_OnCmd__0[Message](p, func(msg Message) error {
 		fmt.Println(msg.info)
 		return nil
 	})
-	bar.Gopt_Player_Gopx_OnCmd__1[int, Message](p, 100, func(n int, msg Message) error {
+	bar.XGot_Player_XGox_OnCmd__1[int, Message](p, 100, func(n int, msg Message) error {
 		fmt.Println(n, msg.info)
 		return nil
 	})
@@ -809,7 +809,7 @@ func main() {
 `)
 }
 
-func TestGoptLambdaError(t *testing.T) {
+func TestXGotLambdaError(t *testing.T) {
 	codeErrorTest(t, `bar.xgo:8:9: 100 not type`, `
 import "github.com/goplus/xgo/cl/internal/overload/bar"
 

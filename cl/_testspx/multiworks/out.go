@@ -24,7 +24,7 @@ func (this *Game) Main() {
 	_xgo_obj1 := &foo{Game: this}
 	this.foo = _xgo_obj1
 	_xgo_lst2 := []mcp.PromptProto{_xgo_obj1}
-	mcp.Gopt_Game_Main(this, nil, _xgo_lst1, _xgo_lst2)
+	mcp.XGot_Game_Main(this, nil, _xgo_lst1, _xgo_lst2)
 }
 func (this *foo) Main(_xgo_arg0 *mcp.Tool) string {
 	this.Prompt.Main(_xgo_arg0)

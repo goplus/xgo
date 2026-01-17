@@ -119,7 +119,7 @@ func TestFindGoModFileInGoModDir(t *testing.T) {
 	})
 }
 
-func TestFindGoModFileInGopRoot(t *testing.T) {
+func TestFindGoModFileInXGoRoot(t *testing.T) {
 	originDir, _ := os.Getwd()
 	origiExecutable := executable
 	home := filepath.Join(os.TempDir(), "test_home")
@@ -282,9 +282,9 @@ func TestFindGoModFileInGopRoot(t *testing.T) {
 		})
 
 		tt.Run("the executable's parent dir is a valid xgo root dir", func(tt *testing.T) {
-			newGopRoot2 := filepath.Join(root, "new_xgo_root2")
-			makeValidXgoRoot(newGopRoot2)
-			bin := filepath.Join(newGopRoot2, "bin")
+			newXGoRoot2 := filepath.Join(root, "new_xgo_root2")
+			makeValidXgoRoot(newXGoRoot2)
+			bin := filepath.Join(newXGoRoot2, "bin")
 			exePath := filepath.Join(bin, "run")
 			os.Mkdir(bin, 0755)
 			writeDummyFile(exePath)
@@ -295,13 +295,13 @@ func TestFindGoModFileInGopRoot(t *testing.T) {
 
 			modfile, noCacheFile, err := findGoModFile(src)
 
-			if err != nil || !noCacheFile || modfile != filepath.Join(newGopRoot2, "go.mod") {
+			if err != nil || !noCacheFile || modfile != filepath.Join(newXGoRoot2, "go.mod") {
 				tt.Fatal("should found go.mod in new_xgo_root2/, but got:", modfile, noCacheFile, err)
 			}
 		})
 
 		tt.Run("set XGOROOT to an invalid xgo root dir", func(tt *testing.T) {
-			newGopRoot3 := filepath.Join(root, "new_xgo_root3")
+			newXGoRoot3 := filepath.Join(root, "new_xgo_root3")
 
 			defer func() {
 				r := recover()
@@ -310,18 +310,18 @@ func TestFindGoModFileInGopRoot(t *testing.T) {
 				}
 			}()
 
-			os.Setenv("XGOROOT", newGopRoot3)
+			os.Setenv("XGOROOT", newXGoRoot3)
 			findGoModFile(src)
 		})
 
 		tt.Run("set XGOROOT to a valid xgo root dir", func(tt *testing.T) {
-			newGopRoot4 := filepath.Join(root, "new_xgo_root4")
-			makeValidXgoRoot(newGopRoot4)
+			newXGoRoot4 := filepath.Join(root, "new_xgo_root4")
+			makeValidXgoRoot(newXGoRoot4)
 
-			os.Setenv("XGOROOT", newGopRoot4)
+			os.Setenv("XGOROOT", newXGoRoot4)
 			modfile, noCacheFile, err := findGoModFile(src)
 
-			if err != nil || !noCacheFile || modfile != filepath.Join(newGopRoot4, "go.mod") {
+			if err != nil || !noCacheFile || modfile != filepath.Join(newXGoRoot4, "go.mod") {
 				tt.Fatal("should found go.mod in new_xgo_root3/, but got:", modfile, noCacheFile, err)
 			}
 		})

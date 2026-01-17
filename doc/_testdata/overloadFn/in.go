@@ -1,6 +1,6 @@
 package foo
 
-const GopPackage = true
+const XGoPackage = true
 
 // Bar doc
 func Bar__0() {

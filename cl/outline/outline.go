@@ -241,9 +241,9 @@ func (p Package) Outline(withUnexported ...bool) (ret *All) {
 			if !all {
 				ret.checkUsedSig(sig)
 			}
-			if name, ok := checkGoptFunc(o.Name()); ok {
+			if name, ok := checkXGotFunc(o.Name()); ok {
 				if named, ok := ret.lookupNamed(pkg, name); ok {
-					named.GoptFuncs = append(named.GoptFuncs, Func{v, p.docs})
+					named.XGotFuncs = append(named.XGotFuncs, Func{v, p.docs})
 					continue
 				}
 			}
@@ -257,8 +257,8 @@ func (p Package) Outline(withUnexported ...bool) (ret *All) {
 				named.Helpers = append(named.Helpers, Func{v, p.docs})
 			}
 		case *types.Const:
-			if name := v.Name(); strings.HasPrefix(name, "Gop") || strings.HasPrefix(name, "XGo") {
-				if name == "GopPackage" || name == "XGoPackage" || name == "Gop_sched" {
+			if name := v.Name(); strings.HasPrefix(name, "XGo") || strings.HasPrefix(name, "XGo") {
+				if name == "XGoPackage" || name == "XGoPackage" || name == "XGo_sched" {
 					continue
 				}
 			}
@@ -372,10 +372,10 @@ func CheckOverload(obj types.Object) (name string, fn *types.Func, ok bool) {
 }
 
 const (
-	goptPrefix = "Gopt_"
+	goptPrefix = "XGot_"
 )
 
-func isGoptFunc(name string) bool {
+func isXGotFunc(name string) bool {
 	return strings.HasPrefix(name, goptPrefix)
 }
 
@@ -384,8 +384,8 @@ func isOverloadFunc(name string) bool {
 	return n > 3 && name[n-3:n-1] == "__"
 }
 
-func checkGoptFunc(name string) (string, bool) {
-	if isGoptFunc(name) {
+func checkXGotFunc(name string) (string, bool) {
+	if isXGotFunc(name) {
 		name = name[len(goptPrefix):]
 		if pos := strings.IndexByte(name, '_'); pos > 0 {
 			return name[:pos], true
@@ -407,7 +407,7 @@ type TypeName struct {
 	*types.TypeName
 	Consts    []Const
 	Creators  []Func
-	GoptFuncs []Func
+	XGotFuncs []Func
 	Helpers   []Func
 	isUsed    bool
 }

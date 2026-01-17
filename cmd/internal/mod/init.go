@@ -89,8 +89,8 @@ func goMainVer() string {
 }
 
 func llgoLibVer() string {
-	if modGop, e1 := xgomod.LoadFrom(filepath.Join(env.XGOROOT(), "go.mod"), ""); e1 == nil {
-		if pkg, e2 := modGop.Lookup("github.com/goplus/lib"); e2 == nil {
+	if modXGo, e1 := xgomod.LoadFrom(filepath.Join(env.XGOROOT(), "go.mod"), ""); e1 == nil {
+		if pkg, e2 := modXGo.Lookup("github.com/goplus/lib"); e2 == nil {
 			return pkg.Real.Version
 		}
 	}

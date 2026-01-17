@@ -19,7 +19,7 @@ func (this *Game) MainEntry() {
 	this.InitGameApp()
 }
 func (this *Game) Main() {
-	spx.Gopt_MyGame_Main(this)
+	spx.XGot_MyGame_Main(this)
 }
 func (this *Kai) onMsg(msg string) {
 	for {

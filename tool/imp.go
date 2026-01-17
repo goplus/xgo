@@ -59,9 +59,9 @@ func NewImporter(mod *xgomod.Module, xgo *env.XGo, fset *token.FileSet) *Importe
 		defaultFlags = GenFlagPrompt | GenFlagPrintError
 	)
 	if mod == nil || !mod.HasModfile() {
-		if modGop, e := xgomod.LoadFrom(filepath.Join(xgo.Root, "go.mod"), ""); e == nil {
-			modGop.ImportClasses()
-			mod = modGop
+		if modXGo, e := xgomod.LoadFrom(filepath.Join(xgo.Root, "go.mod"), ""); e == nil {
+			modXGo.ImportClasses()
+			mod = modXGo
 		} else {
 			mod = xgomod.Default
 		}

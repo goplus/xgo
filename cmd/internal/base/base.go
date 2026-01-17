@@ -49,10 +49,10 @@ type Command struct {
 	Commands []*Command
 }
 
-// Gop command
-var Gop = &Command{
+// XGo command
+var XGo = &Command{
 	UsageLine: "gop",
-	Short:     `Gop is a tool for managing XGo source code.`,
+	Short:     `XGo is a tool for managing XGo source code.`,
 	// Commands initialized in package main
 }
 

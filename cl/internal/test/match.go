@@ -17,7 +17,7 @@
 package test
 
 const (
-	GopPackage = true
+	XGoPackage = true
 )
 
 type basetype interface {
@@ -29,11 +29,11 @@ type Case struct {
 }
 
 const (
-	Gopo_Gopt_Case_Match = "Gopt_Case_MatchTBase,Gopt_Case_MatchAny"
+	XGoo_XGot_Case_Match = "XGot_Case_MatchTBase,XGot_Case_MatchAny"
 )
 
-func Gopt_Case_MatchTBase[T basetype](t CaseT, got, expected T, name ...string) {
+func XGot_Case_MatchTBase[T basetype](t CaseT, got, expected T, name ...string) {
 }
 
-func Gopt_Case_MatchAny(t CaseT, got, expected any, name ...string) {
+func XGot_Case_MatchAny(t CaseT, got, expected any, name ...string) {
 }

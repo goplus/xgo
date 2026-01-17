@@ -22,10 +22,10 @@ import (
 )
 
 const (
-	goptPrefix = "Gopt_" // template method
-	gopoPrefix = "Gopo_" // overload function/method
-	gopxPrefix = "Gopx_" // type as parameters function/method
-	gopPackage = "GopPackage"
+	goptPrefix = "XGot_" // template method
+	gopoPrefix = "XGoo_" // overload function/method
+	gopxPrefix = "XGox_" // type as parameters function/method
+	gopPackage = "XGoPackage"
 	xgoPackage = "XGoPackage"
 )
 
@@ -40,13 +40,13 @@ func isXGoPackage(in *doc.Package) bool {
 	return false
 }
 
-func isGopoConst(name string) bool {
+func isXGooConst(name string) bool {
 	return strings.HasPrefix(name, gopoPrefix)
 }
 
-func hasGopoConst(in *doc.Value) bool {
+func hasXGooConst(in *doc.Value) bool {
 	for _, name := range in.Names {
-		if isGopoConst(name) {
+		if isXGooConst(name) {
 			return true
 		}
 	}

@@ -1052,9 +1052,9 @@ type Start struct {
 type Foo struct {
 }
 
-// Gop_Enum(proc func(val ValType)) or:
-// Gop_Enum(proc func(key KeyType, val ValType))
-func (p *Foo) Gop_Enum(proc func(key int, val string)) {
+// XGo_Enum(proc func(val ValType)) or:
+// XGo_Enum(proc func(key KeyType, val ValType))
+func (p *Foo) XGo_Enum(proc func(key int, val string)) {
     // ...
 }
 
@@ -1070,7 +1070,7 @@ for k, v in foo {
 echo {v: k for k, v in foo}
 ```
 
-**Note: you can't use break/continue or return statements in for range of udt.Gop_Enum(callback).**
+**Note: you can't use break/continue or return statements in for range of udt.XGo_Enum(callback).**
 
 <h5 align="right"><a href="#table-of-contents">⬆ back to toc</a></h5>
 
@@ -1090,8 +1090,8 @@ func (p *FooIter) Next() (key int, val string, ok bool) {
 type Foo struct {
 }
 
-// Gop_Enum() Iterator
-func (p *Foo) Gop_Enum() *FooIter {
+// XGo_Enum() Iterator
+func (p *Foo) XGo_Enum() *FooIter {
     // ...
 }
 

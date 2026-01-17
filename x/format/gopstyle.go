@@ -30,7 +30,7 @@ import (
 
 // -----------------------------------------------------------------------------
 
-func GopstyleSource(src []byte, filename ...string) (ret []byte, err error) {
+func XGostyleSource(src []byte, filename ...string) (ret []byte, err error) {
 	var fname string
 	if filename != nil {
 		fname = filename[0]
@@ -38,7 +38,7 @@ func GopstyleSource(src []byte, filename ...string) (ret []byte, err error) {
 	fset := token.NewFileSet()
 	var f *ast.File
 	if f, err = parser.ParseFile(fset, fname, src, parser.ParseComments); err == nil {
-		Gopstyle(f)
+		XGostyle(f)
 		var buf bytes.Buffer
 		if err = format.Node(&buf, fset, f); err == nil {
 			ret = buf.Bytes()
@@ -49,7 +49,7 @@ func GopstyleSource(src []byte, filename ...string) (ret []byte, err error) {
 
 // -----------------------------------------------------------------------------
 
-func Gopstyle(file *ast.File) {
+func XGostyle(file *ast.File) {
 	if identEqual(file.Name, "main") {
 		file.NoPkgDecl = true
 	}

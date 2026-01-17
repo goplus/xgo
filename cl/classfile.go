@@ -174,7 +174,7 @@ func (p *gmxProject) getGameClass(ctx *pkgCtx) string {
 func (p *gmxProject) hasMain() bool {
 	if !p.hasMain_ {
 		imps := p.pkgImps
-		p.hasMain_ = len(imps) > 0 && imps[0].TryRef("GopTestClass") != nil
+		p.hasMain_ = len(imps) > 0 && imps[0].TryRef("XGoTestClass") != nil
 	}
 	return p.hasMain_
 }
@@ -293,7 +293,7 @@ func loadClass(ctx *pkgCtx, pkg *gogen.Package, file string, f *ast.File, conf *
 			p.game, p.gameIsPtr = spxRef(spx, gt.Class)
 			spriteFeatures(p.game, sprites)
 		}
-		if x := getStringConst(spx, "Gop_sched"); x != "" {
+		if x := getStringConst(spx, "XGo_sched"); x != "" {
 			p.scheds, p.hasScheds = strings.SplitN(x, ",", 2), true
 		}
 	}

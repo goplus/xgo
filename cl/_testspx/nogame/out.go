@@ -11,7 +11,7 @@ type MyGame struct {
 }
 
 func (this *MyGame) Main() {
-	spx.Gopt_MyGame_Main(this)
+	spx.XGot_MyGame_Main(this)
 }
 func (this *bar) Main() {
 }

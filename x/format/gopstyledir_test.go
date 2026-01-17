@@ -59,7 +59,7 @@ func testFrom(t *testing.T, pkgDir, sel string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ret, err := GopstyleSource(src, file)
+	ret, err := XGostyleSource(src, file)
 	if err != nil {
 		t.Fatal(err)
 	}
