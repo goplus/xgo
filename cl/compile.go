@@ -759,7 +759,7 @@ func initGopPkg(ctx *pkgCtx, pkg *gogen.Package, gopSyms map[string]bool) {
 			ctx.loadType(lbi.(*ast.Ident).Name)
 		}
 	}
-	gogen.InitThisGopPkgEx(pkg.Types, ctx.overpos)
+	gogen.InitXGoPackageEx(pkg.Types, ctx.overpos)
 }
 
 func loadFile(ctx *pkgCtx, f *ast.File) {
