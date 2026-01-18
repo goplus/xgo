@@ -74,10 +74,10 @@ const (
 const (
 	objNormal = iota
 	objPkgRef
-	objGopExecOrEnv
+	objXGoExecOrEnv
 
-	objGopEnv  = objGopExecOrEnv
-	objGopExec = objGopExecOrEnv
+	objXGoEnv  = objXGoExecOrEnv
+	objXGoExec = objXGoExecOrEnv
 )
 
 func compileIdent(ctx *blockCtx, ident *ast.Ident, flags int) (pkg gogen.PkgRef, kind int) {
@@ -151,14 +151,14 @@ func compileIdent(ctx *blockCtx, ident *ast.Ident, flags int) (pkg gogen.PkgRef,
 		}
 		oldo, o = o, obj
 	} else if o == nil {
-		// for support Gop_Exec, see TestSpxGopExec
-		if (clCommandIdent&flags) != 0 && recv != nil && xgoMember(cb, recv, "Gop_Exec", ident) == nil {
-			kind = objGopExec
+		// for support XGo_Exec, see TestSpxXGoExec
+		if (clCommandIdent&flags) != 0 && recv != nil && xgoOp(cb, recv, "XGo_Exec", "Gop_Exec", ident) == nil {
+			kind = objXGoExec
 			return
 		}
-		// for support Gop_Env, see TestSpxGopEnv
-		if (clIdentInStringLitEx&flags) != 0 && recv != nil && xgoMember(cb, recv, "Gop_Env", ident) == nil {
-			kind = objGopEnv
+		// for support XGo_Env, see TestSpxGopEnv
+		if (clIdentInStringLitEx&flags) != 0 && recv != nil && xgoOp(cb, recv, "XGo_Env", "Gop_Env", ident) == nil {
+			kind = objXGoEnv
 			return
 		}
 		if (clIdentGoto & flags) != 0 {
@@ -217,7 +217,7 @@ func compileEnvExpr(ctx *blockCtx, v *ast.EnvExpr) {
 	cb := ctx.cb
 	if ctx.isClass { // in an XGo class file
 		if recv := classRecv(cb); recv != nil {
-			if xgoMember(cb, recv, "Gop_Env", v) == nil {
+			if xgoOp(cb, recv, "XGo_Env", "Gop_Env", v) == nil {
 				name := v.Name
 				cb.Val(name.Name, name).CallWith(1, 0, v)
 				return
@@ -236,8 +236,12 @@ func classRecv(cb *gogen.CodeBuilder) *types.Var {
 	return nil
 }
 
-func xgoMember(cb *gogen.CodeBuilder, recv *types.Var, op string, src ...ast.Node) error {
-	_, e := cb.Val(recv).Member(op, gogen.MemberFlagVal, src...)
+func xgoOp(cb *gogen.CodeBuilder, recv *types.Var, op1, op2 string, src ...ast.Node) error {
+	cb.Val(recv)
+	kind, e := cb.Member(op1, gogen.MemberFlagVal, src...)
+	if kind == gogen.MemberInvalid {
+		_, e = cb.Member(op2, gogen.MemberFlagVal, src...)
+	}
 	return e
 }
 
@@ -316,19 +320,19 @@ func compileExpr(ctx *blockCtx, expr ast.Expr, inFlags ...int) {
 	case *ast.Ident:
 		flags, cmdNoArgs := identOrSelectorFlags(inFlags)
 		if cmdNoArgs {
-			flags |= clCommandIdent // for support Gop_Exec, see TestSpxGopExec
+			flags |= clCommandIdent // for support XGo_Exec, see TestSpxXGoExec
 		}
 		_, kind := compileIdent(ctx, v, flags)
-		if cmdNoArgs || kind == objGopExecOrEnv {
+		if cmdNoArgs || kind == objXGoExecOrEnv {
 			cb := ctx.cb
-			if kind == objGopExecOrEnv {
+			if kind == objXGoExecOrEnv {
 				cb.Val(v.Name, v)
 			} else {
 				err := callCmdNoArgs(ctx, expr, false)
 				if err == nil {
 					return
 				}
-				if !(ctx.isClass && tryGopExec(cb, v)) {
+				if !(ctx.isClass && tryXGoExec(cb, v)) {
 					panic(err)
 				}
 			}
@@ -672,10 +676,10 @@ func compileCallExpr(ctx *blockCtx, v *ast.CallExpr, inFlags int) {
 	var ifn *ast.Ident
 	switch fn := v.Fun.(type) {
 	case *ast.Ident:
-		if v.IsCommand() { // for support Gop_Exec, see TestSpxGopExec
+		if v.IsCommand() { // for support XGo_Exec, see TestSpxXGoExec
 			inFlags |= clCommandIdent
 		}
-		if _, kind := compileIdent(ctx, fn, clIdentAllowBuiltin|inFlags); kind == objGopExec {
+		if _, kind := compileIdent(ctx, fn, clIdentAllowBuiltin|inFlags); kind == objXGoExec {
 			args := make([]ast.Expr, 1, len(v.Args)+1)
 			args[0] = toBasicLit(fn)
 			args = append(args, v.Args...)
@@ -745,7 +749,7 @@ func compileCallExpr(ctx *blockCtx, v *ast.CallExpr, inFlags int) {
 		stk.SetLen(base)
 		fn = fn.next
 	}
-	if ifn != nil && builtinOrGopExec(ctx, ifn, v, flags) == nil {
+	if ifn != nil && builtinOrXGoExec(ctx, ifn, v, flags) == nil {
 		return
 	}
 	panic(err)
@@ -839,8 +843,8 @@ func toBasicLit(fn *ast.Ident) *ast.BasicLit {
 }
 
 // maybe builtin new/delete: see TestSpxNewObj, TestMayBuiltinDelete
-// maybe Gop_Exec: see TestSpxGopExec
-func builtinOrGopExec(ctx *blockCtx, ifn *ast.Ident, v *ast.CallExpr, flags gogen.InstrFlags) error {
+// maybe XGo_Exec: see TestSpxXGoExec
+func builtinOrXGoExec(ctx *blockCtx, ifn *ast.Ident, v *ast.CallExpr, flags gogen.InstrFlags) error {
 	cb := ctx.cb
 	switch name := ifn.Name; name {
 	case "new", "delete":
@@ -848,18 +852,18 @@ func builtinOrGopExec(ctx *blockCtx, ifn *ast.Ident, v *ast.CallExpr, flags goge
 		cb.Val(ctx.pkg.Builtin().Ref(name), ifn)
 		return fnCall(ctx, v, flags, 0)
 	default:
-		// for support Gop_Exec, see TestSpxGopExec
-		if v.IsCommand() && ctx.isClass && tryGopExec(cb, ifn) {
+		// for support XGo_Exec, see TestSpxXGoExec
+		if v.IsCommand() && ctx.isClass && tryXGoExec(cb, ifn) {
 			return fnCall(ctx, v, flags, 1)
 		}
 	}
 	return syscall.ENOENT
 }
 
-func tryGopExec(cb *gogen.CodeBuilder, ifn *ast.Ident) bool {
+func tryXGoExec(cb *gogen.CodeBuilder, ifn *ast.Ident) bool {
 	if recv := classRecv(cb); recv != nil {
 		cb.InternalStack().PopN(1)
-		if xgoMember(cb, recv, "Gop_Exec", ifn) == nil {
+		if xgoOp(cb, recv, "XGo_Exec", "Gop_Exec", ifn) == nil {
 			cb.Val(ifn.Name, ifn)
 			return true
 		}

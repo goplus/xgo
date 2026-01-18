@@ -176,10 +176,10 @@ func TestCompileStmt(t *testing.T) {
 	compileStmt(ctx, &ast.BadStmt{})
 }
 
-func TestTryGopExec(t *testing.T) {
+func TestTryXGoExec(t *testing.T) {
 	pkg := gogen.NewPackage("", "foo", goxConf)
-	if tryGopExec(pkg.CB(), nil) {
-		t.Fatal("tryGopExec")
+	if tryXGoExec(pkg.CB(), nil) {
+		t.Fatal("tryXGoExec")
 	}
 }
 

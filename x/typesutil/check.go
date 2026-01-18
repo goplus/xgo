@@ -204,7 +204,7 @@ func (p *Checker) Files(goFiles []*goast.File, xgoFiles []*ast.File) (err error)
 		// TODO(xsw): how to process error?
 		CorrectTypesInfo(scope, objMap, p.xgoInfo.Uses)
 		if opts.UpdateGoTypesOverload {
-			gogen.InitThisGopPkg(pkgTypes)
+			gogen.InitXGoPackage(pkgTypes)
 		}
 	}
 	return
