@@ -24,7 +24,6 @@ import (
 	"github.com/goplus/gogen"
 	"github.com/goplus/xgo/cl"
 	"github.com/goplus/xgo/cl/cltest"
-	"github.com/goplus/xgo/cl/internal/typesalias"
 )
 
 const (
@@ -48,7 +47,7 @@ func init() {
 		NoFileLine:    false,
 		NoAutoGenMain: true,
 	}
-	gotypesalias = typesalias.Support // cltest.EnableTypesalias()
+	gotypesalias = cltest.EnableTypesalias()
 	go1point = cltest.Go1Point()
 }
 

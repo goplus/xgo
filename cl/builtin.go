@@ -82,6 +82,15 @@ const (
 	osxPkgPath = "github.com/qiniu/x/osx"
 )
 
+func getXGo_ninteger(ng gogen.PkgRef) types.Object {
+	scope := ng.Types.Scope()
+	obj := scope.Lookup("XGo_ninteger")
+	if obj == nil {
+		obj = scope.Lookup("Gop_integer") // for backward compatibility
+	}
+	return obj
+}
+
 func (ctx *pkgCtx) newBuiltinDefault(pkg *gogen.Package, conf *gogen.Config) *types.Package {
 	builtin := types.NewPackage("", "")
 	fmt := pkg.Import("fmt")
@@ -97,8 +106,12 @@ func (ctx *pkgCtx) newBuiltinDefault(pkg *gogen.Package, conf *gogen.Config) *ty
 	if ng.Types != nil {
 		initMathBig(pkg, conf, ng)
 		if typesalias.Support {
-			conf.EnableTypesalias = true
-			ctx.featTypesAlias = true
+			if obj := getXGo_ninteger(ng); obj != nil {
+				if _, ok := obj.Type().(*types.Basic); !ok {
+					conf.EnableTypesalias = true
+					ctx.featTypesAlias = true
+				}
+			}
 		}
 	}
 	initBuiltin(pkg, builtin, os, fmt, ng, osx, buil, reflect)

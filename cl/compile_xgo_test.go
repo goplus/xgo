@@ -980,8 +980,8 @@ var a Var__0[int]
 var b Var__1[M]
 
 func main() {
-	c := Gopx_Var_Cast__0[string]()
-	d := Gopx_Var_Cast__1[M]()
+	c := XGox_Var_Cast__0[string]()
+	d := XGox_Var_Cast__1[M]()
 }
 `
 	} else {
@@ -991,8 +991,8 @@ var a Var__0[int]
 var b Var__1[map[string]interface{}]
 
 func main() {
-	c := Gopx_Var_Cast__0[string]()
-	d := Gopx_Var_Cast__1[map[string]interface{}]()
+	c := XGox_Var_Cast__0[string]()
+	d := XGox_Var_Cast__1[map[string]interface{}]()
 }
 `
 	}
@@ -1012,11 +1012,11 @@ type Var__1[T map[string]any] struct {
 	val T
 }
 
-func Gopx_Var_Cast__0[T basetype]() *Var__0[T] {
+func XGox_Var_Cast__0[T basetype]() *Var__0[T] {
 	return new(Var__0[T])
 }
 
-func Gopx_Var_Cast__1[T map[string]any]() *Var__1[T] {
+func XGox_Var_Cast__1[T map[string]any]() *Var__1[T] {
 	return new(Var__1[T])
 }
 `, `
@@ -1183,23 +1183,23 @@ type basetype interface {
 	int | string
 }
 
-func Gopx_Row__0[T basetype](name string) {
+func XGox_Row__0[T basetype](name string) {
 }
 
-func Gopx_Row__1[Array any](v int) {
+func XGox_Row__1[Array any](v int) {
 }
 
-func Gopx_Col[T any](name string) {
+func XGox_Col[T any](name string) {
 	fmt.Printf("%v: %s\n", reflect.TypeOf((*T)(nil)).Elem(), name)
 }
 
 type Table struct {
 }
 
-func Gopt_Table_Gopx_Col__0[T basetype](p *Table, name string) {
+func Gopt_Table_XGox_Col__0[T basetype](p *Table, name string) {
 }
 
-func Gopt_Table_Gopx_Col__1[Array any](p *Table, v int) {
+func Gopt_Table_XGox_Col__1[Array any](p *Table, v int) {
 }
 `, `
 var tbl *Table
@@ -1216,11 +1216,11 @@ tbl.col int, 100
 var tbl *Table
 
 func main() {
-	Gopx_Col[string]("name")
-	Gopx_Col[int]("age")
-	Gopx_Row__1[string](100)
-	Gopt_Table_Gopx_Col__0[string](tbl, "foo")
-	Gopt_Table_Gopx_Col__1[int](tbl, 100)
+	XGox_Col[string]("name")
+	XGox_Col[int]("age")
+	XGox_Row__1[string](100)
+	Gopt_Table_XGox_Col__0[string](tbl, "foo")
+	Gopt_Table_XGox_Col__1[int](tbl, 100)
 }
 `)
 }
@@ -1519,14 +1519,14 @@ a := foo.new(100)
 
 type foo int
 
-func Gops_foo_New(a int) *foo {
+func XGos_foo_New(a int) *foo {
 	return new(foo)
 }
-func Gops__foo___add() *foo {
+func XGos__foo___add() *foo {
 	return new(foo)
 }
 func main() {
-	a := Gops_foo_New(100)
+	a := XGos_foo_New(100)
 }
 `)
 }
