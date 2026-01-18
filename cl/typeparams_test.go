@@ -797,11 +797,11 @@ type Message struct {
 
 func main() {
 	p := &bar.Player{}
-	bar.Gopt_Player_Gopx_OnCmd__0[Message](p, func(msg Message) error {
+	bar.XGot_Player_XGox_OnCmd__0[Message](p, func(msg Message) error {
 		fmt.Println(msg.info)
 		return nil
 	})
-	bar.Gopt_Player_Gopx_OnCmd__1[int, Message](p, 100, func(n int, msg Message) error {
+	bar.XGot_Player_XGox_OnCmd__1[int, Message](p, 100, func(n int, msg Message) error {
 		fmt.Println(n, msg.info)
 		return nil
 	})

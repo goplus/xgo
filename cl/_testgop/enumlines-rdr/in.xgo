@@ -2,6 +2,6 @@ import "io"
 
 var r io.Reader
 
-for line <- lines(r) {
+for line in lines(r) {
 	println line
 }
