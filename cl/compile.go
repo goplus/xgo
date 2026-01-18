@@ -1660,17 +1660,17 @@ func loadVars(ctx *blockCtx, v *ast.ValueSpec, doc *ast.CommentGroup, global boo
 		scope = ctx.cb.Scope()
 	}
 	varDefs := ctx.pkg.NewVarDefs(scope).SetComments(doc)
-	varDecl := varDefs.New(v.Names[0].Pos(), typ, names...)
-	if nv := len(v.Values); nv > 0 {
-		cb := varDecl.InitStart(ctx.pkg)
-		if enableRecover {
-			defer func() {
-				if e := recover(); e != nil {
-					cb.ResetInit()
-					panic(e)
-				}
-			}()
-		}
+	initExpr := makeInitExpr(ctx, v, typ, names)
+	varDefs.NewAndInit(initExpr, v.Names[0].Pos(), typ, names...)
+	defNames(ctx, v.Names, scope)
+}
+
+func makeInitExpr(ctx *blockCtx, v *ast.ValueSpec, typ types.Type, names []string) gogen.F {
+	nv := len(v.Values)
+	if nv == 0 {
+		return nil
+	}
+	return func(cb *gogen.CodeBuilder) int {
 		if nv == 1 && len(names) == 2 {
 			compileExpr(ctx, v.Values[0], clCallWithTwoValue)
 		} else {
@@ -1695,9 +1695,8 @@ func loadVars(ctx *blockCtx, v *ast.ValueSpec, doc *ast.CommentGroup, global boo
 				}
 			}
 		}
-		cb.EndInit(nv)
+		return nv
 	}
-	defNames(ctx, v.Names, scope)
 }
 
 func defNames(ctx *blockCtx, names []*ast.Ident, scope *types.Scope) {
