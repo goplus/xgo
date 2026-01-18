@@ -1,0 +1,9 @@
+var (
+	Kai Kai
+	score int = 100
+	name string = "Game"
+)
+
+func MainEntry() {
+	println score, name
+}

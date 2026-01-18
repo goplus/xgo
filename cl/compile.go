@@ -386,6 +386,7 @@ type blockCtx struct {
 	classDecl *ast.GenDecl   // available when isClass
 	classRecv *ast.FieldList // available when isClass
 	baseClass types.Object   // available when isClass
+	classFile *gmxClass      // available when isClass (not normal gox)
 
 	fileScope *types.Scope // available when isXGoFile
 	rec       *goxRecorder
@@ -825,6 +826,7 @@ func preloadXGoFile(p *gogen.Package, ctx *blockCtx, file string, f *ast.File, c
 		} else {
 			c = parent.classes[f]
 			proj, ctx.proj = c.proj, c.proj
+			ctx.classFile = c
 			classType, gameClass = c.getName(parent), proj.getGameClass(parent)
 			ctx.autoimps = proj.autoimps
 			goxTestFile = proj.isTest
@@ -925,7 +927,7 @@ func preloadXGoFile(p *gogen.Package, ctx *blockCtx, file string, f *ast.File, c
 							flds = append(flds, fld)
 							tags = append(tags, tag)
 						} else {
-							for _, name := range spec.Names {
+							for i, name := range spec.Names {
 								if chk.chkRedecl(ctx, name.Name, name.Pos(), name.End(), fieldKindUser) {
 									continue
 								}
@@ -935,6 +937,14 @@ func preloadXGoFile(p *gogen.Package, ctx *blockCtx, file string, f *ast.File, c
 								}
 								flds = append(flds, fld)
 								tags = append(tags, tag)
+								// Collect field initializers if present
+								if c != nil && len(spec.Values) > i {
+									c.inits = append(c.inits, &classFieldInit{
+										name:  name.Name,
+										typ:   spec.Type,
+										value: spec.Values[i],
+									})
+								}
 							}
 						}
 					}
@@ -984,6 +994,21 @@ func preloadXGoFile(p *gogen.Package, ctx *blockCtx, file string, f *ast.File, c
 				genClassclone(ctx, sp.clone)
 			})
 		}
+	}
+	// Generate XGo_Init method if there are field initializers
+	// Note: c.inits is populated during type initialization (ld.typInit),
+	// so we always register the method and check inits inside
+	if c != nil {
+		ld := getTypeLoader(parent, parent.syms, token.NoPos, token.NoPos, classType)
+		ld.methods = append(ld.methods, func() {
+			if len(c.inits) == 0 {
+				return
+			}
+			old, _ := p.SetCurFile(goFile, true)
+			defer p.RestoreCurFile(old)
+			doInitType(ld)
+			genXGoInit(ctx, c)
+		})
 	}
 	if goxTestFile {
 		parent.inits = append(parent.inits, func() {
@@ -1543,9 +1568,14 @@ var unaryXGoNames = map[string]string{
 func loadFuncBody(ctx *blockCtx, fn *gogen.Func, body *ast.BlockStmt, sigBase *types.Signature, src ast.Node) {
 	cb := fn.BodyStart(ctx.pkg, body)
 	cb.SetComments(nil, false)
+	// Call XGo_Init if this is an entry function and the class has field initializers
+	fnName := fn.Name()
+	if (fnName == "Main" || fnName == "MainEntry") && ctx.classFile != nil && len(ctx.classFile.inits) > 0 {
+		cb.VarVal("this").MemberVal("XGo_Init").Call(0).EndStmt()
+	}
 	if sigBase != nil {
 		// this.Sprite.Main(...) or this.Game.MainEntry(...)
-		cb.VarVal("this").MemberVal(ctx.baseClass.Name()).MemberVal(fn.Name())
+		cb.VarVal("this").MemberVal(ctx.baseClass.Name()).MemberVal(fnName)
 		params := sigBase.Params()
 		n := params.Len()
 		for i := 0; i < n; i++ {

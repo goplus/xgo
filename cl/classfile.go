@@ -42,6 +42,14 @@ type gmxClass struct {
 	ext     string
 	proj    *gmxProject
 	sp      *spxObj
+	inits   []*classFieldInit // class field initializers
+}
+
+// classFieldInit stores information about a class field that has an initializer
+type classFieldInit struct {
+	name  string   // field name
+	typ   ast.Expr // field type expression
+	value ast.Expr // field initializer expression
 }
 
 func (p *gmxClass) getName(ctx *pkgCtx) string {
@@ -674,6 +682,29 @@ func genClassclone(ctx *blockCtx, classclone *types.Signature) {
 		DefineVarStart(token.NoPos, nameRet).VarVal("this").Elem().EndInit(1).
 		VarVal(nameRet).UnaryOp(gotoken.AND).Return(1).
 		End()
+}
+
+// genXGoInit generates the XGo_Init method for a classfile type that has field initializers.
+// The method signature is: func (this *T) XGo_Init() *T
+// It initializes all member variables that have initializers and returns the object pointer.
+func genXGoInit(ctx *blockCtx, c *gmxClass) {
+	if len(c.inits) == 0 {
+		return
+	}
+	pkg := ctx.pkg
+	recv := toRecv(ctx, ctx.classRecv)
+	t := recv.Type()
+	ret := types.NewTuple(pkg.NewParam(token.NoPos, "", t))
+	fn := pkg.NewFunc(recv, "XGo_Init", nil, ret, false)
+	cb := fn.BodyStart(pkg)
+	// Initialize each field with its initializer expression
+	for _, init := range c.inits {
+		cb.VarVal("this").MemberRef(init.name)
+		compileExpr(ctx, init.value)
+		cb.Assign(1)
+	}
+	// Return this
+	cb.VarVal("this").Return(1).End()
 }
 
 func astEmptyEntrypoint(f *ast.File) {

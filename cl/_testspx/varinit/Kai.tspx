@@ -1,0 +1,8 @@
+var (
+	hp int = 50
+	level int = 1
+)
+
+func Main() {
+	println hp, level
+}
