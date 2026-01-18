@@ -152,12 +152,12 @@ func compileIdent(ctx *blockCtx, ident *ast.Ident, flags int) (pkg gogen.PkgRef,
 		oldo, o = o, obj
 	} else if o == nil {
 		// for support XGo_Exec, see TestSpxXGoExec
-		if (clCommandIdent&flags) != 0 && recv != nil && xgoOp(cb, recv, "Exec", ident) == nil {
+		if (clCommandIdent&flags) != 0 && recv != nil && xgoOp(cb, recv, "XGo_Exec", "Gop_Exec", ident) == nil {
 			kind = objXGoExec
 			return
 		}
 		// for support XGo_Env, see TestSpxGopEnv
-		if (clIdentInStringLitEx&flags) != 0 && recv != nil && xgoOp(cb, recv, "Env", ident) == nil {
+		if (clIdentInStringLitEx&flags) != 0 && recv != nil && xgoOp(cb, recv, "XGo_Env", "Gop_Env", ident) == nil {
 			kind = objXGoEnv
 			return
 		}
@@ -217,7 +217,7 @@ func compileEnvExpr(ctx *blockCtx, v *ast.EnvExpr) {
 	cb := ctx.cb
 	if ctx.isClass { // in an XGo class file
 		if recv := classRecv(cb); recv != nil {
-			if xgoOp(cb, recv, "Env", v) == nil {
+			if xgoOp(cb, recv, "XGo_Env", "Gop_Env", v) == nil {
 				name := v.Name
 				cb.Val(name.Name, name).CallWith(1, 0, v)
 				return
@@ -236,12 +236,11 @@ func classRecv(cb *gogen.CodeBuilder) *types.Var {
 	return nil
 }
 
-// op = Exec | Env
-func xgoOp(cb *gogen.CodeBuilder, recv *types.Var, op string, src ...ast.Node) error {
+func xgoOp(cb *gogen.CodeBuilder, recv *types.Var, op1, op2 string, src ...ast.Node) error {
 	cb.Val(recv)
-	kind, e := cb.Member("XGo_"+op, gogen.MemberFlagVal, src...)
+	kind, e := cb.Member(op1, gogen.MemberFlagVal, src...)
 	if kind == gogen.MemberInvalid {
-		_, e = cb.Member("Gop_"+op, gogen.MemberFlagVal, src...)
+		_, e = cb.Member(op2, gogen.MemberFlagVal, src...)
 	}
 	return e
 }
@@ -864,7 +863,7 @@ func builtinOrXGoExec(ctx *blockCtx, ifn *ast.Ident, v *ast.CallExpr, flags goge
 func tryXGoExec(cb *gogen.CodeBuilder, ifn *ast.Ident) bool {
 	if recv := classRecv(cb); recv != nil {
 		cb.InternalStack().PopN(1)
-		if xgoOp(cb, recv, "Exec", ifn) == nil {
+		if xgoOp(cb, recv, "XGo_Exec", "Gop_Exec", ifn) == nil {
 			cb.Val(ifn.Name, ifn)
 			return true
 		}
