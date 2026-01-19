@@ -1560,6 +1560,8 @@ func loadFuncBody(ctx *blockCtx, fn *gogen.Func, body *ast.BlockStmt, sigBase *t
 		if _, err := cb.VarVal("this").Member("XGo_Init", gogen.MemberFlagVal); err == nil {
 			cb.Call(0).EndStmt()
 		} else {
+			// clean up the partial expression pushed by VarVal("this") when
+			// the XGo_Init member lookup fails
 			cb.ResetStmt()
 		}
 		if sigBase != nil {
