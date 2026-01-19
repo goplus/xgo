@@ -911,7 +911,7 @@ func preloadXGoFile(p *gogen.Package, ctx *blockCtx, file string, f *ast.File, c
 				if classDecl := ctx.classDecl; classDecl != nil {
 					var spec *ast.ValueSpec
 					recvType := types.NewPointer(decl.Type())
-					recv := types.NewParam(token.NoPos, pkg, "_xgo_this", recvType)
+					recv := types.NewParam(token.NoPos, pkg, "this", recvType)
 					defs := p.ClassDefsStart(recv, func(idx int, name string, typ types.Type, embed bool) {
 						var id *ast.Ident
 						if embed {
@@ -1438,9 +1438,11 @@ func loadFunc(ctx *blockCtx, recv *types.Var, name string, d *ast.FuncDecl, genB
 		}
 	}
 	var pkg = ctx.pkg
+	var initClass bool
 	var sigBase *types.Signature
 	if d.Shadow {
 		if recv != nil && (name == "Main" || name == "MainEntry") {
+			initClass = true // should call XGo_Init method
 			if base := ctx.baseClass; base != nil {
 				if f := findMethod(base, name); f != nil {
 					sigBase = makeMainSig(recv, f)
@@ -1487,11 +1489,11 @@ func loadFunc(ctx *blockCtx, recv *types.Var, name string, d *ast.FuncDecl, genB
 				file := pkg.CurFile()
 				ctx.inits = append(ctx.inits, func() { // interface issue: #795
 					old := pkg.RestoreCurFile(file)
-					loadFuncBody(ctx, fn, body, sigBase, d)
+					loadFuncBody(ctx, fn, body, sigBase, d, initClass)
 					pkg.RestoreCurFile(old)
 				})
 			} else {
-				loadFuncBody(ctx, fn, body, nil, d)
+				loadFuncBody(ctx, fn, body, nil, d, initClass)
 			}
 		}
 	}
@@ -1550,18 +1552,26 @@ var unaryXGoNames = map[string]string{
 	"<-": "XGo_Recv",
 }
 
-func loadFuncBody(ctx *blockCtx, fn *gogen.Func, body *ast.BlockStmt, sigBase *types.Signature, src ast.Node) {
+func loadFuncBody(ctx *blockCtx, fn *gogen.Func, body *ast.BlockStmt, sigBase *types.Signature, src ast.Node, initClass bool) {
 	cb := fn.BodyStart(ctx.pkg, body)
 	cb.SetComments(nil, false)
-	if sigBase != nil {
-		// this.Sprite.Main(...) or this.Game.MainEntry(...)
-		cb.VarVal("this").MemberVal(ctx.baseClass.Name()).MemberVal(fn.Name())
-		params := sigBase.Params()
-		n := params.Len()
-		for i := 0; i < n; i++ {
-			cb.Val(params.At(i))
+	if initClass {
+		// this.XGo_Init()
+		if _, err := cb.VarVal("this").Member("XGo_Init", gogen.MemberFlagVal); err == nil {
+			cb.Call(0).EndStmt()
+		} else {
+			cb.ResetStmt()
 		}
-		cb.Call(n).EndStmt()
+		if sigBase != nil {
+			// this.Sprite.Main(...) or this.Game.MainEntry(...)
+			cb.VarVal("this").MemberVal(ctx.baseClass.Name()).MemberVal(fn.Name())
+			params := sigBase.Params()
+			n := params.Len()
+			for i := 0; i < n; i++ {
+				cb.Val(params.At(i))
+			}
+			cb.Call(n).EndStmt()
+		}
 	}
 	compileStmts(ctx, body.List)
 	if rec := ctx.recorder(); rec != nil {
