@@ -336,7 +336,7 @@ func afterLoad(mod *xgomod.Module, xgo *env.XGo, out, test *gogen.Package, conf 
 
 func checkGopDeps(pkg *gogen.Package) (flags int) {
 	pkg.ForEachFile(func(fname string, file *gogen.File) {
-		flags |= file.CheckGopDeps(pkg)
+		flags |= file.CheckXGoDeps(pkg)
 	})
 	return
 }

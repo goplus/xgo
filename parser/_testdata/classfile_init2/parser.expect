@@ -1,0 +1,14 @@
+package main
+
+file Rect.gox
+ast.GenDecl:
+  Tok: var
+  Specs:
+    ast.ValueSpec:
+      Names:
+        ast.Ident:
+          Name: x
+      Values:
+        ast.BasicLit:
+          Kind: INT
+          Value: 1

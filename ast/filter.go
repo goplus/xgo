@@ -189,6 +189,11 @@ func filterType(typ Expr, f Filter, export bool) bool {
 		return b1 || b2
 	case *ChanType:
 		return filterType(t.Value, f, export)
+	case *TupleType:
+		if filterFieldList(t.Fields, f, export) {
+			// Note: TupleType doesn't have an Incomplete field like StructType
+		}
+		return t.Fields != nil && len(t.Fields.List) > 0
 	}
 	return false
 }

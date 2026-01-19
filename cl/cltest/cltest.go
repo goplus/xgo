@@ -115,6 +115,11 @@ func LookupClass(ext string) (c *modfile.Project, ok bool) {
 				{Ext: "_res.gox", Class: "Resource", Proto: "ResourceProto"},
 			},
 			PkgPaths: []string{"github.com/goplus/xgo/cl/internal/mcp"}}, true
+	case ".gsh":
+		return &modfile.Project{
+			Ext: ".gsh", Class: "App",
+			PkgPaths: []string{"github.com/qiniu/x/gsh", "math"},
+		}, true
 	}
 	return
 }

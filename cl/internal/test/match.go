@@ -29,7 +29,7 @@ type Case struct {
 }
 
 const (
-	Gopo_Gopt_Case_Match = "Gopt_Case_MatchTBase,Gopt_Case_MatchAny"
+	XGoo_Gopt_Case_Match = "Gopt_Case_MatchTBase,Gopt_Case_MatchAny"
 )
 
 func Gopt_Case_MatchTBase[T basetype](t CaseT, got, expected T, name ...string) {

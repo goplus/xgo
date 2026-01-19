@@ -1474,7 +1474,7 @@ var z uint128 = x + y
 import "github.com/qiniu/x/xgo/ng"
 
 var x, y ng.Uint128
-var z ng.Uint128 = (ng.Uint128).Gop_Add__1(x, y)
+var z ng.Uint128 = (ng.Uint128).XGo_Add__1(x, y)
 `)
 }
 
@@ -1487,7 +1487,7 @@ var z int128 = x + y
 import "github.com/qiniu/x/xgo/ng"
 
 var x, y ng.Int128
-var z ng.Int128 = (ng.Int128).Gop_Add__1(x, y)
+var z ng.Int128 = (ng.Int128).XGo_Add__1(x, y)
 `)
 }
 
@@ -1500,7 +1500,7 @@ var z bigint = x + y
 import "github.com/qiniu/x/xgo/ng"
 
 var x, y ng.Bigint
-var z ng.Bigint = (ng.Bigint).Gop_Add(x, y)
+var z ng.Bigint = (ng.Bigint).XGo_Add(x, y)
 `)
 }
 
@@ -1582,8 +1582,8 @@ import (
 )
 
 var x = ng.Bigrat_Init__2(big.NewRat(7, 2))
-var y = (ng.Bigrat).Gop_Add(x, ng.Bigrat_Init__0(100))
-var z = (ng.Bigrat).Gop_Add(ng.Bigrat_Init__0(100), y)
+var y = (ng.Bigrat).XGo_Add(x, ng.Bigrat_Init__0(100))
+var z = (ng.Bigrat).XGo_Add(ng.Bigrat_Init__0(100), y)
 `)
 }
 
@@ -1695,7 +1695,7 @@ import "github.com/qiniu/x/xgo/ng"
 var x ng.Bigint
 
 func main() {
-	x.Gop_AddAssign(ng.Bigint_Init__0(3))
+	x.XGo_AddAssign(ng.Bigint_Init__0(3))
 }
 `)
 }
@@ -1713,7 +1713,7 @@ import (
 
 func main() {
 	x := ng.Bigint_Init__1(big.NewInt(3))
-	x.Gop_MulAssign(ng.Bigint_Init__0(2))
+	x.XGo_MulAssign(ng.Bigint_Init__0(2))
 }
 `)
 }
@@ -1731,7 +1731,7 @@ import (
 
 func main() {
 	x := ng.Bigint_Init__1(big.NewInt(3))
-	x.Gop_MulAssign(ng.Bigint_Init__1(big.NewInt(2)))
+	x.XGo_MulAssign(ng.Bigint_Init__1(big.NewInt(2)))
 }
 `)
 }

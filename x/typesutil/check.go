@@ -204,7 +204,7 @@ func (p *Checker) Files(goFiles []*goast.File, xgoFiles []*ast.File) (err error)
 		// TODO(xsw): how to process error?
 		CorrectTypesInfo(scope, objMap, p.xgoInfo.Uses)
 		if opts.UpdateGoTypesOverload {
-			gogen.InitThisGopPkg(pkgTypes)
+			gogen.InitXGoPackage(pkgTypes)
 		}
 	}
 	return
@@ -278,7 +278,7 @@ func convErr(fset *token.FileSet, e error) (ret Error, ok bool) {
 
 func convGoErr(e error) (ret Error, ok bool) {
 	if v, ok := e.(types.Error); ok {
-		ret.Pos, ret.Msg, ret.Soft = v.Pos, v.Msg, v.Soft
+		ret.Fset, ret.Pos, ret.Msg, ret.Soft = v.Fset, v.Pos, v.Msg, v.Soft
 		code, _, end, ok := typesutil.GetErrorGo116(&v)
 		if ok {
 			ret.Code = Code(code)

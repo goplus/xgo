@@ -203,6 +203,11 @@ func Walk(v Visitor, node Node) {
 	case *ChanType:
 		Walk(v, n.Value)
 
+	case *TupleType:
+		if n.Fields != nil {
+			Walk(v, n.Fields)
+		}
+
 	// Statements
 	case *BadStmt:
 		// nothing to do
