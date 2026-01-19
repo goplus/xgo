@@ -3956,13 +3956,12 @@ func (p *parser) parseValueSpec(doc *ast.CommentGroup, keyword token.Token, iota
 				idents = append(idents, p.parseIdent())
 			}
 			typ = p.tryType()
-			if len(idents) == 1 && typ == nil {
-				typ = ident
-				idents = nil
-			}
 			if p.tok == token.ASSIGN {
 				p.next()
 				values = p.parseRHSList()
+			} else if len(idents) == 1 && typ == nil {
+				typ = ident
+				idents = nil
 			}
 		}
 		if p.tok == token.STRING {

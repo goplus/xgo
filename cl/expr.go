@@ -1160,7 +1160,7 @@ func compileFuncLit(ctx *blockCtx, v *ast.FuncLit) {
 	}
 	fn := cb.NewClosureWith(sig)
 	if body := v.Body; body != nil {
-		loadFuncBody(ctx, fn, body, nil, v)
+		loadFuncBody(ctx, fn, body, nil, v, false)
 		cb.SetComments(comments, once)
 	}
 }

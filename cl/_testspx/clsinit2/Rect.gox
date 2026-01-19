@@ -1,0 +1,7 @@
+var (
+    w, h = 10, 20
+    color int
+    border float64 = 1.2
+)
+
+echo *this
