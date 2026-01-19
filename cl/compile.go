@@ -909,35 +909,45 @@ func preloadXGoFile(p *gogen.Package, ctx *blockCtx, file string, f *ast.File, c
 				}
 				rec := ctx.recorder()
 				if classDecl := ctx.classDecl; classDecl != nil {
-					for _, v := range classDecl.Specs {
-						spec := v.(*ast.ValueSpec)
-						typ := toType(ctx, spec.Type)
-						tag := toFieldTag(spec.Tag)
-						if len(spec.Names) == 0 {
-							name := parseTypeEmbedName(spec.Type)
-							if chk.chkRedecl(ctx, name.Name, spec.Type.Pos(), spec.Type.End(), fieldKindUser) {
-								continue
-							}
-							fld := types.NewField(spec.Type.Pos(), pkg, name.Name, typ, true)
-							if rec != nil {
-								rec.Def(name, fld)
-							}
-							flds = append(flds, fld)
-							tags = append(tags, tag)
+					var spec *ast.ValueSpec
+					recvType := types.NewPointer(decl.Type())
+					recv := types.NewParam(token.NoPos, pkg, "_xgo_this", recvType)
+					defs := p.ClassDefsStart(recv, func(idx int, name string, typ types.Type, embed bool) {
+						var id *ast.Ident
+						if embed {
+							id = parseTypeEmbedName(spec.Type)
 						} else {
-							for _, name := range spec.Names {
-								if chk.chkRedecl(ctx, name.Name, name.Pos(), name.End(), fieldKindUser) {
-									continue
-								}
-								fld := types.NewField(name.Pos(), pkg, name.Name, typ, false)
-								if rec != nil {
-									rec.Def(name, fld)
-								}
-								flds = append(flds, fld)
-								tags = append(tags, tag)
-							}
+							id = spec.Names[idx]
 						}
+						pos := id.Pos()
+						if chk.chkRedecl(ctx, name, pos, id.End(), fieldKindUser) {
+							return
+						}
+						fld := types.NewField(pos, pkg, name, typ, embed)
+						if rec != nil {
+							rec.Def(id, fld)
+						}
+						flds = append(flds, fld)
+						tags = append(tags, toFieldTag(spec.Tag))
+					})
+					for _, v := range classDecl.Specs {
+						var pos token.Pos
+						var names []string
+						var fldType types.Type
+						spec = v.(*ast.ValueSpec)
+						if spec.Type != nil {
+							fldType = toType(ctx, spec.Type)
+						}
+						if specNames := spec.Names; len(specNames) > 0 {
+							names = makeNames(specNames)
+							pos = specNames[0].Pos()
+						} else {
+							pos = spec.Type.Pos()
+						}
+						initExpr := makeInitExpr(ctx, spec, fldType, names)
+						defs.NewAndInit(initExpr, pos, fldType, names...)
 					}
+					defs.End()
 				}
 				decl.InitType(p, types.NewStruct(flds, tags))
 			}
@@ -1660,17 +1670,17 @@ func loadVars(ctx *blockCtx, v *ast.ValueSpec, doc *ast.CommentGroup, global boo
 		scope = ctx.cb.Scope()
 	}
 	varDefs := ctx.pkg.NewVarDefs(scope).SetComments(doc)
-	varDecl := varDefs.New(v.Names[0].Pos(), typ, names...)
-	if nv := len(v.Values); nv > 0 {
-		cb := varDecl.InitStart(ctx.pkg)
-		if enableRecover {
-			defer func() {
-				if e := recover(); e != nil {
-					cb.ResetInit()
-					panic(e)
-				}
-			}()
-		}
+	initExpr := makeInitExpr(ctx, v, typ, names)
+	varDefs.NewAndInit(initExpr, v.Names[0].Pos(), typ, names...)
+	defNames(ctx, v.Names, scope)
+}
+
+func makeInitExpr(ctx *blockCtx, v *ast.ValueSpec, typ types.Type, names []string) gogen.F {
+	nv := len(v.Values)
+	if nv == 0 {
+		return nil
+	}
+	return func(cb *gogen.CodeBuilder) int {
 		if nv == 1 && len(names) == 2 {
 			compileExpr(ctx, v.Values[0], clCallWithTwoValue)
 		} else {
@@ -1695,9 +1705,8 @@ func loadVars(ctx *blockCtx, v *ast.ValueSpec, doc *ast.CommentGroup, global boo
 				}
 			}
 		}
-		cb.EndInit(nv)
+		return nv
 	}
-	defNames(ctx, v.Names, scope)
 }
 
 func defNames(ctx *blockCtx, names []*ast.Ident, scope *types.Scope) {
