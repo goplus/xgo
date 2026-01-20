@@ -1,6 +1,11 @@
 package main
 
-import "io"
+import (
+	"fmt"
+	"github.com/qiniu/x/stringutil"
+	"io"
+	"strconv"
+)
 // Empty tuple
 type Empty struct {
 }
@@ -108,4 +113,11 @@ var cache map[string]struct {
 var pairs []struct {
 	_0 string
 	_1 int
+}
+var ken Person
+
+func main() {
+	ken._0, ken._1 = "Ken", 18
+	ken._1++
+	fmt.Println(stringutil.Concat("name: ", ken._0, ", age: ", strconv.Itoa(ken._1)))
 }

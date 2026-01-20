@@ -59,3 +59,10 @@ type MixedArray (items []int, count int)
 
 // Single named field tuple
 type SingleNamed (value int)
+
+var ken Person
+
+ken.name, ken.age = "Ken", 18
+ken.age++
+
+echo "name: ${ken.name}, age: ${ken.age}"
