@@ -156,6 +156,8 @@ func toType(ctx *blockCtx, typ ast.Expr) (t types.Type) {
 		return types.NewSlice(elem)
 	case *ast.MapType:
 		return toMapType(ctx, v)
+	case *ast.TupleType:
+		return toTupleType(ctx, v)
 	case *ast.StructType:
 		return toStructType(ctx, v)
 	case *ast.ChanType:
@@ -334,6 +336,45 @@ func (p *checkRedecl) chkRedecl(ctx *blockCtx, name string, pos, end token.Pos, 
 		kind: kind,
 	}
 	return false
+}
+
+func toTupleType(ctx *blockCtx, v *ast.TupleType) *types.Struct {
+	pkg := ctx.pkg
+	pkgTypes := pkg.Types
+	fieldList := v.Fields.List
+	fields := make([]*types.Var, 0, len(fieldList))
+	chk := newCheckRedecl()
+	rec := ctx.recorder()
+	namedCount := 0
+	for _, field := range fieldList {
+		fieldType := field.Type
+		typ := toType(ctx, fieldType)
+		if len(field.Names) == 0 {
+			fld := types.NewField(fieldType.Pos(), pkgTypes, "", typ, true)
+			fields = append(fields, fld)
+			continue
+		}
+		for _, id := range field.Names {
+			name := id.Name
+			if name != "" {
+				namedCount++
+				if chk.chkRedecl(ctx, name, id.Pos(), id.End(), fieldKindUser) {
+					continue
+				}
+				if name == "_" {
+					name = ""
+				}
+			}
+			fld := types.NewField(id.NamePos, pkgTypes, name, typ, false)
+			fields = append(fields, fld)
+			if rec != nil {
+				rec.Def(id, fld)
+			}
+		}
+	}
+	// TODO(xsw): error check if some fields are named
+	withName := namedCount == len(fields)
+	return pkg.NewTuple(withName, fields...)
 }
 
 func toStructType(ctx *blockCtx, v *ast.StructType) *types.Struct {
