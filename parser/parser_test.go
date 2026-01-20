@@ -100,7 +100,7 @@ func testShadowEntry(t *testing.T, code string, errExp string, decl *ast.FuncDec
 		t.Fatal("testShadowEntry error:", err)
 	}
 	if err == nil && errExp != "" {
-		t.Fatal("testShadowEntry: nil")
+		t.Fatal("testShadowEntry: nil, errExp:", errExp)
 	}
 
 	if f.ShadowEntry == nil {

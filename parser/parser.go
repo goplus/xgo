@@ -1613,17 +1613,6 @@ func (p *parser) parseTupleType() (ast.Expr, int) {
 	lparen := p.pos
 	p.next() // consume '('
 
-	// Handle empty tuple: ()
-	if p.tok == token.RPAREN {
-		rparen := p.pos
-		p.next()
-		return &ast.TupleType{
-			Lparen: lparen,
-			Fields: &ast.FieldList{Opening: lparen, Closing: rparen},
-			Rparen: rparen,
-		}, resultType
-	}
-
 	// Parse tuple fields similar to parameter list parsing
 	fields := p.parseTupleFieldList()
 
@@ -1694,11 +1683,6 @@ func (p *parser) parseTupleFieldList() []*ast.Field {
 		case token.MUL, token.ARROW, token.FUNC, token.LBRACK, token.CHAN, token.MAP, token.STRUCT, token.INTERFACE, token.LPAREN:
 			// Type without name
 			f.typ = p.parseType()
-
-		default:
-			// Not a valid tuple element - don't produce additional error here,
-			// let the caller handle it. Just break out of the loop.
-			break
 		}
 
 		if f.typ == nil && f.name == nil {

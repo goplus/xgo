@@ -607,12 +607,6 @@ func (p *printer) tupleType(x *ast.TupleType) {
 	// Print opening paren (without position to avoid line tracking issues)
 	p.print(token.LPAREN)
 
-	// Check if this is an empty tuple
-	if len(list) == 0 {
-		p.print(token.RPAREN)
-		return
-	}
-
 	// Print tuple fields
 	for i, f := range list {
 		if i > 0 {
