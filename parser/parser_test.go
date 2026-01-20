@@ -346,6 +346,13 @@ func TestCheckExpr(t *testing.T) {
 	p.checkExpr(&ast.FuncLit{})
 }
 
+func TestErrTupleType(t *testing.T) {
+	testErrCode(t, `var a (a float64, x int, chan int)
+`, `/foo/bar.xgo:1:8: mixed named and unnamed fields in tuple type`, ``)
+	testErrCode(t, `var a (a float64, x int, string)
+`, `/foo/bar.xgo:1:8: mixed named and unnamed fields in tuple type`, ``)
+}
+
 func TestErrFuncDecl(t *testing.T) {
 	testErrCode(t, `func test()
 {

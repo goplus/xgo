@@ -338,6 +338,9 @@ func (p *checkRedecl) chkRedecl(ctx *blockCtx, name string, pos, end token.Pos, 
 	return false
 }
 
+// toTupleType converts an AST TupleType node to a types.Struct.
+// Tuple types are syntactic sugar for structs with ordinal field names (_0, _1, ...).
+// Named fields in the tuple are compile-time aliases converted to ordinal fields.
 func toTupleType(ctx *blockCtx, v *ast.TupleType) *types.Struct {
 	pkg := ctx.pkg
 	pkgTypes := pkg.Types
@@ -373,10 +376,6 @@ func toTupleType(ctx *blockCtx, v *ast.TupleType) *types.Struct {
 		}
 	}
 	withName := namedCount == len(fields)
-	if !withName && namedCount > 0 {
-		// Using v.Pos() for now, but a more specific error location would be better.
-		ctx.handleErrorf(v.Pos(), v.End(), "mixed named and unnamed fields in tuple type")
-	}
 	return pkg.NewTuple(withName, fields...)
 }
 
