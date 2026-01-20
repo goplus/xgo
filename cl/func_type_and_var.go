@@ -341,10 +341,20 @@ func (p *checkRedecl) chkRedecl(ctx *blockCtx, name string, pos, end token.Pos, 
 // toTupleType converts an AST TupleType node to a types.Struct.
 // Tuple types are syntactic sugar for structs with ordinal field names (_0, _1, ...).
 // Named fields in the tuple are compile-time aliases converted to ordinal fields.
-func toTupleType(ctx *blockCtx, v *ast.TupleType) *types.Struct {
+func toTupleType(ctx *blockCtx, v *ast.TupleType) types.Type {
+	fieldList := v.Fields.List
+	switch len(fieldList) {
+	case 0:
+		return types.NewStruct(nil, nil)
+	case 1:
+		// single-field tuple is equivalent to the field type itself
+		if len(fieldList[0].Names) <= 1 {
+			return toType(ctx, fieldList[0].Type)
+		}
+	}
+
 	pkg := ctx.pkg
 	pkgTypes := pkg.Types
-	fieldList := v.Fields.List
 	fields := make([]*types.Var, 0, len(fieldList))
 	chk := newCheckRedecl()
 	rec := ctx.recorder()
