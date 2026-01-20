@@ -372,8 +372,11 @@ func toTupleType(ctx *blockCtx, v *ast.TupleType) *types.Struct {
 			}
 		}
 	}
-	// TODO(xsw): error check if some fields are named
 	withName := namedCount == len(fields)
+	if !withName && namedCount > 0 {
+		// Using v.Pos() for now, but a more specific error location would be better.
+		ctx.handleErrorf(v.Pos(), v.End(), "mixed named and unnamed fields in tuple type")
+	}
 	return pkg.NewTuple(withName, fields...)
 }
 
