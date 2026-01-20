@@ -96,9 +96,7 @@ type MixedArray struct {
 	_1 int
 }
 // Single named field tuple
-type SingleNamed struct {
-	_0 int
-}
+type SingleNamed int
 // Tuple as channel element type
 var ch chan struct {
 	_0 int
