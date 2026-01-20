@@ -156,6 +156,8 @@ func toType(ctx *blockCtx, typ ast.Expr) (t types.Type) {
 		return types.NewSlice(elem)
 	case *ast.MapType:
 		return toMapType(ctx, v)
+	case *ast.TupleType:
+		return toTupleType(ctx, v)
 	case *ast.StructType:
 		return toStructType(ctx, v)
 	case *ast.ChanType:
@@ -334,6 +336,57 @@ func (p *checkRedecl) chkRedecl(ctx *blockCtx, name string, pos, end token.Pos, 
 		kind: kind,
 	}
 	return false
+}
+
+// toTupleType converts an AST TupleType node to a types.Struct.
+// Tuple types are syntactic sugar for structs with ordinal field names (_0, _1, ...).
+// Named fields in the tuple are compile-time aliases converted to ordinal fields.
+func toTupleType(ctx *blockCtx, v *ast.TupleType) types.Type {
+	fieldList := v.Fields.List
+	switch len(fieldList) {
+	case 0:
+		return types.NewStruct(nil, nil)
+	case 1:
+		// single-field tuple is equivalent to the field type itself
+		if len(fieldList[0].Names) <= 1 {
+			return toType(ctx, fieldList[0].Type)
+		}
+	}
+
+	pkg := ctx.pkg
+	pkgTypes := pkg.Types
+	fields := make([]*types.Var, 0, len(fieldList))
+	chk := newCheckRedecl()
+	rec := ctx.recorder()
+	namedCount := 0
+	for _, field := range fieldList {
+		fieldType := field.Type
+		typ := toType(ctx, fieldType)
+		if len(field.Names) == 0 {
+			fld := types.NewField(fieldType.Pos(), pkgTypes, "", typ, true)
+			fields = append(fields, fld)
+			continue
+		}
+		for _, id := range field.Names {
+			name := id.Name
+			if name != "" {
+				namedCount++
+				if chk.chkRedecl(ctx, name, id.Pos(), id.End(), fieldKindUser) {
+					continue
+				}
+				if name == "_" {
+					name = ""
+				}
+			}
+			fld := types.NewField(id.NamePos, pkgTypes, name, typ, false)
+			fields = append(fields, fld)
+			if rec != nil {
+				rec.Def(id, fld)
+			}
+		}
+	}
+	withName := namedCount == len(fields)
+	return pkg.NewTuple(withName, fields...)
 }
 
 func toStructType(ctx *blockCtx, v *ast.StructType) *types.Struct {

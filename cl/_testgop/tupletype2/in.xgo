@@ -1,0 +1,6 @@
+type Point (x, y int)
+type Int (x int)
+
+pt := Point{2, 3}
+echo pt.x, pt.y
+echo Int(100)

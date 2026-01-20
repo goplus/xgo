@@ -1613,17 +1613,6 @@ func (p *parser) parseTupleType() (ast.Expr, int) {
 	lparen := p.pos
 	p.next() // consume '('
 
-	// Handle empty tuple: ()
-	if p.tok == token.RPAREN {
-		rparen := p.pos
-		p.next()
-		return &ast.TupleType{
-			Lparen: lparen,
-			Fields: &ast.FieldList{Opening: lparen, Closing: rparen},
-			Rparen: rparen,
-		}, resultType
-	}
-
 	// Parse tuple fields similar to parameter list parsing
 	fields := p.parseTupleFieldList()
 
@@ -1650,7 +1639,7 @@ func (p *parser) parseTupleType() (ast.Expr, int) {
 //   - Multiple names with shared type: x, y int (shorthand for x int, y int)
 //
 // The function handles type distribution similar to Go's function parameter syntax.
-func (p *parser) parseTupleFieldList() []*ast.Field {
+func (p *parser) parseTupleFieldList() (params []*ast.Field) {
 	if p.trace {
 		defer un(trace(p, "TupleFieldList"))
 	}
@@ -1694,11 +1683,6 @@ func (p *parser) parseTupleFieldList() []*ast.Field {
 		case token.MUL, token.ARROW, token.FUNC, token.LBRACK, token.CHAN, token.MAP, token.STRUCT, token.INTERFACE, token.LPAREN:
 			// Type without name
 			f.typ = p.parseType()
-
-		default:
-			// Not a valid tuple element - don't produce additional error here,
-			// let the caller handle it. Just break out of the loop.
-			break
 		}
 
 		if f.typ == nil && f.name == nil {
@@ -1706,7 +1690,6 @@ func (p *parser) parseTupleFieldList() []*ast.Field {
 		}
 
 		list = append(list, f)
-
 		if !p.atComma("tuple type", token.RPAREN) {
 			break
 		}
@@ -1717,88 +1700,74 @@ func (p *parser) parseTupleFieldList() []*ast.Field {
 		return nil
 	}
 
-	// Distribute types across fields using Go's type shorthand syntax
-	// For example, (x, y int) becomes (x int, y int)
-	var distributedNamed int
-	for i := range list {
-		if list[i].name != nil && list[i].typ != nil {
-			distributedNamed++
-		}
-	}
-
-	if distributedNamed == 0 {
-		// All unnamed => identifiers are type names
-		for i := range list {
-			if list[i].name != nil && list[i].typ == nil {
-				list[i].typ = list[i].name
-				list[i].name = nil
+	// distribute parameter types
+	if named == 0 {
+		// all unnamed => found names are type names
+		for i := 0; i < len(list); i++ {
+			par := &list[i]
+			if typ := par.name; typ != nil {
+				par.typ = typ
+				par.name = nil
 			}
 		}
-	} else if distributedNamed != len(list) {
-		// Some named => apply type distribution (Go's shorthand syntax)
-		// e.g., (x, y int) => x gets type int, y gets type int
+	} else if named != len(list) {
+		// some named => all must be named
+		ok := true
 		var typ ast.Expr
 		for i := len(list) - 1; i >= 0; i-- {
-			if list[i].typ != nil {
-				typ = list[i].typ
+			if par := &list[i]; par.typ != nil {
+				typ = par.typ
+				if par.name == nil {
+					ok = false
+					n := ast.NewIdent("_")
+					n.NamePos = typ.Pos() // correct position
+					par.name = n
+				}
 			} else if typ != nil {
-				list[i].typ = typ
+				par.typ = typ
+			} else {
+				// par.typ == nil && typ == nil => we only have a par.name
+				ok = false
+				par.typ = &ast.BadExpr{From: par.name.Pos(), To: p.pos}
 			}
 		}
-		// Recount after distribution
-		distributedNamed = 0
-		for i := range list {
-			if list[i].name != nil && list[i].typ != nil {
-				distributedNamed++
-			}
+		if !ok {
+			p.error(list[0].name.Pos(), "mixed named and unnamed fields in tuple type")
 		}
 	}
 
-	// Handle tuple-specific error recovery: treat untyped names as types
-	if named != 0 && distributedNamed != len(list) {
-		for i := range list {
-			if list[i].typ == nil && list[i].name != nil {
-				list[i].typ = list[i].name
-				list[i].name = nil
-			}
+	// convert list []*ast.Field
+	if named == 0 {
+		// parameter list consists of types only
+		for _, par := range list {
+			assert(par.typ != nil, "nil type in unnamed field list")
+			params = append(params, &ast.Field{Type: par.typ})
 		}
+		return
 	}
 
-	// Convert to []*ast.Field
-	// For named fields, group by type as Go does with parameters
-	if distributedNamed == 0 {
-		// All unnamed - one Field per type
-		result := make([]*ast.Field, len(list))
-		for i, f := range list {
-			result[i] = &ast.Field{Type: f.typ}
-		}
-		return result
-	}
-
-	// Named fields - group consecutive names with the same type
-	var result []*ast.Field
+	// parameter list consists of named parameters with types
 	var names []*ast.Ident
-	var currentType ast.Expr
-
-	addField := func() {
-		if currentType != nil && len(names) > 0 {
-			result = append(result, &ast.Field{Names: names, Type: currentType})
-			names = nil
-		}
+	var typ ast.Expr
+	addFields := func() {
+		assert(typ != nil, "nil type in named field list")
+		field := &ast.Field{Names: names, Type: typ}
+		params = append(params, field)
+		names = nil
 	}
-
-	for _, f := range list {
-		if f.typ != currentType {
-			addField()
-			currentType = f.typ
+	for _, par := range list {
+		if par.typ != typ {
+			if len(names) > 0 {
+				addFields()
+			}
+			typ = par.typ
 		}
-		if f.name != nil {
-			names = append(names, f.name)
-		}
+		names = append(names, par.name)
 	}
-	addField()
-
-	return result
+	if len(names) > 0 {
+		addFields()
+	}
+	return
 }
 
 func (p *parser) tryType() ast.Expr {
