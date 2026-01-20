@@ -3,13 +3,13 @@ package main
 import "fmt"
 
 type Point struct {
-	_0 int
-	_1 int
+	X_0 int
+	X_1 int
 }
 type Int int
 
 func main() {
-	pt := Point{2, 3}
-	fmt.Println(pt._0, pt._1)
+	pt := Point{X_0: 2, X_1: 3}
+	fmt.Println(pt.X_0, pt.X_1)
 	fmt.Println(Int(100))
 }
