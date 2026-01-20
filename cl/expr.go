@@ -1440,12 +1440,13 @@ func compileStructLit(ctx *blockCtx, elts []ast.Expr, t *types.Struct, typ types
 }
 
 func compileStructLitInKeyVal(ctx *blockCtx, elts []ast.Expr, t *types.Struct, typ types.Type, src *ast.CompositeLit) error {
+	cb := ctx.cb
 	for _, elt := range elts {
 		kv := elt.(*ast.KeyValueExpr)
 		name := kv.Key.(*ast.Ident)
-		idx := lookupField(t, name.Name)
+		idx := cb.LookupField(t, name.Name)
 		if idx >= 0 {
-			ctx.cb.Val(idx)
+			cb.Val(idx)
 		} else {
 			src := ctx.LoadExpr(name)
 			return ctx.newCodeErrorf(name.Pos(), name.End(), "%s undefined (type %v has no field or method %s)", src, typ, name.Name)
@@ -1458,17 +1459,8 @@ func compileStructLitInKeyVal(ctx *blockCtx, elts []ast.Expr, t *types.Struct, t
 			return err
 		}
 	}
-	ctx.cb.StructLit(typ, len(elts)<<1, true, src)
+	cb.StructLit(typ, len(elts)<<1, true, src)
 	return nil
-}
-
-func lookupField(t *types.Struct, name string) int {
-	for i, n := 0, t.NumFields(); i < n; i++ {
-		if fld := t.Field(i); fld.Name() == name {
-			return i
-		}
-	}
-	return -1
 }
 
 type kvType struct {
