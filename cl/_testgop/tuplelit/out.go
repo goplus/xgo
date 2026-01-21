@@ -2,11 +2,22 @@ package main
 
 import "fmt"
 
+type T struct {
+	x struct {
+		X_0 int16
+		X_1 float32
+	}
+}
+
 func dump(a struct {
 	X_0 int16
 	X_1 float32
 }, _ ...bool) {
-	fmt.Println(a)
+	t := T{x: struct {
+		X_0 int16
+		X_1 float32
+	}{1, 3.14}}
+	fmt.Println(a, t)
 }
 func main() {
 	ken := struct {
