@@ -361,10 +361,10 @@ func compileExpr(ctx *blockCtx, expr ast.Expr, inFlags ...int) {
 		compileFuncLit(ctx, v)
 	case *ast.CompositeLit:
 		compileCompositeLit(ctx, v, nil, false)
+	case *ast.TupleLit:
+		compileTupleLit(ctx, v, nil)
 	case *ast.SliceLit:
 		compileSliceLit(ctx, v, nil)
-	//case *ast.TupleLit:
-	//	compileTupleLit(ctx, v)
 	case *ast.RangeExpr:
 		compileRangeExpr(ctx, v)
 	case *ast.IndexExpr:
@@ -946,6 +946,10 @@ func compileCallArgs(ctx *blockCtx, pfn *gogen.Element, fn *fnType, v *ast.CallE
 			if err = compileCompositeLitEx(ctx, expr, t, true); err != nil {
 				return
 			}
+		case *ast.TupleLit:
+			if err = compileTupleLit(ctx, expr, t, true); err != nil {
+				return
+			}
 		case *ast.SliceLit:
 			switch t.(type) {
 			case *types.Slice:
@@ -1410,6 +1414,8 @@ func compileCompositeLitElt(ctx *blockCtx, e ast.Expr, typ types.Type, flag clLa
 			return err
 		}
 		compileLambda(ctx, v, sig)
+	case *ast.TupleLit:
+		compileTupleLit(ctx, v, typ)
 	case *ast.SliceLit:
 		compileSliceLit(ctx, v, typ)
 	case *ast.CompositeLit:
@@ -1626,50 +1632,21 @@ func compileSliceLit(ctx *blockCtx, v *ast.SliceLit, typ types.Type, noPanic ...
 	return
 }
 
-/*
-func compileTupleLit(ctx *blockCtx, v *ast.TupleLit) {
+func compileTupleLit(ctx *blockCtx, v *ast.TupleLit, typ types.Type, noPanic ...bool) (err error) {
+	if noPanic != nil {
+		defer func() {
+			if e := recover(); e != nil { // TODO: don't use defer to capture error
+				err = ctx.recoverErr(e, v)
+			}
+		}()
+	}
 	n := len(v.Elts)
-	if n == 0 {
-		// Empty tuple () is struct{}
-		emptyStruct := types.NewStruct(nil, nil)
-		ctx.cb.Val(&gogen.Element{
-			Type: emptyStruct,
-			Val:  nil,
-		}, v)
-		return
-	}
-
-	// Single element tuple degenerates to the element itself
-	if n == 1 {
-		compileExpr(ctx, v.Elts[0])
-		return
-	}
-
-	// Compile elements to determine types
 	for _, elt := range v.Elts {
 		compileExpr(ctx, elt)
 	}
-
-	// Build tuple type from stack element types
-	pkg := ctx.pkg
-	pkgTypes := pkg.Types
-	stack := ctx.cb.InternalStack()
-	fields := make([]*types.Var, n)
-
-	for i := 0; i < n; i++ {
-		// Get type from stack (elements are in order from bottom to top)
-		arg := stack.Get(-(n - i))
-		fldName := fmt.Sprintf("X_%d", i)
-		fields[i] = types.NewField(v.Lparen, pkgTypes, fldName, arg.Type, false)
-	}
-
-	// Create tuple type using pkg.NewTuple
-	tupleType := pkg.NewTuple(false, fields...)
-
-	// Call StructLit with the tuple type
-	ctx.cb.StructLit(tupleType, n, false, v)
+	ctx.cb.TupleLit(typ, n, v)
+	return
 }
-*/
 
 func compileRangeExpr(ctx *blockCtx, v *ast.RangeExpr) {
 	pkg, cb := ctx.pkg, ctx.cb

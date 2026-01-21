@@ -30,3 +30,35 @@ ast.FuncDecl:
                 ast.BasicLit:
                   Kind: INT
                   Value: 7
+        ast.ExprStmt:
+          X:
+            ast.CallExpr:
+              Fun:
+                ast.Ident:
+                  Name: dump
+              Args:
+                ast.TupleLit:
+                  Elts:
+                    ast.BasicLit:
+                      Kind: INT
+                      Value: 1
+                    ast.BasicLit:
+                      Kind: FLOAT
+                      Value: 3.14
+                ast.Ident:
+                  Name: true
+        ast.ExprStmt:
+          X:
+            ast.CallExpr:
+              Fun:
+                ast.Ident:
+                  Name: dump
+              Args:
+                ast.TupleLit:
+                  Elts:
+                    ast.BasicLit:
+                      Kind: INT
+                      Value: 1
+                    ast.BasicLit:
+                      Kind: FLOAT
+                      Value: 3.14
