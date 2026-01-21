@@ -247,9 +247,10 @@ func (*SliceLit) exprNode() {}
 
 // A TupleLit node represents a tuple literal.
 type TupleLit struct {
-	Lparen token.Pos // position of "("
-	Elts   []Expr    // list of tuple elements; or nil
-	Rparen token.Pos // position of ")"
+	Lparen   token.Pos // position of "("
+	Elts     []Expr    // list of tuple elements; or nil
+	Ellipsis token.Pos // position of "..." (token.NoPos if there is no "...")
+	Rparen   token.Pos // position of ")"
 }
 
 // Pos - position of first character belonging to the node.

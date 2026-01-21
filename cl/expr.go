@@ -19,7 +19,6 @@ package cl
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	goast "go/ast"
 	gotoken "go/token"
 	"go/types"
@@ -364,8 +363,8 @@ func compileExpr(ctx *blockCtx, expr ast.Expr, inFlags ...int) {
 		compileCompositeLit(ctx, v, nil, false)
 	case *ast.SliceLit:
 		compileSliceLit(ctx, v, nil)
-	case *ast.TupleLit:
-		compileTupleLit(ctx, v)
+	//case *ast.TupleLit:
+	//	compileTupleLit(ctx, v)
 	case *ast.RangeExpr:
 		compileRangeExpr(ctx, v)
 	case *ast.IndexExpr:
@@ -1627,6 +1626,7 @@ func compileSliceLit(ctx *blockCtx, v *ast.SliceLit, typ types.Type, noPanic ...
 	return
 }
 
+/*
 func compileTupleLit(ctx *blockCtx, v *ast.TupleLit) {
 	n := len(v.Elts)
 	if n == 0 {
@@ -1669,6 +1669,7 @@ func compileTupleLit(ctx *blockCtx, v *ast.TupleLit) {
 	// Call StructLit with the tuple type
 	ctx.cb.StructLit(tupleType, n, false, v)
 }
+*/
 
 func compileRangeExpr(ctx *blockCtx, v *ast.RangeExpr) {
 	pkg, cb := ctx.pkg, ctx.cb

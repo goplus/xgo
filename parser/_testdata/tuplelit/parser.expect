@@ -1,0 +1,32 @@
+package main
+
+file tuplelit.xgo
+noEntrypoint
+ast.FuncDecl:
+  Name:
+    ast.Ident:
+      Name: main
+  Type:
+    ast.FuncType:
+      Params:
+        ast.FieldList:
+  Body:
+    ast.BlockStmt:
+      List:
+        ast.AssignStmt:
+          Lhs:
+            ast.Ident:
+              Name: ken
+          Tok: :=
+          Rhs:
+            ast.TupleLit:
+              Elts:
+                ast.BasicLit:
+                  Kind: STRING
+                  Value: "Ken"
+                ast.BasicLit:
+                  Kind: STRING
+                  Value: "ken@abc.com"
+                ast.BasicLit:
+                  Kind: INT
+                  Value: 7
