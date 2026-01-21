@@ -14,4 +14,7 @@ func main() {
 	fmt.Println(Int(100))
 	x, y := pt.X_0, pt.X_1
 	fmt.Println(x, y)
+	var pt2 Point
+	pt2.X_0, pt2.X_1 = pt.X_0, pt.X_1
+	fmt.Println(pt2)
 }
