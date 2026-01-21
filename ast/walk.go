@@ -399,6 +399,9 @@ func Walk(v Visitor, node Node) {
 	case *SliceLit:
 		walkList(v, n.Elts)
 
+	case *TupleLit:
+		walkList(v, n.Elts)
+
 	case *LambdaExpr:
 		walkList(v, n.Lhs)
 		walkList(v, n.Rhs)

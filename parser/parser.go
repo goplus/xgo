@@ -779,7 +779,7 @@ func (p *parser) parseLHSList(flags int) []ast.Expr {
 func (p *parser) parseRHSList() []ast.Expr {
 	old := p.inRHS
 	p.inRHS = true
-	list := p.parseExprList(0)
+	list := p.parseExprList(flagAllowTuple)
 	p.inRHS = old
 	return list
 }
@@ -2511,8 +2511,12 @@ func (p *parser) checkExpr(x ast.Expr) ast.Expr {
 	case *ast.LambdaExpr:
 	case *ast.LambdaExpr2:
 	case *tupleExpr:
-		p.error(v.opening, msgTupleNotSupported)
-		x = &ast.BadExpr{From: v.opening, To: v.closing}
+		// Convert tupleExpr to TupleLit
+		x = &ast.TupleLit{
+			Lparen: v.opening,
+			Elts:   v.items,
+			Rparen: v.closing,
+		}
 	case *ast.EnvExpr:
 	case *ast.ElemEllipsis:
 	case *ast.NumberUnitLit:
