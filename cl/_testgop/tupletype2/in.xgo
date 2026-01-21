@@ -7,3 +7,7 @@ echo Int(100)
 
 x, y := pt
 echo x, y
+
+var pt2 Point
+pt2.x, pt2.y = pt
+echo pt2
