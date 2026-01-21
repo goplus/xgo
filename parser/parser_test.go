@@ -150,12 +150,6 @@ func TestErrTplLit(t *testing.T) {
 	testErrCode(t, "tpl`a =`", `/foo/bar.xgo:1:8: expected ';', found 'EOF' (and 1 more errors)`, ``)
 }
 
-func TestErrTuple(t *testing.T) {
-	testErrCode(t, `println (1,2)*2`, `/foo/bar.xgo:1:9: tuple is not supported`, ``)
-	testErrCode(t, `println 2*(1,2)`, `/foo/bar.xgo:1:13: expected ')', found ','`, ``)
-	testErrCode(t, `func test() (int,int) { return (100,100)`, `/foo/bar.xgo:1:41: expected '}', found 'EOF'`, ``)
-}
-
 func TestErrOperand(t *testing.T) {
 	testErrCode(t, `a :=`, `/foo/bar.xgo:1:5: expected operand, found 'EOF'`, ``)
 }

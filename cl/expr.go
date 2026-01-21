@@ -361,10 +361,10 @@ func compileExpr(ctx *blockCtx, expr ast.Expr, inFlags ...int) {
 		compileFuncLit(ctx, v)
 	case *ast.CompositeLit:
 		compileCompositeLit(ctx, v, nil, false)
-	case *ast.SliceLit:
-		compileSliceLit(ctx, v, nil)
 	case *ast.TupleLit:
 		compileTupleLit(ctx, v, nil)
+	case *ast.SliceLit:
+		compileSliceLit(ctx, v, nil)
 	case *ast.RangeExpr:
 		compileRangeExpr(ctx, v)
 	case *ast.IndexExpr:
@@ -946,6 +946,10 @@ func compileCallArgs(ctx *blockCtx, pfn *gogen.Element, fn *fnType, v *ast.CallE
 			if err = compileCompositeLitEx(ctx, expr, t, true); err != nil {
 				return
 			}
+		case *ast.TupleLit:
+			if err = compileTupleLit(ctx, expr, t, true); err != nil {
+				return
+			}
 		case *ast.SliceLit:
 			switch t.(type) {
 			case *types.Slice:
@@ -1410,6 +1414,8 @@ func compileCompositeLitElt(ctx *blockCtx, e ast.Expr, typ types.Type, flag clLa
 			return err
 		}
 		compileLambda(ctx, v, sig)
+	case *ast.TupleLit:
+		compileTupleLit(ctx, v, typ)
 	case *ast.SliceLit:
 		compileSliceLit(ctx, v, typ)
 	case *ast.CompositeLit:

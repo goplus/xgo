@@ -20,19 +20,35 @@ ast.FuncDecl:
                 ast.Ident:
                   Name: println
               Args:
-                ast.BinaryExpr:
-                  X:
+                ast.TupleLit:
+                  Elts:
+                    ast.BinaryExpr:
+                      X:
+                        ast.BasicLit:
+                          Kind: INT
+                          Value: 1
+                      Op: +
+                      Y:
+                        ast.BasicLit:
+                          Kind: IMAG
+                          Value: 2i
+                    ast.BasicLit:
+                      Kind: INT
+                      Value: 2
+        ast.ExprStmt:
+          X:
+            ast.CallExpr:
+              Fun:
+                ast.Ident:
+                  Name: println
+              Args:
+                ast.TupleLit:
+                  Elts:
                     ast.BasicLit:
                       Kind: INT
                       Value: 1
-                  Op: +
-                  Y:
-                    ast.BasicLit:
-                      Kind: IMAG
-                      Value: 2i
-                ast.BasicLit:
-                  Kind: INT
-                  Value: 2
+                    ast.Ident:
+                      Name: a
         ast.ExprStmt:
           X:
             ast.CallExpr:
@@ -40,17 +56,7 @@ ast.FuncDecl:
                 ast.Ident:
                   Name: println
               Args:
-                ast.BasicLit:
-                  Kind: INT
-                  Value: 1
-                ast.Ident:
-                  Name: a
-        ast.ExprStmt:
-          X:
-            ast.CallExpr:
-              Fun:
-                ast.Ident:
-                  Name: println
-              Args:
-                ast.Ident:
-                  Name: a
+                ast.TupleLit:
+                  Elts:
+                    ast.Ident:
+                      Name: a
