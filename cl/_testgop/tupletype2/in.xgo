@@ -4,3 +4,6 @@ type Int (x int)
 pt := Point{x: 2, y: 3}
 echo pt.x, pt.y
 echo Int(100)
+
+x, y := pt
+echo x, y
