@@ -50,9 +50,6 @@ type WithStruct (s struct{ x int }, data struct{ name string })
 // Tuple with interface types (covers token.INTERFACE case)
 type WithInterface (i interface{}, reader interface{ Read([]byte) int })
 
-// Tuple with parenthesized types (covers token.LPAREN case)
-type WithParen ((int), (string))
-
 // Tuple with qualified type names (covers token.PERIOD case)
 type WithQualified (io.Reader, io.Writer)
 

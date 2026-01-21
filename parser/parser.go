@@ -779,7 +779,7 @@ func (p *parser) parseLHSList(flags int) []ast.Expr {
 func (p *parser) parseRHSList() []ast.Expr {
 	old := p.inRHS
 	p.inRHS = true
-	list := p.parseExprList(0)
+	list := p.parseExprList(flagAllowTuple)
 	p.inRHS = old
 	return list
 }
@@ -2042,7 +2042,7 @@ func (p *parser) parseOperand(flags int) (x ast.Expr, exprKind int) {
 		allowTuple := flags&flagAllowTuple != 0
 		if allowTuple && p.tok == token.RPAREN { // () => expr
 			p.next()
-			return &tupleExpr{opening: lparen, closing: p.pos}, exprTuple
+			return &ast.TupleLit{Lparen: lparen, Rparen: p.pos}, exprTuple
 		}
 		p.exprLev++
 		x = p.parseRHSOrType() // types may be parenthesized: (some type)
@@ -2054,9 +2054,9 @@ func (p *parser) parseOperand(flags int) (x ast.Expr, exprKind int) {
 				p.next()
 				items = append(items, p.parseRHSOrType())
 			}
-			t := &tupleExpr{opening: lparen, items: items, closing: p.pos}
+			t := &ast.TupleLit{Lparen: lparen, Elts: items, Rparen: p.pos}
 			if p.tok == token.ELLIPSIS {
-				t.ellipsis = p.pos
+				t.Ellipsis = p.pos
 				p.next()
 			}
 			p.exprLev--
@@ -2292,12 +2292,12 @@ func (p *parser) parseCallOrConversion(fun ast.Expr, isCmd bool) *ast.CallExpr {
 		}
 		expr, exprKind := p.parseRHSOrTypeEx(flags)
 		if exprKind == exprTuple {
-			t := expr.(*tupleExpr)
+			t := expr.(*ast.TupleLit)
 			if p.tok != token.SEMICOLON && p.tok != token.RBRACE && p.tok != token.EOF {
-				p.error(t.opening, msgTupleNotSupported)
+				p.error(t.Lparen, msgTupleNotSupported)
 				p.advance(stmtStart)
 			}
-			args, lparen, ellipsis, rparen = t.items, t.opening, t.ellipsis, t.closing
+			args, lparen, ellipsis, rparen = t.Elts, t.Lparen, t.Ellipsis, t.Rparen
 			isCmd = true // force conversion of fake command to command
 			break
 		}
@@ -2478,7 +2478,7 @@ func (p *parser) parseLiteralValue(typ ast.Expr) ast.Expr {
 
 // checkExpr checks that x is an expression (and not a type).
 func (p *parser) checkExpr(x ast.Expr) ast.Expr {
-	switch v := unparen(x).(type) {
+	switch unparen(x).(type) {
 	case *ast.BadExpr:
 	case *ast.Ident:
 	case *ast.BasicLit:
@@ -2510,9 +2510,7 @@ func (p *parser) checkExpr(x ast.Expr) ast.Expr {
 	case *ast.ErrWrapExpr:
 	case *ast.LambdaExpr:
 	case *ast.LambdaExpr2:
-	case *tupleExpr:
-		p.error(v.opening, msgTupleNotSupported)
-		x = &ast.BadExpr{From: v.opening, To: v.closing}
+	case *ast.TupleLit:
 	case *ast.EnvExpr:
 	case *ast.ElemEllipsis:
 	case *ast.NumberUnitLit:
@@ -2843,14 +2841,6 @@ func (p *parser) parseRangeExpr(first ast.Expr, flags int) (x ast.Expr, exprKind
 	return &ast.RangeExpr{First: x, To: to, Last: high, Colon2: colon2, Expr3: expr3}, 0
 }
 
-type tupleExpr struct {
-	ast.Expr
-	opening  token.Pos
-	items    []ast.Expr
-	ellipsis token.Pos
-	closing  token.Pos
-}
-
 // flags support flagAllowTuple, flagAllowCmd, flagAllowRangeExpr, flagAllowKwargExpr
 func (p *parser) parseLambdaExpr(flags int) (x ast.Expr, exprKind int) {
 	var first = p.pos
@@ -2893,9 +2883,9 @@ func (p *parser) parseLambdaExpr(flags int) (x ast.Expr, exprKind int) {
 			e := x
 		retry:
 			switch v := e.(type) {
-			case *tupleExpr:
-				items := make([]*ast.Ident, len(v.items))
-				for i, item := range v.items {
+			case *ast.TupleLit:
+				items := make([]*ast.Ident, len(v.Elts))
+				for i, item := range v.Elts {
 					ident := p.toIdent(item)
 					if ident == nil {
 						return &ast.BadExpr{From: item.Pos(), To: p.safePos(item.End())}, 0
@@ -2936,7 +2926,7 @@ func (p *parser) parseLambdaExpr(flags int) (x ast.Expr, exprKind int) {
 			RhsHasParen: rhsHasParen,
 		}, 0
 	} else if exprKind == exprTuple && flags&flagAllowTuple == 0 {
-		p.error(x.(*tupleExpr).opening, msgTupleNotSupported)
+		p.error(x.(*ast.TupleLit).Lparen, msgTupleNotSupported)
 		p.advance(stmtStart)
 	}
 	return

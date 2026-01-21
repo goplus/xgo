@@ -363,6 +363,8 @@ func compileExpr(ctx *blockCtx, expr ast.Expr, inFlags ...int) {
 		compileCompositeLit(ctx, v, nil, false)
 	case *ast.SliceLit:
 		compileSliceLit(ctx, v, nil)
+	//case *ast.TupleLit:
+	//	compileTupleLit(ctx, v)
 	case *ast.RangeExpr:
 		compileRangeExpr(ctx, v)
 	case *ast.IndexExpr:
@@ -1623,6 +1625,51 @@ func compileSliceLit(ctx *blockCtx, v *ast.SliceLit, typ types.Type, noPanic ...
 	}
 	return
 }
+
+/*
+func compileTupleLit(ctx *blockCtx, v *ast.TupleLit) {
+	n := len(v.Elts)
+	if n == 0 {
+		// Empty tuple () is struct{}
+		emptyStruct := types.NewStruct(nil, nil)
+		ctx.cb.Val(&gogen.Element{
+			Type: emptyStruct,
+			Val:  nil,
+		}, v)
+		return
+	}
+
+	// Single element tuple degenerates to the element itself
+	if n == 1 {
+		compileExpr(ctx, v.Elts[0])
+		return
+	}
+
+	// Compile elements to determine types
+	for _, elt := range v.Elts {
+		compileExpr(ctx, elt)
+	}
+
+	// Build tuple type from stack element types
+	pkg := ctx.pkg
+	pkgTypes := pkg.Types
+	stack := ctx.cb.InternalStack()
+	fields := make([]*types.Var, n)
+
+	for i := 0; i < n; i++ {
+		// Get type from stack (elements are in order from bottom to top)
+		arg := stack.Get(-(n - i))
+		fldName := fmt.Sprintf("X_%d", i)
+		fields[i] = types.NewField(v.Lparen, pkgTypes, fldName, arg.Type, false)
+	}
+
+	// Create tuple type using pkg.NewTuple
+	tupleType := pkg.NewTuple(false, fields...)
+
+	// Call StructLit with the tuple type
+	ctx.cb.StructLit(tupleType, n, false, v)
+}
+*/
 
 func compileRangeExpr(ctx *blockCtx, v *ast.RangeExpr) {
 	pkg, cb := ctx.pkg, ctx.cb
