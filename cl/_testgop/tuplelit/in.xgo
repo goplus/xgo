@@ -1,0 +1,2 @@
+ken := ("Ken", "ken@abc.com", 7)
+echo ken
