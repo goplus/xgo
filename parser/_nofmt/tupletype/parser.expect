@@ -1,0 +1,32 @@
+package main
+
+file tuple.xgo
+ast.GenDecl:
+  Doc:
+    ast.CommentGroup:
+      List:
+        ast.Comment:
+          Text: // Tuple with parenthesized types (covers token.LPAREN case)
+  Tok: type
+  Specs:
+    ast.TypeSpec:
+      Name:
+        ast.Ident:
+          Name: WithParen
+      Type:
+        ast.TupleType:
+          Fields:
+            ast.FieldList:
+              List:
+                ast.Field:
+                  Type:
+                    ast.ParenExpr:
+                      X:
+                        ast.Ident:
+                          Name: int
+                ast.Field:
+                  Type:
+                    ast.ParenExpr:
+                      X:
+                        ast.Ident:
+                          Name: string

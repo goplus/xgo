@@ -1,0 +1,2 @@
+// Tuple with parenthesized types (covers token.LPAREN case)
+type WithParen ((int), (string))
