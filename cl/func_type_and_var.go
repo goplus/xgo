@@ -501,7 +501,7 @@ func toArrayType(ctx *blockCtx, v *ast.ArrayType) types.Type {
 
 func toInt64(ctx *blockCtx, e ast.Expr, emsg string) int64 {
 	cb := ctx.pkg.ConstStart()
-	compileExpr(ctx, e)
+	compileExpr(ctx, 0, e)
 	tv := cb.EndConst()
 	if val := tv.CVal; val != nil {
 		if val.Kind() == constant.Float {

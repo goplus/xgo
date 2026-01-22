@@ -18,3 +18,9 @@ echo ken
 dump (1, 3.14), true
 dump (1, 3.14)
 demo (1, 3.14)
+
+pairs := [](string, int16){
+    ("a", 1),
+    ("b", 2),
+}
+echo pairs
