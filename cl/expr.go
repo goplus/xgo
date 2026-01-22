@@ -634,6 +634,10 @@ func (p *fnType) initTypeType(t *gogen.TypeType) {
 	p.size = 1
 }
 
+func (p *fnType) unpackTupleLit(cb *gogen.CodeBuilder) bool {
+	return p.size != 1 || !cb.IsTupleType(p.params.At(0).Type())
+}
+
 func (p *fnType) load(fnt types.Type) {
 	switch v := fnt.(type) {
 	case *gogen.TypeType:
@@ -708,7 +712,7 @@ func compileCallExpr(ctx *blockCtx, v *ast.CallExpr, inFlags int) {
 	var stk = ctx.cb.InternalStack()
 	var base = stk.Len()
 	var flags gogen.InstrFlags
-	var ellipsis = v.Ellipsis != gotoken.NoPos
+	var ellipsis = v.Ellipsis != token.NoPos
 	if ellipsis {
 		flags = gogen.InstrFlagEllipsis
 	}
@@ -888,13 +892,24 @@ func compileCallArgs(ctx *blockCtx, pfn *gogen.Element, fn *fnType, v *ast.CallE
 		}
 	}()
 
+	cb := ctx.cb
 	vargs := v.Args
+	if len(vargs) == 1 && !ellipsis {
+		if tupleLit, ok := vargs[0].(*ast.TupleLit); ok {
+			isEll := tupleLit.Ellipsis != token.NoPos
+			if isEll || fn.unpackTupleLit(cb) {
+				vargs, ellipsis = tupleLit.Elts, isEll
+			}
+		}
+	}
+
+	vargsOrg := vargs
 	if fn.typeAsParams && fn.typeparam {
 		n := fn.sig.TypeParams().Len()
 		for i := 0; i < n; i++ {
 			compileExpr(ctx, vargs[i])
 		}
-		args := ctx.cb.InternalStack().GetArgs(n)
+		args := cb.InternalStack().GetArgs(n)
 		var targs []types.Type
 		for i, arg := range args {
 			typ := arg.Type
@@ -962,7 +977,7 @@ func compileCallArgs(ctx *blockCtx, pfn *gogen.Element, fn *fnType, v *ast.CallE
 			}
 			typetype := fn.typetype && t != nil
 			if typetype {
-				ctx.cb.InternalStack().PopN(1)
+				cb.InternalStack().PopN(1)
 			}
 			if err = compileSliceLit(ctx, expr, t, true); err != nil {
 				return
@@ -975,7 +990,6 @@ func compileCallArgs(ctx *blockCtx, pfn *gogen.Element, fn *fnType, v *ast.CallE
 		default:
 			compileExpr(ctx, arg)
 			if sigParamLen(t) == 0 {
-				cb := ctx.cb
 				if nonClosure(cb.Get(-1).Type) {
 					cb.ConvertToClosure()
 				}
@@ -983,7 +997,7 @@ func compileCallArgs(ctx *blockCtx, pfn *gogen.Element, fn *fnType, v *ast.CallE
 		}
 	}
 	if needInferFunc {
-		args := ctx.cb.InternalStack().GetArgs(len(v.Args))
+		args := cb.InternalStack().GetArgs(len(vargsOrg))
 		typ, err := gogen.InferFunc(ctx.pkg, pfn, fn.sig, nil, args, flags)
 		if err != nil {
 			return err
@@ -994,7 +1008,7 @@ func compileCallArgs(ctx *blockCtx, pfn *gogen.Element, fn *fnType, v *ast.CallE
 		fn.next = next
 		return errCallNext
 	}
-	return ctx.cb.CallWithEx(len(v.Args), flags, v)
+	return cb.CallWithEx(len(vargsOrg), flags, v)
 }
 
 var (
