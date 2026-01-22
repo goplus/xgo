@@ -19,6 +19,9 @@ func dump(a struct {
 	}{1, 3.14}}
 	fmt.Println(a, t)
 }
+func demo(a int16, b float32) {
+	fmt.Println(a, b)
+}
 func main() {
 	ken := struct {
 		X_0 string
@@ -34,4 +37,5 @@ func main() {
 		X_0 int16
 		X_1 float32
 	}{1, 3.14})
+	demo(1, 3.14)
 }
