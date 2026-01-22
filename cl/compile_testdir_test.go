@@ -27,7 +27,7 @@ func TestTestspx(t *testing.T) {
 }
 
 func TestTestgop(t *testing.T) {
-	cltest.FromDir(t, "tuplechan", "./_testgop")
+	cltest.FromDir(t, "", "./_testgop")
 }
 
 func TestTestc(t *testing.T) {
