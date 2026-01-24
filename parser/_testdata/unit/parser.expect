@@ -24,3 +24,14 @@ ast.FuncDecl:
                   Kind: INT
                   Value: 1
                   Unit: µs
+        ast.ExprStmt:
+          X:
+            ast.CallExpr:
+              Fun:
+                ast.Ident:
+                  Name: wait
+              Args:
+                ast.NumberUnitLit:
+                  Kind: FLOAT
+                  Value: 0.5
+                  Unit: µs

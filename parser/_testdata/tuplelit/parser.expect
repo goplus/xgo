@@ -35,6 +35,20 @@ ast.FuncDecl:
             ast.CallExpr:
               Fun:
                 ast.Ident:
+                  Name: echo
+              Args:
+                ast.SelectorExpr:
+                  X:
+                    ast.Ident:
+                      Name: ken
+                  Sel:
+                    ast.Ident:
+                      Name: 0
+        ast.ExprStmt:
+          X:
+            ast.CallExpr:
+              Fun:
+                ast.Ident:
                   Name: dump
               Args:
                 ast.TupleLit:
