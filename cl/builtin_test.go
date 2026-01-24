@@ -160,7 +160,7 @@ func TestCompileExpr(t *testing.T) {
 		}
 	}()
 	ctx := &blockCtx{pkgCtx: &pkgCtx{}}
-	compileExpr(ctx, &ast.Ellipsis{})
+	compileExpr(ctx, 0, &ast.Ellipsis{})
 }
 
 func TestCompileStmt(t *testing.T) {

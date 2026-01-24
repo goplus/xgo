@@ -38,4 +38,15 @@ func main() {
 		X_1 float32
 	}{1, 3.14})
 	demo(1, 3.14)
+	pairs := []struct {
+		X_0 string
+		X_1 int16
+	}{struct {
+		X_0 string
+		X_1 int16
+	}{"a", 1}, struct {
+		X_0 string
+		X_1 int16
+	}{"b", 2}}
+	fmt.Println(pairs)
 }
