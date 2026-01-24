@@ -3,8 +3,5 @@ type Point (x, y int)
 pt := Point{x: 2, y: 3}
 echo pt.x, pt.y
 
-x, y := pt
-echo x, y
-
 pt.x, pt.y = 100, 200
 echo pt
