@@ -128,7 +128,7 @@ Type = TypeLit | TypeName | "(" Type ")"
 
 TypeName = IDENT ?("." IDENT)
 
-TypeLit = PointerType | ArrayType | MapType | FuncType | StructType | InterfaceType
+TypeLit = PointerType | ArrayType | MapType | FuncType | TupleType | InterfaceType
 
 PointerType = "*" Type
 
@@ -138,13 +138,11 @@ MapType = "map" "[" Type "]" Type
 
 FuncType = "func" Signature
 
-StructType = "struct" "{" *(FieldDecl ";") "}"
+TupleType = "(" ?TupleFieldList ")"
 
-FieldDecl = ("*" TypeName | FieldsOrNonPtrEmbeddedField) ?Tag
+TupleFieldList = TupleField % ","
 
-FieldsOrNonPtrEmbeddedField = IDENT ("." IDENT | +("," IDENT) Type | ?Type)
-
-Tag = STRING
+TupleField = ?(IDENT % ",") Type
 
 InterfaceType = "interface" "{" *(InterfaceElem ";") "}"
 
@@ -184,7 +182,7 @@ DomainTextLit = IDENT ++ RAWSTRING
 
 NamedCompositeLit = TypeName ++ "{" ElementList "}"
 
-CompositeLit = (MapType | StructType) LiteralValue
+CompositeLit = MapType LiteralValue
 
 ListCompositeLit = LBRACK ?("..." | LambdaExpr % ",") (RBRACK ++ Type LiteralValue | RBRACK)
 

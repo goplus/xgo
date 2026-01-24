@@ -183,6 +183,69 @@ type (
 )
 ```
 
+### Tuple types
+
+See [Tuple types](spec-mini.md#tuple-types).
+
+Tuple types in the FullSpec support all MiniSpec features plus additional advanced capabilities for compatibility with Go and migration scenarios.
+
+#### Brace-Style Construction (FullSpec Only)
+
+In addition to function-style construction, the FullSpec supports brace-based initialization using `:` for field assignment:
+
+```go
+type Point (x int, y int)
+
+// Function-style (available in both MiniSpec and FullSpec)
+p1 := Point(10, 20)
+p1 := Point(x = 10, y = 20)
+
+// Brace-style (FullSpec only)
+p2 := Point{x: 10, y: 20}
+p2 := Point{10, 20}
+```
+
+#### Anonymous Tuple Literals with Braces
+
+The FullSpec allows using tuple literals within brace-based composite literals:
+
+```go
+// Using tuples in struct fields
+type Record struct {
+	coords (int, int)
+	data   (string, bool)
+}
+
+r := Record{
+	coords: (10, 20),
+	data:   ("test", true),
+}
+```
+
+#### Type Compatibility and Reflection
+
+At runtime, tuples are implemented as structs with ordinal field names `_0`, `_1`, `_2`, etc.:
+
+```go
+type Point (x int, y int)
+
+// At runtime, Point is equivalent to:
+// struct {
+//     _0 int  // accessible as .x at compile time, ._0 or .0 at runtime
+//     _1 int  // accessible as .y at compile time, ._1 or .1 at runtime
+// }
+```
+
+Tuple types with the same element types (in the same order) have identical underlying structures but are distinct named types:
+
+```go
+type Point (x int, y int)
+type Coord (a int, b int)
+
+// Point and Coord have identical underlying types but are different types
+// Conversion is required: c := Coord(p)
+```
+
 ### Function types
 
 See [Function types](spec-mini.md#function-types).
