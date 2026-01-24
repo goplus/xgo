@@ -634,7 +634,7 @@ type Person (name string, age int)
 type Point3D (x, y, z int)
 ```
 
-**Single-Element Degeneracy**: A tuple with a single element `(T)` or `(value T)` is degenerates to `T` itself, not a tuple.
+**Single-Element Degeneracy**: A tuple with a single element `(T)` or `(value T)` degenerates to `T` itself, not a tuple.
 
 #### Tuple Construction
 
@@ -653,8 +653,8 @@ person := Person(name = "Alice", age = 30)
 #### Field Access
 
 Tuple fields can be accessed by:
-- **Named fields** (compile-time): `p.x`, `p.y`
-- **Ordinal indices** (runtime): `p.0`, `p.1` (equivalent to `p.x`, `p.y`)
+- **Named fields**: `p.x`, `p.y` (using declared names)
+- **Ordinal notation**: `p.0`, `p.1` (numeric shorthand)
 
 ```go
 type Point (x int, y int)

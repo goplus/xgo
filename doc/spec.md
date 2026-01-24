@@ -252,7 +252,7 @@ In addition to function-style construction, tuple supports brace-based initializ
 ```go
 type Point (x int, y int)
 
-p2 := Point{x: 10, y: 20}
+p1 := Point{x: 10, y: 20}
 p2 := Point{10, 20}
 ```
 
