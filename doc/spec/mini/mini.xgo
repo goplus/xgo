@@ -198,7 +198,11 @@ Element = LiteralValue | LambdaExpr
 
 FunctionLit = "func" Signature Block
 
-CallOrConversion = "(" ?(LambdaExpr % ",") ?"..." ?"," ")"
+CallOrConversion = "(" ?(ArgList) ?"..." ?"," ")"
+
+ArgList = (LambdaExpr | Kwarg) % ","
+
+Kwarg = IDENT "=" LambdaExpr
 
 SelectorOrTypeAssertion = "." (IDENT | "(" Type ")")
 
