@@ -1269,6 +1269,67 @@ echo min(elements...)
 
 Both styles are equivalent and can be used interchangeably. XGo prefers command-style for its cleaner, more natural appearance, similar to shell commands. The built-in function `echo` is provided as an alias for `println` to emphasize this command-oriented approach.
 
+#### Keyword arguments
+
+XGo supports keyword arguments (kwargs) in function calls, allowing arguments to be specified by parameter name. This improves code readability, especially for functions with many parameters or optional parameters.
+
+**Syntax:**
+
+```go
+CallOrConversion = "(" [ ArgList ] [ "..." ] [ "," ] ")" .
+ArgList          = (LambdaExpr | Kwarg) { "," (LambdaExpr | Kwarg) } .
+Kwarg            = IDENT "=" LambdaExpr .
+```
+
+**Three calling styles are supported:**
+
+1. **Positional arguments only:**
+
+```go
+playSound(getUrl("1.mp3"), true)
+```
+
+2. **Keyword arguments only:**
+
+```go
+listDir(withHidden = true, recursive = false)
+```
+
+3. **Mixed arguments (positional followed by keyword):**
+
+```go
+playSound(getUrl("1.mp3", cache = false), loop = true)
+```
+
+**Important rules:**
+
+- Keyword arguments use the `=` operator to bind argument names to values
+- Positional arguments must come before keyword arguments
+- Once a keyword argument appears, all subsequent arguments must also be keyword arguments
+- Keyword argument names must match the function's parameter names
+
+**Examples:**
+
+```go
+// Function definition
+func createWindow(width, height int, title string, resizable bool) { ... }
+
+// Positional arguments
+createWindow(800, 600, "My App", true)
+
+// Keyword arguments improve readability
+createWindow(width = 800, height = 600, title = "My App", resizable = true)
+
+// Mixed: positional then keyword
+createWindow(800, 600, title = "My App", resizable = true)
+
+// Command-style with keyword arguments
+listDir withHidden = true, recursive = false
+playSound getUrl("1.mp3", cache = false), loop = true
+```
+
+Note: This syntax is specific to MiniSpec. The FullSpec uses `:` for field assignment in brace-style construction (e.g., `Point{x: 10, y: 20}`), while MiniSpec uses `=` for keyword arguments in function-style calls (e.g., `Point(x = 10, y = 20)`).
+
 
 ### Built-in functions
 
