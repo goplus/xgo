@@ -962,7 +962,7 @@ func compileBranchStmt(ctx *blockCtx, v *ast.BranchStmt) {
 			cb.Goto(l)
 			return
 		}
-		compileCallExpr(ctx, &ast.CallExpr{
+		compileCallExpr(ctx, 0, &ast.CallExpr{
 			Fun:        &ast.Ident{NamePos: v.TokPos, Name: "goto", Obj: &ast.Object{Data: label}},
 			Args:       []ast.Expr{label},
 			NoParenEnd: label.End(),
@@ -995,12 +995,12 @@ func compileLabeledStmt(ctx *blockCtx, v *ast.LabeledStmt) {
 }
 
 func compileGoStmt(ctx *blockCtx, v *ast.GoStmt) {
-	compileCallExpr(ctx, v.Call, 0)
+	compileCallExpr(ctx, 0, v.Call, 0)
 	ctx.cb.Go()
 }
 
 func compileDeferStmt(ctx *blockCtx, v *ast.DeferStmt) {
-	compileCallExpr(ctx, v.Call, 0)
+	compileCallExpr(ctx, 0, v.Call, 0)
 	ctx.cb.Defer()
 }
 

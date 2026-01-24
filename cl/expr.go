@@ -342,7 +342,7 @@ func compileExpr(ctx *blockCtx, lhs int, expr ast.Expr, inFlags ...int) {
 		if inFlags != nil {
 			flags = inFlags[0]
 		}
-		compileCallExpr(ctx, v, flags)
+		compileCallExpr(ctx, lhs, v, flags)
 	case *ast.SelectorExpr:
 		flags, cmdNoArgs := identOrSelectorFlags(inFlags)
 		compileSelectorExpr(ctx, v, flags)
@@ -671,7 +671,7 @@ func (p *fnType) initFuncs(base int, funcs []types.Object, typeAsParams bool) {
 	}
 }
 
-func compileCallExpr(ctx *blockCtx, v *ast.CallExpr, inFlags int) {
+func compileCallExpr(ctx *blockCtx, lhs int, v *ast.CallExpr, inFlags int) {
 	// If you need to confirm the callExpr format, you can turn on
 	// if !v.NoParenEnd.IsValid() && !v.Rparen.IsValid() {
 	// 	panic("unexpected invalid Rparen and NoParenEnd in CallExpr")
@@ -740,7 +740,7 @@ func compileCallExpr(ctx *blockCtx, v *ast.CallExpr, inFlags int) {
 		v = &ne
 	}
 	for fn != nil {
-		if err = compileCallArgs(ctx, pfn, fn, v, ellipsis, flags); err == nil {
+		if err = compileCallArgs(ctx, lhs, pfn, fn, v, ellipsis, flags); err == nil {
 			if rec := ctx.recorder(); rec != nil {
 				rec.recordCallExpr(ctx, v, fnt)
 			}
@@ -749,7 +749,7 @@ func compileCallExpr(ctx *blockCtx, v *ast.CallExpr, inFlags int) {
 		stk.SetLen(base)
 		fn = fn.next
 	}
-	if ifn != nil && builtinOrXGoExec(ctx, ifn, v, flags) == nil {
+	if ifn != nil && builtinOrXGoExec(ctx, lhs, ifn, v, flags) == nil {
 		return
 	}
 	panic(err)
@@ -844,17 +844,17 @@ func toBasicLit(fn *ast.Ident) *ast.BasicLit {
 
 // maybe builtin new/delete: see TestSpxNewObj, TestMayBuiltinDelete
 // maybe XGo_Exec: see TestSpxXGoExec
-func builtinOrXGoExec(ctx *blockCtx, ifn *ast.Ident, v *ast.CallExpr, flags gogen.InstrFlags) error {
+func builtinOrXGoExec(ctx *blockCtx, lhs int, ifn *ast.Ident, v *ast.CallExpr, flags gogen.InstrFlags) error {
 	cb := ctx.cb
 	switch name := ifn.Name; name {
 	case "new", "delete":
 		cb.InternalStack().PopN(1)
 		cb.Val(ctx.pkg.Builtin().Ref(name), ifn)
-		return fnCall(ctx, v, flags, 0)
+		return fnCall(ctx, lhs, v, flags, 0)
 	default:
 		// for support XGo_Exec, see TestSpxXGoExec
 		if v.IsCommand() && ctx.isClass && tryXGoExec(cb, ifn) {
-			return fnCall(ctx, v, flags, 1)
+			return fnCall(ctx, lhs, v, flags, 1)
 		}
 	}
 	return syscall.ENOENT
@@ -871,14 +871,14 @@ func tryXGoExec(cb *gogen.CodeBuilder, ifn *ast.Ident) bool {
 	return false
 }
 
-func fnCall(ctx *blockCtx, v *ast.CallExpr, flags gogen.InstrFlags, extra int) error {
+func fnCall(ctx *blockCtx, lhs int, v *ast.CallExpr, flags gogen.InstrFlags, extra int) error {
 	for _, arg := range v.Args {
 		compileExpr(ctx, 0, arg)
 	}
-	return ctx.cb.CallWithEx(len(v.Args)+extra, 0, flags, v)
+	return ctx.cb.CallWithEx(len(v.Args)+extra, lhs, flags, v)
 }
 
-func compileCallArgs(ctx *blockCtx, pfn *gogen.Element, fn *fnType, v *ast.CallExpr, ellipsis bool, flags gogen.InstrFlags) (err error) {
+func compileCallArgs(ctx *blockCtx, lhs int, pfn *gogen.Element, fn *fnType, v *ast.CallExpr, ellipsis bool, flags gogen.InstrFlags) (err error) {
 	defer func() {
 		r := recover()
 		if r != nil {
@@ -1002,7 +1002,7 @@ func compileCallArgs(ctx *blockCtx, pfn *gogen.Element, fn *fnType, v *ast.CallE
 		fn.next = next
 		return errCallNext
 	}
-	return cb.CallWithEx(len(vargsOrg), 0, flags, v)
+	return cb.CallWithEx(len(vargsOrg), lhs, flags, v)
 }
 
 var (
