@@ -247,7 +247,7 @@ See [Tuple types](spec-mini.md#tuple-types).
 
 #### Brace-Style Construction
 
-In addition to function-style construction, the FullSpec supports brace-based initialization using `:` for field assignment:
+In addition to function-style construction, tuple supports brace-based initialization using `:` for field assignment:
 
 ```go
 type Point (x int, y int)
@@ -258,7 +258,7 @@ p2 := Point{10, 20}
 
 #### Anonymous Tuple Literals with Braces
 
-The FullSpec allows using tuple literals within brace-based composite literals:
+It allows using tuple literals within brace-based composite literals:
 
 ```go
 // Using tuples in struct fields
@@ -275,15 +275,15 @@ r := Record{
 
 #### Type Compatibility and Reflection
 
-At runtime, tuples are implemented as structs with ordinal field names `_0`, `_1`, `_2`, etc.:
+At runtime, tuples are implemented as structs with ordinal field names `X_0`, `X_1`, `X_2`, etc.:
 
 ```go
 type Point (x int, y int)
 
 // At runtime, Point is equivalent to:
 // struct {
-//     _0 int  // accessible as .x at compile time, ._0 or .0 at runtime
-//     _1 int  // accessible as .y at compile time, ._1 or .1 at runtime
+//     X_0 int  // accessible as .x or .0 at compile time, .X_0 at runtime
+//     X_1 int  // accessible as .y or .1 at compile time, .X_1 at runtime
 // }
 ```
 
