@@ -365,9 +365,9 @@ func compileExpr(ctx *blockCtx, lhs int, expr ast.Expr, inFlags ...int) {
 	case *ast.RangeExpr:
 		compileRangeExpr(ctx, v)
 	case *ast.IndexExpr:
-		compileIndexExpr(ctx, lhs, v)
+		compileIndexExpr(ctx, lhs, v, inFlags...)
 	case *ast.IndexListExpr:
-		compileIndexListExpr(ctx, lhs, v)
+		compileIndexListExpr(ctx, lhs, v, inFlags...)
 	case *ast.SliceExpr:
 		compileSliceExpr(ctx, v)
 	case *ast.StarExpr:
@@ -450,14 +450,14 @@ func compileTypeAssertExpr(ctx *blockCtx, lhs int, v *ast.TypeAssertExpr) {
 	ctx.cb.TypeAssert(typ, lhs, v)
 }
 
-func compileIndexExpr(ctx *blockCtx, lhs int, v *ast.IndexExpr) { // x[i]
-	compileExpr(ctx, 0, v.X)
+func compileIndexExpr(ctx *blockCtx, lhs int, v *ast.IndexExpr, inFlags ...int) { // x[i]
+	compileExpr(ctx, 0, v.X, inFlags...)
 	compileExpr(ctx, 0, v.Index)
 	ctx.cb.Index(1, lhs, v)
 }
 
-func compileIndexListExpr(ctx *blockCtx, lhs int, v *ast.IndexListExpr) { // fn[t1,t2]
-	compileExpr(ctx, 0, v.X)
+func compileIndexListExpr(ctx *blockCtx, lhs int, v *ast.IndexListExpr, inFlags ...int) { // fn[t1,t2]
+	compileExpr(ctx, 0, v.X, inFlags...)
 	n := len(v.Indices)
 	for i := 0; i < n; i++ {
 		compileExpr(ctx, 0, v.Indices[i])
