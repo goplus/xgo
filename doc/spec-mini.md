@@ -610,7 +610,7 @@ Like arrays, slices are always one-dimensional but may be composed to construct 
 
 ### Tuple types
 
-A _tuple_ type is a lightweight data structure for grouping multiple values together. Tuple types are syntactic sugar for anonymous structs with ordinal field names (`_0`, `_1`, etc.). Named fields in tuples serve as compile-time aliases for better code readability but map to ordinal fields at runtime.
+A _tuple_ type is a lightweight data structure for grouping multiple values together. Tuple types are syntactic sugar for anonymous structs with ordinal field names (`X_0`, `X_1`, etc.). Named fields in tuples serve as compile-time aliases for better code readability but map to ordinal fields at runtime.
 
 ```go
 TupleType  = "(" [ TupleFieldList ] ")" .
@@ -636,11 +636,11 @@ type Person (name string, age int)
 type Point3D (x, y, z int)
 ```
 
-**Single-Element Degeneracy**: A tuple with a single unnamed element `(T)` is treated as a parenthesized type expression and degenerates to `T` itself, not a tuple. To create a single-element tuple, use a named field: `(value T)`.
+**Single-Element Degeneracy**: A tuple with a single element `(T)` or `(value T)` is degenerates to `T` itself, not a tuple.
 
 #### Tuple Construction
 
-Tuples in the MiniSpec are constructed using **function-style syntax**:
+Tuples are constructed using **function-style syntax**:
 
 ```go
 // Positional construction
@@ -656,14 +656,14 @@ person := Person(name = "Alice", age = 30)
 
 Tuple fields can be accessed by:
 - **Named fields** (compile-time): `p.x`, `p.y`
-- **Ordinal indices** (runtime): `p.0`, `p.1` (equivalent to `p._0`, `p._1`)
+- **Ordinal indices** (runtime): `p.0`, `p.1` (equivalent to `p.x`, `p.y`)
 
 ```go
 type Point (x int, y int)
 p := Point(10, 20)
 
 echo p.x      // 10 (using compile-time name)
-echo p.0      // 10 (using ordinal index, equivalent to p._0)
+echo p.0      // 10 (using ordinal index, equivalent to p.x)
 echo p.y      // 20
 echo p.1      // 20
 ```
@@ -676,7 +676,7 @@ Two tuple types are identical if they have the same number of elements and corre
 type Point (x int, y int)
 type Coord (a int, b int)
 
-// Point and Coord have identical underlying types (both map to struct{ _0 int; _1 int })
+// Point and Coord have identical underlying types (both map to struct{ X_0 int; X_1 int })
 // but are different named types
 ```
 

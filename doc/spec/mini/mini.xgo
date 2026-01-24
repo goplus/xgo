@@ -138,11 +138,7 @@ MapType = "map" "[" Type "]" Type
 
 FuncType = "func" Signature
 
-TupleType = "(" ?TupleFieldList ")"
-
-TupleFieldList = TupleField % ","
-
-TupleField = ?(IDENT % ",") Type
+TupleType = Parameters
 
 InterfaceType = "interface" "{" *(InterfaceElem ";") "}"
 
@@ -173,18 +169,14 @@ PrimaryExpr = Operand *(
 
 Operand =
 	INT ?UNIT | FLOAT ?UNIT | STRING | CHAR | RAT | IMAG | "(" LambdaExpr ")" |
-	LiteralValue | CompositeLit | FunctionLit | Env | "c" ++ QSTRING | "py" ++ QSTRING |
-	ListCompositeLit | DomainTextLit | NamedCompositeLit | IDENT
+	LiteralValue | FunctionLit | Env | "c" ++ QSTRING | "py" ++ QSTRING |
+	ListLit | DomainTextLit | IDENT
 
 Env = "$" ("{" IDENT "}" | IDENT)
 
 DomainTextLit = IDENT ++ RAWSTRING
 
-NamedCompositeLit = TypeName ++ "{" ElementList "}"
-
-CompositeLit = MapType LiteralValue
-
-ListCompositeLit = LBRACK ?("..." | LambdaExpr % ",") (RBRACK ++ Type LiteralValue | RBRACK)
+ListLit = LBRACK ?("..." | LambdaExpr % ",") RBRACK
 
 LiteralValue = "{" ElementList "}"
 

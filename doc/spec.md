@@ -14,6 +14,57 @@ See [Literals](spec-mini.md#literals).
 
 ### String literals
 
+### Composite literals
+
+Composite literals construct new composite values each time they are evaluated. They consist of the type of the literal followed by a brace-bound list of elements. Each element may optionally be preceded by a corresponding key.
+
+```go
+CompositeLit  = LiteralType LiteralValue .
+LiteralType   = TypeName [ TypeArgs ] .
+LiteralValue  = "{" [ ElementList [ "," ] ] "}" .
+ElementList   = KeyedElement { "," KeyedElement } .
+KeyedElement  = [ Key ":" ] Element .
+Key           = FieldName | Expression | LiteralValue .
+FieldName     = identifier .
+Element       = Expression | LiteralValue .
+```
+
+The LiteralType's [underlying type](#underlying-types) `T` must be a [struct](#struct-types) or a [classfile]() type. The types of the elements and keys must be [assignable](#assignability) to the respective field; there is no additional conversion. It is an error to specify multiple elements with the same field name.
+
+* A key must be a field name declared in the struct type.
+* An element list that does not contain any keys must list an element for each struct field in the order in which the fields are declared.
+* If any element has a key, every element must have a key.
+* An element list that contains keys does not need to have an element for each struct field. Omitted fields get the zero value for that field.
+* A literal may omit the element list; such a literal evaluates to the zero value for its type.
+* It is an error to specify an element for a non-exported field of a struct belonging to a different package.
+
+Given the declarations
+
+```go
+type Point3D struct { x, y, z float64 }
+type Line struct { p, q Point3D }
+```
+
+one may write
+
+```go
+origin := Point3D{}                            // zero value for Point3D
+line := Line{origin, Point3D{y: -4, z: 12.3}}  // zero value for line.q.x
+```
+
+[Taking the address](#address-operators) of a composite literal generates a pointer to a unique [variable](#variables) initialized with the literal's value.
+
+```go
+var pointer *Point3D = &Point3D{y: 1000}
+```
+
+A parsing ambiguity arises when a composite literal using the TypeName form of the LiteralType appears as an operand between the [keyword](#keywords) and the opening brace of the block of an "if", "for", or "switch" statement, and the composite literal is not enclosed in parentheses, square brackets, or curly braces. In this rare case, the opening brace of the literal is erroneously parsed as the one introducing the block of statements. To resolve the ambiguity, the composite literal must appear within parentheses.
+
+```go
+if x == (T{a,b,c}[i]) { … }
+if (x == T{a,b,c}[i]) { … }
+```
+
 #### C style string literals
 
 TODO
@@ -98,7 +149,14 @@ See [Map types](spec-mini.md#map-types).
 
 ### Struct types
 
-A _struct_ is a sequence of named elements, called fields, each of which has a name and a type. Field names may be specified explicitly (IdentifierList) or implicitly (EmbeddedField). Within a struct, non-[blank]() field names must be [unique]().
+A struct is a sequence of named elements, called fields, each of which has a name and a type. Field names may be specified explicitly (IdentifierList) or implicitly (EmbeddedField). Within a struct, non-[blank](#blank-identifier) field names must be [unique]().
+
+```go
+StructType    = "struct" "{" { FieldDecl ";" } "}" .
+FieldDecl     = (IdentifierList Type | EmbeddedField) [ Tag ] .
+EmbeddedField = [ "*" ] TypeName [ TypeArgs ] .
+Tag           = string_lit .
+```
 
 ```go
 // An empty struct.
@@ -137,16 +195,16 @@ struct {
 }
 ```
 
-A field or [method]() f of an embedded field in a struct x is called _promoted_ if x.f is a legal [selector]() that denotes that field or method f.
+A field `f` or [method]() of an embedded field in a struct `x` is called promoted if `x.f` is a legal [selector]() that denotes that field or method `f`.
 
 Promoted fields act like ordinary fields of a struct except that they cannot be used as field names in [composite literals]() of the struct.
 
-Given a struct type S and a [named type]() T, promoted methods are included in the method set of the struct as follows:
+Given a struct type `S` and a [named type](#types) `T`, promoted methods are included in the method set of the struct as follows:
 
-* If S contains an embedded field T, the [method sets]() of S and *S both include promoted methods with receiver T. The method set of *S also includes promoted methods with receiver *T.
-* If S contains an embedded field *T, the method sets of S and *S both include promoted methods with receiver T or *T.
+* If `S` contains an embedded field `T`, the [method sets]() of `S` and `*S` both include promoted methods with receiver `T`. The method set of `*S` also includes promoted methods with receiver `*T`.
+* If `S` contains an embedded field `*T`, the method sets of `S` and `*S` both include promoted methods with receiver `T` or `*T`.
 
-A field declaration may be followed by an optional string literal tag, which becomes an attribute for all the fields in the corresponding field declaration. An empty tag string is equivalent to an absent tag. The tags are made visible through a [reflection interface]() and take part in [type identity]() for structs but are otherwise ignored.
+A field declaration may be followed by an optional string literal _tag_, which becomes an attribute for all the fields in the corresponding field declaration. An empty tag string is equivalent to an absent tag. The tags are made visible through a [reflection interface]() and take part in [type identity]() for structs but are otherwise ignored.
 
 ```go
 struct {
@@ -164,7 +222,7 @@ struct {
 }
 ```
 
-A struct type T may not contain a field of type T, or of a type containing T as a component, directly or indirectly, if those containing types are only array or struct types.
+A struct type `T` may not contain a field of type T, or of a type containing T as a component, directly or indirectly, if those containing types are only array or struct types.
 
 ```go
 // invalid struct types
@@ -187,20 +245,13 @@ type (
 
 See [Tuple types](spec-mini.md#tuple-types).
 
-Tuple types in the FullSpec support all MiniSpec features plus additional advanced capabilities for compatibility with Go and migration scenarios.
-
-#### Brace-Style Construction (FullSpec Only)
+#### Brace-Style Construction
 
 In addition to function-style construction, the FullSpec supports brace-based initialization using `:` for field assignment:
 
 ```go
 type Point (x int, y int)
 
-// Function-style (available in both MiniSpec and FullSpec)
-p1 := Point(10, 20)
-p1 := Point(x = 10, y = 20)
-
-// Brace-style (FullSpec only)
 p2 := Point{x: 10, y: 20}
 p2 := Point{10, 20}
 ```
