@@ -2547,6 +2547,7 @@ func (p *parser) parsePrimaryExpr(iden *ast.Ident, flags int) (x ast.Expr, exprK
 	} else if x, exprKind = p.parseOperand(flags); exprKind > 0 {
 		return
 	}
+
 	lhs := flags&flagInLHS != 0
 	allowCmd := flags&flagAllowCmd != 0
 L:
@@ -2637,6 +2638,10 @@ L:
 					p.resolve(x)
 				}
 				x = p.parseCallOrConversion(p.checkExprOrType(x), true)
+			} else if p.tok == token.FLOAT && p.lit[0] == '.' { // tuple field: .0 .1 etc.
+				sel := &ast.Ident{NamePos: p.pos + 1, Name: p.lit[1:]}
+				p.next()
+				x = &ast.SelectorExpr{X: x, Sel: sel}
 			} else {
 				break L
 			}

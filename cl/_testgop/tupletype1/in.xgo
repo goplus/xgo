@@ -62,7 +62,7 @@ type SingleNamed (value int)
 
 var ken Person
 
-ken.name, ken.age = "Ken", 18
+ken.0, ken.1 = "Ken", 18
 ken.age++
 
 echo "name: ${ken.name}, age: ${ken.age}"
