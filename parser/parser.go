@@ -2638,7 +2638,8 @@ L:
 					p.resolve(x)
 				}
 				x = p.parseCallOrConversion(p.checkExprOrType(x), true)
-			} else if p.tok == token.FLOAT && p.lit[0] == '.' { // tuple field: .0 .1 etc.
+			} else if p.tok == token.FLOAT && p.lit[0] == '.' && x.End() == p.pos {
+				// tuple field: .0 .1 etc.
 				sel := &ast.Ident{NamePos: p.pos + 1, Name: p.lit[1:]}
 				p.next()
 				x = &ast.SelectorExpr{X: x, Sel: sel}
