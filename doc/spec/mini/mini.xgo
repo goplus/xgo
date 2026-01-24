@@ -168,13 +168,15 @@ PrimaryExpr = Operand *(
 	CallOrConversion | SelectorOrTypeAssertion | IndexOrSlice | ErrWrap)
 
 Operand =
-	INT ?UNIT | FLOAT ?UNIT | STRING | CHAR | RAT | IMAG | "(" LambdaExpr ")" |
+	INT ?UNIT | FLOAT ?UNIT | STRING | CHAR | RAT | IMAG | TupleLit |
 	LiteralValue | FunctionLit | Env | "c" ++ QSTRING | "py" ++ QSTRING |
 	ListLit | DomainTextLit | IDENT
 
 Env = "$" ("{" IDENT "}" | IDENT)
 
 DomainTextLit = IDENT ++ RAWSTRING
+
+TupleLit = "(" ExpressionList ?"," ")"
 
 ListLit = LBRACK ?("..." | LambdaExpr % ",") RBRACK
 

@@ -540,7 +540,7 @@ The length is part of the array's type; it must evaluate to a non-negative [cons
 
 ```go
 [32]byte
-[2*N] (x int32, y int32)
+[2*N](x int32, y int32)
 [1000]*float64
 [3][5]int
 [2][2][2]float64  // same as [2]([2]([2]float64))
@@ -613,9 +613,7 @@ Like arrays, slices are always one-dimensional but may be composed to construct 
 A _tuple_ type is a lightweight data structure for grouping multiple values together. Tuple types are syntactic sugar for anonymous structs with ordinal field names (`X_0`, `X_1`, etc.). Named fields in tuples serve as compile-time aliases for better code readability but map to ordinal fields at runtime.
 
 ```go
-TupleType  = "(" [ TupleFieldList ] ")" .
-TupleFieldList = TupleField { "," TupleField } .
-TupleField = [ IdentifierList ] Type .
+TupleType = Parameters .
 ```
 
 A tuple type is denoted by a parenthesized, comma-separated list of types, optionally with names for the elements:
@@ -1065,7 +1063,7 @@ An expression specifies the computation of a value by applying operators and fun
 Operands denote the elementary values in an expression. An operand may be a literal, a (possibly [qualified]()) non-[blank](#blank-identifier) identifier denoting a [constant](#constant-declarations), [variable](#variable-declarations), or [function](#function-declarations), or a parenthesized expression.
 
 ```go
-Operand     = Literal | OperandName [ TypeArgs ] | "(" Expression ")" .
+Operand     = Literal | OperandName [ TypeArgs ] .
 Literal     = BasicLit | FunctionLit | TupleLit .
 BasicLit    = int_lit | float_lit | imaginary_lit | rune_lit | string_lit .
 OperandName = identifier | QualifiedIdent .
