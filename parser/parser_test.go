@@ -100,7 +100,7 @@ func testShadowEntry(t *testing.T, code string, errExp string, decl *ast.FuncDec
 		t.Fatal("testShadowEntry error:", err)
 	}
 	if err == nil && errExp != "" {
-		t.Fatal("testShadowEntry: nil")
+		t.Fatal("testShadowEntry: nil, errExp:", errExp)
 	}
 
 	if f.ShadowEntry == nil {
@@ -148,12 +148,6 @@ func TestErrLabel(t *testing.T) {
 
 func TestErrTplLit(t *testing.T) {
 	testErrCode(t, "tpl`a =`", `/foo/bar.xgo:1:8: expected ';', found 'EOF' (and 1 more errors)`, ``)
-}
-
-func TestErrTuple(t *testing.T) {
-	testErrCode(t, `println (1,2)*2`, `/foo/bar.xgo:1:9: tuple is not supported`, ``)
-	testErrCode(t, `println 2*(1,2)`, `/foo/bar.xgo:1:13: expected ')', found ','`, ``)
-	testErrCode(t, `func test() (int,int) { return (100,100)`, `/foo/bar.xgo:1:32: tuple is not supported`, ``)
 }
 
 func TestErrOperand(t *testing.T) {
@@ -344,6 +338,13 @@ func TestCheckExpr(t *testing.T) {
 	p.checkExpr(&ast.IndexListExpr{})
 	p.checkExpr(&ast.FuncType{})
 	p.checkExpr(&ast.FuncLit{})
+}
+
+func TestErrTupleType(t *testing.T) {
+	testErrCode(t, `var a (a float64, x int, chan int)
+`, `/foo/bar.xgo:1:8: mixed named and unnamed fields in tuple type`, ``)
+	testErrCode(t, `var a (a float64, x int, string)
+`, `/foo/bar.xgo:1:8: mixed named and unnamed fields in tuple type`, ``)
 }
 
 func TestErrFuncDecl(t *testing.T) {

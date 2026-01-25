@@ -1,5 +1,3 @@
-// Test cases for tuple types
-
 import "io"
 
 // Empty tuple
@@ -18,7 +16,7 @@ type Person (name string, age int)
 // Type shorthand syntax
 type Point3D (x, y, z int)
 
-type Mixed (a, b string, c int)
+type Mixed (a, b string, _ int)
 
 // Tuple as channel element type
 var ch chan (int, error)
@@ -50,6 +48,9 @@ type WithStruct (s struct{ x int }, data struct{ name string })
 // Tuple with interface types (covers token.INTERFACE case)
 type WithInterface (i interface{}, reader interface{ Read([]byte) int })
 
+// Tuple with parenthesized types (covers token.LPAREN case)
+type WithParen ((int), (string))
+
 // Tuple with qualified type names (covers token.PERIOD case)
 type WithQualified (io.Reader, io.Writer)
 
@@ -58,3 +59,10 @@ type MixedArray (items []int, count int)
 
 // Single named field tuple
 type SingleNamed (value int)
+
+var ken Person
+
+ken.0, ken.1 = "Ken", 18
+ken.age++
+
+echo "name: ${ken.name}, age: ${ken.age}"

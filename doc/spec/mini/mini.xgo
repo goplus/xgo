@@ -128,7 +128,7 @@ Type = TypeLit | TypeName | "(" Type ")"
 
 TypeName = IDENT ?("." IDENT)
 
-TypeLit = PointerType | ArrayType | MapType | FuncType | StructType | InterfaceType
+TypeLit = PointerType | ArrayType | MapType | FuncType | TupleType | InterfaceType
 
 PointerType = "*" Type
 
@@ -138,13 +138,7 @@ MapType = "map" "[" Type "]" Type
 
 FuncType = "func" Signature
 
-StructType = "struct" "{" *(FieldDecl ";") "}"
-
-FieldDecl = ("*" TypeName | FieldsOrNonPtrEmbeddedField) ?Tag
-
-FieldsOrNonPtrEmbeddedField = IDENT ("." IDENT | +("," IDENT) Type | ?Type)
-
-Tag = STRING
+TupleType = Parameters
 
 InterfaceType = "interface" "{" *(InterfaceElem ";") "}"
 
@@ -174,19 +168,17 @@ PrimaryExpr = Operand *(
 	CallOrConversion | SelectorOrTypeAssertion | IndexOrSlice | ErrWrap)
 
 Operand =
-	INT ?UNIT | FLOAT ?UNIT | STRING | CHAR | RAT | IMAG | "(" LambdaExpr ")" |
-	LiteralValue | CompositeLit | FunctionLit | Env | "c" ++ QSTRING | "py" ++ QSTRING |
-	ListCompositeLit | DomainTextLit | NamedCompositeLit | IDENT
+	INT ?UNIT | FLOAT ?UNIT | STRING | CHAR | RAT | IMAG | TupleLit |
+	LiteralValue | FunctionLit | Env | "c" ++ QSTRING | "py" ++ QSTRING |
+	ListLit | DomainTextLit | IDENT
 
 Env = "$" ("{" IDENT "}" | IDENT)
 
 DomainTextLit = IDENT ++ RAWSTRING
 
-NamedCompositeLit = TypeName ++ "{" ElementList "}"
+TupleLit = "(" ExpressionList ?"," ")"
 
-CompositeLit = (MapType | StructType) LiteralValue
-
-ListCompositeLit = LBRACK ?("..." | LambdaExpr % ",") (RBRACK ++ Type LiteralValue | RBRACK)
+ListLit = "[" ?(LambdaExpr % ",") ?"," "]"
 
 LiteralValue = "{" ElementList "}"
 
@@ -200,7 +192,11 @@ Element = LiteralValue | LambdaExpr
 
 FunctionLit = "func" Signature Block
 
-CallOrConversion = "(" ?(LambdaExpr % ",") ?"..." ?"," ")"
+CallOrConversion = "(" ?(argExpr % ",") ?"..." ?"," ")"
+
+argExpr = KwargExpr | LambdaExpr
+
+KwargExpr = IDENT "=" LambdaExpr
 
 SelectorOrTypeAssertion = "." (IDENT | "(" Type ")")
 

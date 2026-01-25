@@ -124,10 +124,10 @@ The following keywords are reserved and may not be used as identifiers (TODO: so
 
 ```go
 break        default      func         interface    select
-case         defer        go           map          struct
+case         defer        go           map          type
 chan         else         goto         package      switch
-const        fallthrough  if           range        type
-continue     for          import       return       var
+const        fallthrough  if           range        var
+continue     for          import       return
 ```
 
 ### Operators and punctuation
@@ -455,11 +455,11 @@ Type      = TypeName [ TypeArgs ] | TypeLit | "(" Type ")" .
 TypeName  = identifier | QualifiedIdent .
 TypeArgs  = "[" TypeList [ "," ] "]" .
 TypeList  = Type { "," Type } .
-TypeLit   = ArrayType | StructType | PointerType | FunctionType | InterfaceType |
+TypeLit   = ArrayType | TupleType | PointerType | FunctionType | InterfaceType |
             SliceType | MapType . // TODO: check this
 ```
 
-The language [predeclares]() certain type names. Others are introduced with [type declarations](#type-declarations). _Composite types_—array, struct, pointer, function, interface, slice, map—may be constructed using type literals.
+The language [predeclares]() certain type names. Others are introduced with [type declarations](#type-declarations). _Composite types_—array, tuple, pointer, function, interface, slice, map—may be constructed using type literals.
 
 Predeclared types and defined types are called _named types_. An alias denotes a named type if the type given in the alias declaration is a named type.
 
@@ -540,28 +540,28 @@ The length is part of the array's type; it must evaluate to a non-negative [cons
 
 ```go
 [32]byte
-[2*N] struct { x, y int32 }
+[2*N](x int32, y int32)
 [1000]*float64
 [3][5]int
 [2][2][2]float64  // same as [2]([2]([2]float64))
 ```
 
-An array type T may not have an element of type T, or of a type containing T as a component, directly or indirectly, if those containing types are only array or struct types.
+An array type T may not have an element of type T, or of a type containing T as a component, directly or indirectly, if those containing types are only array or tuple types.
 
 ```go
 // invalid array types
 type (
 	T1 [10]T1                 // element type of T1 is T1
-	T2 [10]struct{ f T2 }     // T2 contains T2 as component of a struct
-	T3 [10]T4                 // T3 contains T3 as component of a struct in T4
-	T4 struct{ f T3 }         // T4 contains T4 as component of array T3 in a struct
+	T2 [10](f T2)             // T2 contains T2 as component of a tuple
+	T3 [10]T4                 // T3 contains T3 as component of a tuple in T4
+	T4 (f [10]T3)             // T4 contains T4 as component of array T3 in a tuple
 )
 
 // valid array types
 type (
 	T5 [10]*T5                // T5 contains T5 as component of a pointer
 	T6 [10]func() T6          // T6 contains T6 as component of a function type
-	T7 [10]struct{ f []T7 }   // T7 contains T7 as component of a slice in a struct
+	T7 [10](f []T7)           // T7 contains T7 as component of a slice in a tuple
 )
 ```
 
@@ -608,97 +608,107 @@ new([100]int)[0:50]
 
 Like arrays, slices are always one-dimensional but may be composed to construct higher-dimensional objects. With arrays of arrays, the inner arrays are, by construction, always the same length; however with slices of slices (or arrays of slices), the inner lengths may vary dynamically. Moreover, the inner slices must be initialized individually.
 
-### Struct types
+### Tuple types
 
-A struct is a sequence of named elements, called fields, each of which has a name and a type. Field names may be specified explicitly (IdentifierList) or implicitly (EmbeddedField). Within a struct, non-[blank](#blank-identifier) field names must be [unique]().
+A _tuple_ type is a lightweight data structure for grouping multiple values together. Tuple types are syntactic sugar for anonymous structs with ordinal field names (`X_0`, `X_1`, etc.). Named fields in tuples serve as compile-time aliases for better code readability but map to ordinal fields at runtime.
 
 ```go
-StructType    = "struct" "{" { FieldDecl ";" } "}" .
-FieldDecl     = (IdentifierList Type | EmbeddedField) [ Tag ] .
-EmbeddedField = [ "*" ] TypeName [ TypeArgs ] .
-Tag           = string_lit .
+TupleType = Parameters .
 ```
 
-```go
-// An empty struct.
-struct {}
+A tuple type is denoted by a parenthesized, comma-separated list of types, optionally with names for the elements:
 
-// A struct with 6 fields.
-struct {
-	x, y int
-	u float32
-	_ float32  // padding
-	A *[]int
-	F func()
-}
+```go
+// Empty tuple (equivalent to struct{})
+()
+
+// Anonymous tuples (elements accessed by ordinal: .0, .1, .2)
+(int, string)
+(int, string, bool)
+
+// Named tuples (compile-time names for readability, runtime uses ordinal fields)
+type Point (x int, y int)
+type Person (name string, age int)
+
+// Type shorthand syntax (same as: x int, y int, z int)
+type Point3D (x, y, z int)
 ```
 
-A field declared with a type but no explicit field name is called an _embedded field_. An embedded field must be specified as a type name T or as a pointer to a non-interface type name *T, and T itself may not be a pointer type. The unqualified type name acts as the field name.
+**Single-Element Degeneracy**: A tuple with a single element `(T)` or `(value T)` degenerates to `T` itself, not a tuple.
+
+#### Tuple Construction
+
+Tuples are constructed using **function-style syntax**:
 
 ```go
-// A struct with four embedded fields of types T1, *T2, P.T3 and *P.T4
-struct {
-	T1        // field name is T1
-	*T2       // field name is T2
-	P.T3      // field name is T3
-	*P.T4     // field name is T4
-	x, y int  // field names are x and y
-}
+// Positional construction
+p := Point(10, 20)
+result := (42, "success", true)
+
+// Keyword argument construction (using = for clarity)
+p := Point(x = 10, y = 20)
+person := Person(name = "Alice", age = 30)
 ```
 
-The following declaration is illegal because field names must be unique in a struct type:
+#### Field Access
+
+Tuple fields can be accessed by:
+- **Named fields**: `p.x`, `p.y` (using declared names)
+- **Ordinal notation**: `p.0`, `p.1` (numeric shorthand)
 
 ```go
-struct {
-	T     // conflicts with embedded field *T and *P.T
-	*T    // conflicts with embedded field T and *P.T
-	*P.T  // conflicts with embedded field T and *T
-}
+type Point (x int, y int)
+p := Point(10, 20)
+
+echo p.x      // 10 (using compile-time name)
+echo p.0      // 10 (using ordinal index, equivalent to p.x)
+echo p.y      // 20
+echo p.1      // 20
 ```
 
-A field `f` or [method]() of an embedded field in a struct `x` is called promoted if `x.f` is a legal [selector]() that denotes that field or method `f`.
+#### Type Identity
 
-Promoted fields act like ordinary fields of a struct except that they cannot be used as field names in [composite literals]() of the struct.
-
-Given a struct type `S` and a [named type](#types) `T`, promoted methods are included in the method set of the struct as follows:
-
-* If `S` contains an embedded field `T`, the [method sets]() of `S` and `*S` both include promoted methods with receiver `T`. The method set of `*S` also includes promoted methods with receiver `*T`.
-* If `S` contains an embedded field `*T`, the method sets of `S` and `*S` both include promoted methods with receiver `T` or `*T`.
-
-A field declaration may be followed by an optional string literal _tag_, which becomes an attribute for all the fields in the corresponding field declaration. An empty tag string is equivalent to an absent tag. The tags are made visible through a [reflection interface]() and take part in [type identity]() for structs but are otherwise ignored.
+Two tuple types are identical if they have the same number of elements and corresponding element types are identical. Named fields are not part of type identity:
 
 ```go
-struct {
-	x, y float64 ""  // an empty tag string is like an absent tag
-	name string  "any string is permitted as a tag"
-	_    [4]byte "ceci n'est pas un champ de structure"
-}
+type Point (x int, y int)
+type Coord (a int, b int)
 
-// A struct corresponding to a TimeStamp protocol buffer.
-// The tag strings define the protocol buffer field numbers;
-// they follow the convention outlined by the reflect package.
-struct {
-	microsec  uint64 `protobuf:"1"`
-	serverIP6 uint64 `protobuf:"2"`
-}
+// Point and Coord have identical underlying types (both map to struct{ X_0 int; X_1 int })
+// but are different named types
 ```
 
-A struct type `T` may not contain a field of type T, or of a type containing T as a component, directly or indirectly, if those containing types are only array or struct types.
+#### Tuples in Composite Types
+
+Tuples can be used as element types in arrays, slices, maps, and channels:
 
 ```go
-// invalid struct types
+// Tuple as map value type
+var cache map[string](int, bool)
+
+// Tuple as slice element type
+var pairs [](string, int)
+
+// Tuple as channel element type
+var ch chan (int, error)
+```
+
+#### Recursive Type Restrictions
+
+A tuple type `T` may not contain an element of type `T`, or of a type containing `T` as a component, directly or indirectly, if those containing types are only array or tuple types.
+
+```go
+// invalid tuple types
 type (
-	T1 struct{ T1 }            // T1 contains a field of T1
-	T2 struct{ f [10]T2 }      // T2 contains T2 as component of an array
-	T3 struct{ T4 }            // T3 contains T3 as component of an array in struct T4
-	T4 struct{ f [10]T3 }      // T4 contains T4 as component of struct T3 in an array
+	T1 (T1, int)              // T1 contains an element of T1
+	T2 ([10]T2, string)       // T2 contains T2 as component of an array
 )
 
-// valid struct types
+// valid tuple types
 type (
-	T5 struct{ f *T5 }         // T5 contains T5 as component of a pointer
-	T6 struct{ f func() T6 }   // T6 contains T6 as component of a function type
-	T7 struct{ f [10][]T7 }    // T7 contains T7 as component of a slice in an array
+	T3 (*T3, int)             // T3 contains T3 as component of a pointer
+	T4 (func() T4, string)    // T4 contains T4 as component of a function type
+	T5 ([]T5, int)            // T5 contains T5 as component of a slice
 )
 ```
 
@@ -715,7 +725,7 @@ The comparison operators `==` and `!=` must be fully defined for operands of the
 
 ```go
 map[string]int
-map[*T]struct{ x, y float64 }
+map[*T](x float64, y float64)
 map[string]any
 ```
 
@@ -1053,8 +1063,8 @@ An expression specifies the computation of a value by applying operators and fun
 Operands denote the elementary values in an expression. An operand may be a literal, a (possibly [qualified]()) non-[blank](#blank-identifier) identifier denoting a [constant](#constant-declarations), [variable](#variable-declarations), or [function](#function-declarations), or a parenthesized expression.
 
 ```go
-Operand     = Literal | OperandName [ TypeArgs ] | "(" Expression ")" .
-Literal     = BasicLit | CompositeLit | FunctionLit .
+Operand     = Literal | OperandName [ TypeArgs ] .
+Literal     = BasicLit | FunctionLit | TupleLit .
 BasicLit    = int_lit | float_lit | imaginary_lit | rune_lit | string_lit .
 OperandName = identifier | QualifiedIdent .
 ```
@@ -1075,55 +1085,94 @@ A qualified identifier accesses an identifier in a different package, which must
 math.Sin // denotes the Sin function in package math
 ```
 
-### Composite literals
+### Tuple literals
 
-Composite literals construct new composite values each time they are evaluated. They consist of the type of the literal followed by a brace-bound list of elements. Each element may optionally be preceded by a corresponding key.
+Tuple literals construct tuple values using function-style syntax. Both anonymous and named tuples are created using parenthesized, comma-separated expressions.
 
 ```go
-CompositeLit  = LiteralType LiteralValue .
-LiteralType   = TypeName [ TypeArgs ] .
-LiteralValue  = "{" [ ElementList [ "," ] ] "}" .
-ElementList   = KeyedElement { "," KeyedElement } .
-KeyedElement  = [ Key ":" ] Element .
-Key           = FieldName | Expression | LiteralValue .
-FieldName     = identifier .
-Element       = Expression | LiteralValue .
+TupleLit = "(" [ ExpressionList [ "," ] ] ")" .
 ```
 
-The LiteralType's [underlying type](#underlying-types) `T` must be a [struct](#struct-types) or a [classfile]() type. The types of the elements and keys must be [assignable](#assignability) to the respective field; there is no additional conversion. It is an error to specify multiple elements with the same field name.
+#### Anonymous Tuple Literals
 
-* A key must be a field name declared in the struct type.
-* An element list that does not contain any keys must list an element for each struct field in the order in which the fields are declared.
-* If any element has a key, every element must have a key.
-* An element list that contains keys does not need to have an element for each struct field. Omitted fields get the zero value for that field.
-* A literal may omit the element list; such a literal evaluates to the zero value for its type.
-* It is an error to specify an element for a non-exported field of a struct belonging to a different package.
-
-Given the declarations
+Anonymous tuple literals create values of anonymous tuple types:
 
 ```go
-type Point3D struct { x, y, z float64 }
-type Line struct { p, q Point3D }
+result := (42, "success", true)        // creates a (int, string, bool)
+pair := (10, 20)                       // creates a (int, int)
+empty := ()                            // creates an empty tuple ()
 ```
 
-one may write
+#### Named Tuple Construction
+
+Named tuple types are instantiated using function-style call syntax:
+
+**Positional Arguments**:
 
 ```go
-origin := Point3D{}                            // zero value for Point3D
-line := Line{origin, Point3D{y: -4, z: 12.3}}  // zero value for line.q.x
+type Point (x int, y int)
+p := Point(10, 20)              // positional construction
+
+type Person (name string, age int)
+alice := Person("Alice", 30)    // positional construction
 ```
 
-[Taking the address](#address-operators) of a composite literal generates a pointer to a unique [variable](#variables) initialized with the literal's value.
+**Keyword Arguments**:
+
+Keyword arguments use `=` for assignment and provide clarity when initializing tuples with many fields:
 
 ```go
-var pointer *Point3D = &Point3D{y: 1000}
+p := Point(x = 10, y = 20)              // keyword argument construction
+person := Person(name = "Bob", age = 25) // keyword argument construction
 ```
 
-A parsing ambiguity arises when a composite literal using the TypeName form of the LiteralType appears as an operand between the [keyword](#keywords) and the opening brace of the block of an "if", "for", or "switch" statement, and the composite literal is not enclosed in parentheses, square brackets, or curly braces. In this rare case, the opening brace of the literal is erroneously parsed as the one introducing the block of statements. To resolve the ambiguity, the composite literal must appear within parentheses.
+Keyword arguments can be mixed, but all positional arguments must come before keyword arguments:
 
 ```go
-if x == (T{a,b,c}[i]) { … }
-if (x == T{a,b,c}[i]) { … }
+// This is valid
+p := Point(10, y = 20)
+
+// This is invalid
+// p := Point(x = 10, 20)  // error: positional arg after keyword arg
+```
+
+#### Zero Values
+
+Calling a tuple type with no arguments returns the zero value for that type:
+
+```go
+type Point (x int, y int)
+zero := Point()   // equivalent to Point(0, 0)
+```
+
+#### Type Inference
+
+The type of a tuple literal is inferred from context when possible:
+
+```go
+func process(p (int, string)) {
+	// ...
+}
+
+process((42, "hello"))  // tuple literal type inferred as (int, string)
+```
+
+#### Tuple Literals in Composite Types
+
+Tuple literals can be used as elements in slices, arrays, and maps:
+
+```go
+pairs := [](string, int){
+	("a", 1),
+	("b", 2),
+	("c", 3),
+}
+
+// In a map
+cache := map[string](int, bool){
+	"key1": (100, true),
+	"key2": (200, false),
+}
 ```
 
 ### Function literals
@@ -1182,6 +1231,16 @@ XGo supports two styles for function and method calls: the traditional function-
 
 The traditional function-call syntax uses parentheses:
 
+**Syntax:**
+
+```go
+CallOrConversion = Operand "(" [ ArgList ] [ "..." ] [ "," ] ")" .
+ArgList          = (KwargExpr | LambdaExpr) { "," (KwargExpr | LambdaExpr) } .
+KwargExpr        = IDENT "=" LambdaExpr .
+```
+
+Examples:
+
 ```go
 echo("Hello world")
 fmt.Println("Hello, world")
@@ -1192,7 +1251,7 @@ fmt.Println("Hello, world")
 XGo recommends command-style code where the function name is followed by a space and then arguments, without parentheses:
 
 ```go
-CommandStmt = IDENT [ "." IDENT ] SPACE LambdaExprList [ "..." ] .
+CommandStmt = IDENT [ "." IDENT ] [ SPACE ArgList ] [ "..." ] .
 ```
 
 Examples:
@@ -1213,10 +1272,61 @@ os.Exit 1
 Variadic arguments are supported with the `...` operator:
 
 ```go
-echo min(elements...)
+echo elements...
 ```
 
 Both styles are equivalent and can be used interchangeably. XGo prefers command-style for its cleaner, more natural appearance, similar to shell commands. The built-in function `echo` is provided as an alias for `println` to emphasize this command-oriented approach.
+
+#### Keyword arguments
+
+XGo supports keyword arguments (kwargs) in commands and calls, allowing arguments to be specified by parameter name. When calling functions with many parameters, you can use `key=value` syntax to make your code more expressive and command-line-style.
+
+#### Using kwargs with tuples
+
+You can use tuples or tuple pointers as keyword parameters, which provides type safety:
+
+```go
+type Config (timeout, maxRetries int, debug bool)
+
+func run(task int, cfg Config?) {
+	if cfg.timeout == 0 {
+		cfg.timeout = 30
+	}
+	if cfg.maxRetries == 0 {
+		cfg.maxRetries = 3
+	}
+    echo "timeout:", cfg.timeout, "maxRetries:", cfg.maxRetries, "debug:", cfg.debug
+	echo "task:", task
+}
+
+run 100, timeout = 60, maxRetries = 5
+run 200
+```
+
+#### Using kwargs with maps
+
+You also can use maps as keyword parameters:
+
+```go
+func process(opts map[string]any?, args ...any) {
+    if name, ok := opts["name"]; ok {
+        echo "name:", name
+    }
+    if age, ok := opts["age"]; ok {
+        echo "age:", age
+    }
+    echo "args:", args
+}
+
+process name = "Ken", age = 17              // keyword parameters only
+process "extra", 1, name = "Ken", age = 17  // variadic parameters first, then keyword parameters
+process                                     // all parameters optional
+```
+
+**Key rules:**
+- The keyword parameter must be an optional parameter.
+- The keyword parameter must be the last parameter (without variadic) or second-to-last (with variadic).
+- When calling a function, keyword arguments must be placed after all normal parameters (including variadic parameters). This might seem inconsistent with the order of keyword and variadic parameters in a function declaration, but that's the rule.
 
 
 ### Built-in functions

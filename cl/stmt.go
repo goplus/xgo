@@ -133,7 +133,7 @@ func compileStmt(ctx *blockCtx, stmt ast.Stmt) {
 	case *ast.ExprStmt:
 		x := v.X
 		inFlags := checkCommandWithoutArgs(x)
-		compileExpr(ctx, x, inFlags)
+		compileExpr(ctx, 0, x, inFlags)
 	case *ast.AssignStmt:
 		compileAssignStmt(ctx, v)
 	case *ast.ReturnStmt:
@@ -214,12 +214,12 @@ func compileReturnStmt(ctx *blockCtx, expr *ast.ReturnStmt) {
 			}
 			compileCompositeLit(ctx, c, typ, true)
 		} else {
-			inFlags := 0
+			lhs := 0
 			if len(expr.Results) == 1 {
 				if _, ok := ret.(*ast.ComprehensionExpr); ok {
 					results = ctx.cb.Func().Type().(*types.Signature).Results()
-					if results.Len() == 2 {
-						inFlags = clCallWithTwoValue
+					if results.Len() == 2 { // TODO(xsw): check this
+						lhs = 2
 					}
 				}
 			}
@@ -236,7 +236,7 @@ func compileReturnStmt(ctx *blockCtx, expr *ast.ReturnStmt) {
 				rtyp := ctx.cb.Func().Type().(*types.Signature).Results().At(i).Type()
 				compileSliceLit(ctx, v, rtyp)
 			default:
-				compileExpr(ctx, ret, inFlags)
+				compileExpr(ctx, lhs, ret)
 			}
 		}
 	}
@@ -267,7 +267,7 @@ func compileSendStmt(ctx *blockCtx, expr *ast.SendStmt) {
 	ch, vals := expr.Chan, expr.Values
 	stk := cb.InternalStack()
 	if isAppendable(ch) { // a <- v1, v2, v3 (issue #2107)
-		compileExpr(ctx, ch)
+		compileExpr(ctx, 0, ch)
 		a := stk.Get(-1)
 		t := a.Type.Underlying()
 		if _, ok := t.(*types.Slice); ok { // a = append(a, v1, v2, v3)
@@ -276,32 +276,32 @@ func compileSendStmt(ctx *blockCtx, expr *ast.SendStmt) {
 			cb.Val(ctx.pkg.Builtin().Ref("append"))
 			stk.Push(a)
 			for _, v := range vals {
-				compileExpr(ctx, v)
+				compileExpr(ctx, 0, v)
 			}
 			flags := gogen.InstrFlags(0)
 			if expr.Ellipsis != 0 { // a = append(a, b...)
 				flags |= gogen.InstrFlagEllipsis
 			}
-			cb.CallWith(len(vals)+1, flags, expr).AssignWith(1, 1, expr)
+			cb.CallWith(len(vals)+1, 0, flags, expr).AssignWith(1, 1, expr)
 			return
 		}
 		goto normal
 	}
-	compileExpr(ctx, ch)
+	compileExpr(ctx, 0, ch)
 
 normal:
 	if len(vals) != 1 || expr.Ellipsis != 0 {
 		panic(ctx.newCodeError(vals[0].Pos(), vals[0].End(), "can't send multiple values to a channel"))
 	}
-	compileExpr(ctx, vals[0])
+	compileExpr(ctx, 0, vals[0])
 	ctx.cb.Send()
 }
 
 func compileAssignStmt(ctx *blockCtx, expr *ast.AssignStmt) {
 	tok := expr.Tok
-	inFlags := 0
-	if len(expr.Lhs) == 2 && len(expr.Rhs) == 1 {
-		inFlags = clCallWithTwoValue
+	lhs := 0
+	if len(expr.Lhs) > 1 && len(expr.Rhs) == 1 {
+		lhs = len(expr.Lhs)
 	}
 	if tok == token.DEFINE {
 		stk := ctx.cb.InternalStack()
@@ -336,7 +336,7 @@ func compileAssignStmt(ctx *blockCtx, expr *ast.AssignStmt) {
 			}()
 		}
 		for _, rhs := range expr.Rhs {
-			compileExpr(ctx, rhs, inFlags)
+			compileExpr(ctx, lhs, rhs)
 		}
 		ctx.cb.EndInit(stk.Len() - base)
 		return
@@ -370,7 +370,7 @@ func compileAssignStmt(ctx *blockCtx, expr *ast.AssignStmt) {
 			}
 			compileCompositeLit(ctx, e, typ, false)
 		default:
-			compileExpr(ctx, rhs, inFlags)
+			compileExpr(ctx, lhs, rhs)
 		}
 	}
 	if tok == token.ASSIGN {
@@ -428,7 +428,7 @@ func compileRangeStmt(ctx *blockCtx, v *ast.RangeStmt) {
 			defineNames = append(defineNames, value)
 		}
 		cb.ForRangeEx(names, v)
-		compileExpr(ctx, v.X)
+		compileExpr(ctx, 0, v.X)
 	} else {
 		cb.ForRangeEx(nil, v)
 		n := 0
@@ -445,7 +445,7 @@ func compileRangeStmt(ctx *blockCtx, v *ast.RangeStmt) {
 			compileExprLHS(ctx, v.Value)
 			n++
 		}
-		compileExpr(ctx, v.X)
+		compileExpr(ctx, 0, v.X)
 	}
 	pos := v.TokPos
 	if pos == 0 {
@@ -496,7 +496,7 @@ func compileForPhraseStmt(ctx *blockCtx, v *ast.ForPhraseStmt) {
 		defineNames = append(defineNames, v.Value)
 	}
 	cb.ForRange(names...)
-	compileExpr(ctx, v.X)
+	compileExpr(ctx, 0, v.X)
 	cb.RangeAssignThen(v.TokPos)
 	if len(defineNames) > 0 {
 		defNames(ctx, defineNames, cb.Scope())
@@ -506,7 +506,7 @@ func compileForPhraseStmt(ctx *blockCtx, v *ast.ForPhraseStmt) {
 	}
 	if v.Cond != nil {
 		cb.If()
-		compileExpr(ctx, v.Cond)
+		compileExpr(ctx, 0, v.Cond)
 		cb.Then()
 		compileStmts(ctx, v.Body.List)
 		cb.SetComments(comments, once)
@@ -644,7 +644,7 @@ func compileForStmt(ctx *blockCtx, v *ast.ForStmt) {
 		compileStmt(ctx, v.Init)
 	}
 	if v.Cond != nil {
-		compileExpr(ctx, v.Cond)
+		compileExpr(ctx, 0, v.Cond)
 	} else {
 		cb.None()
 	}
@@ -681,7 +681,7 @@ func compileIfStmt(ctx *blockCtx, v *ast.IfStmt) {
 	if v.Init != nil {
 		compileStmt(ctx, v.Init)
 	}
-	compileExpr(ctx, v.Cond)
+	compileExpr(ctx, 0, v.Cond)
 	if rec := ctx.recorder(); rec != nil {
 		rec.Scope(v, cb.Scope())
 	}
@@ -746,7 +746,7 @@ func compileTypeSwitchStmt(ctx *blockCtx, v *ast.TypeSwitchStmt) {
 	if v.Init != nil {
 		compileStmt(ctx, v.Init)
 	}
-	compileExpr(ctx, ta.X)
+	compileExpr(ctx, 0, ta.X)
 	cb.TypeAssertThen()
 	seen := make(map[types.Type]ast.Expr)
 	var firstDefault ast.Stmt
@@ -757,7 +757,7 @@ func compileTypeSwitchStmt(ctx *blockCtx, v *ast.TypeSwitchStmt) {
 		}
 		cb.TypeCase(c)
 		for _, citem := range c.List {
-			compileExpr(ctx, citem)
+			compileExpr(ctx, 0, citem)
 			T := cb.Get(-1).Type
 			if tt, ok := T.(*gogen.TypeType); ok {
 				T = tt.Type()
@@ -830,7 +830,7 @@ func compileSwitchStmt(ctx *blockCtx, v *ast.SwitchStmt) {
 		compileStmt(ctx, v.Init)
 	}
 	if v.Tag != nil { // switch tag {....}
-		compileExpr(ctx, v.Tag)
+		compileExpr(ctx, 0, v.Tag)
 	} else {
 		cb.None() // switch {...}
 	}
@@ -847,7 +847,7 @@ func compileSwitchStmt(ctx *blockCtx, v *ast.SwitchStmt) {
 		}
 		cb.Case(c)
 		for _, citem := range c.List {
-			compileExpr(ctx, citem)
+			compileExpr(ctx, 0, citem)
 			v := cb.Get(-1)
 			if val := goVal(v.CVal); val != nil {
 				// look for duplicate types for a given value
@@ -962,7 +962,7 @@ func compileBranchStmt(ctx *blockCtx, v *ast.BranchStmt) {
 			cb.Goto(l)
 			return
 		}
-		compileCallExpr(ctx, &ast.CallExpr{
+		compileCallExpr(ctx, 0, &ast.CallExpr{
 			Fun:        &ast.Ident{NamePos: v.TokPos, Name: "goto", Obj: &ast.Object{Data: label}},
 			Args:       []ast.Expr{label},
 			NoParenEnd: label.End(),
@@ -995,12 +995,12 @@ func compileLabeledStmt(ctx *blockCtx, v *ast.LabeledStmt) {
 }
 
 func compileGoStmt(ctx *blockCtx, v *ast.GoStmt) {
-	compileCallExpr(ctx, v.Call, 0)
+	compileCallExpr(ctx, 0, v.Call, 0)
 	ctx.cb.Go()
 }
 
 func compileDeferStmt(ctx *blockCtx, v *ast.DeferStmt) {
-	compileCallExpr(ctx, v.Call, 0)
+	compileCallExpr(ctx, 0, v.Call, 0)
 	ctx.cb.Defer()
 }
 
