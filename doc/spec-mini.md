@@ -1281,54 +1281,46 @@ Both styles are equivalent and can be used interchangeably. XGo prefers command-
 
 XGo supports keyword arguments (kwargs) in commands and calls, allowing arguments to be specified by parameter name. When calling functions with many parameters, you can use `key=value` syntax to make your code more expressive and command-line-style.
 
+#### Using kwargs with tuples
+
+You can use tuples or tuple pointers as keyword parameters, which provides type safety:
+
+```go
+type Config (timeout, maxRetries int, debug bool)
+
+func run(task int, cfg Config?) {
+	if cfg.timeout == 0 {
+		cfg.timeout = 30
+	}
+	if cfg.maxRetries == 0 {
+		cfg.maxRetries = 3
+	}
+    echo "timeout:", cfg.timeout, "maxRetries:", cfg.maxRetries, "debug:", cfg.debug
+	echo "task:", task
+}
+
+run 100, timeout = 60, maxRetries = 5
+run 200
+```
+
 #### Using kwargs with maps
+
+You also can use maps as keyword parameters:
 
 ```go
 func process(opts map[string]any?, args ...any) {
     if name, ok := opts["name"]; ok {
-        echo "Name:", name
+        echo "name:", name
     }
     if age, ok := opts["age"]; ok {
-        echo "Age:", age
+        echo "age:", age
     }
-    echo "Args:", args
+    echo "args:", args
 }
 
 process name = "Ken", age = 17              // keyword parameters only
 process "extra", 1, name = "Ken", age = 17  // variadic parameters first, then keyword parameters
 process                                     // all parameters optional
-```
-
-#### Using kwargs with structs
-
-You can also use structs or struct pointers for keyword parameters, which provides type safety:
-
-```go
-type Config struct {
-    Timeout    int
-    MaxRetries int
-    Debug      bool
-}
-
-func run(cfg *Config?) {
-    timeout := 30
-    maxRetries := 3
-    debug := false
-    if cfg != nil {
-        if cfg.Timeout > 0 {
-            timeout = cfg.Timeout
-        }
-        if cfg.MaxRetries > 0 {
-            maxRetries = cfg.MaxRetries
-        }
-        debug = cfg.Debug
-    }
-    echo "Timeout:", timeout, "MaxRetries:", maxRetries, "Debug:", debug
-}
-
-run timeout = 60, maxRetries = 5           // lowercase field names work
-run Timeout = 10, Debug = true             // uppercase field names work too
-run                                        // uses default values
 ```
 
 **Key rules:**

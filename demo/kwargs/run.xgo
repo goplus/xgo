@@ -1,0 +1,15 @@
+type Config (timeout, maxRetries int, debug bool)
+
+func run(task int, cfg Config?) {
+	if cfg.timeout == 0 {
+		cfg.timeout = 30
+	}
+	if cfg.maxRetries == 0 {
+		cfg.maxRetries = 3
+	}
+    echo "timeout:", cfg.timeout, "maxRetries:", cfg.maxRetries, "debug:", cfg.debug
+	echo "task:", task
+}
+
+run 100, timeout = 60, maxRetries = 5
+run 200
