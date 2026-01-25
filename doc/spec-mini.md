@@ -1231,6 +1231,16 @@ XGo supports two styles for function and method calls: the traditional function-
 
 The traditional function-call syntax uses parentheses:
 
+**Syntax:**
+
+```go
+CallOrConversion = Operand "(" [ ArgList ] [ "..." ] [ "," ] ")" .
+ArgList          = (KwargExpr | LambdaExpr) { "," (KwargExpr | LambdaExpr) } .
+KwargExpr        = IDENT "=" LambdaExpr .
+```
+
+Examples:
+
 ```go
 echo("Hello world")
 fmt.Println("Hello, world")
@@ -1241,7 +1251,7 @@ fmt.Println("Hello, world")
 XGo recommends command-style code where the function name is followed by a space and then arguments, without parentheses:
 
 ```go
-CommandStmt = IDENT [ "." IDENT ] SPACE LambdaExprList [ "..." ] .
+CommandStmt = IDENT [ "." IDENT ] [ SPACE ArgList ] [ "..." ] .
 ```
 
 Examples:
@@ -1262,71 +1272,69 @@ os.Exit 1
 Variadic arguments are supported with the `...` operator:
 
 ```go
-echo min(elements...)
+echo elements...
 ```
 
 Both styles are equivalent and can be used interchangeably. XGo prefers command-style for its cleaner, more natural appearance, similar to shell commands. The built-in function `echo` is provided as an alias for `println` to emphasize this command-oriented approach.
 
 #### Keyword arguments
 
-XGo supports keyword arguments (kwargs) in function calls, allowing arguments to be specified by parameter name. This improves code readability, especially for functions with many parameters or optional parameters.
+XGo supports keyword arguments (kwargs) in commands and calls, allowing arguments to be specified by parameter name. When calling functions with many parameters, you can use `key=value` syntax to make your code more expressive and command-line-style.
 
-**Syntax:**
-
-```go
-CallOrConversion = "(" [ ArgList ] [ "..." ] [ "," ] ")" .
-ArgList          = (LambdaExpr | Kwarg) { "," (LambdaExpr | Kwarg) } .
-Kwarg            = IDENT "=" LambdaExpr .
-```
-
-**Three calling styles are supported:**
-
-1. **Positional arguments only:**
+#### Using kwargs with maps
 
 ```go
-playSound(getUrl("1.mp3"), true)
+func process(opts map[string]any?, args ...any) {
+    if name, ok := opts["name"]; ok {
+        echo "Name:", name
+    }
+    if age, ok := opts["age"]; ok {
+        echo "Age:", age
+    }
+    echo "Args:", args
+}
+
+process name = "Ken", age = 17              // keyword parameters only
+process "extra", 1, name = "Ken", age = 17  // variadic parameters first, then keyword parameters
+process                                     // all parameters optional
 ```
 
-2. **Keyword arguments only:**
+#### Using kwargs with structs
+
+You can also use structs or struct pointers for keyword parameters, which provides type safety:
 
 ```go
-listDir(withHidden = true, recursive = false)
+type Config struct {
+    Timeout    int
+    MaxRetries int
+    Debug      bool
+}
+
+func run(cfg *Config?) {
+    timeout := 30
+    maxRetries := 3
+    debug := false
+    if cfg != nil {
+        if cfg.Timeout > 0 {
+            timeout = cfg.Timeout
+        }
+        if cfg.MaxRetries > 0 {
+            maxRetries = cfg.MaxRetries
+        }
+        debug = cfg.Debug
+    }
+    echo "Timeout:", timeout, "MaxRetries:", maxRetries, "Debug:", debug
+}
+
+run timeout = 60, maxRetries = 5           // lowercase field names work
+run Timeout = 10, Debug = true             // uppercase field names work too
+run                                        // uses default values
 ```
 
-3. **Mixed arguments (positional followed by keyword):**
-
-```go
-playSound(getUrl("1.mp3", cache = false), loop = true)
-```
-
-**Important rules:**
-
-- Keyword arguments use the `=` operator to bind argument names to values
-- Positional arguments must come before keyword arguments
-- Once a keyword argument appears, all subsequent arguments must also be keyword arguments
-- Keyword argument names must match the function's parameter names
-
-**Examples:**
-
-```go
-// Function definition
-func createWindow(width, height int, title string, resizable bool) { ... }
-
-// Positional arguments
-createWindow(800, 600, "My App", true)
-
-// Keyword arguments improve readability
-createWindow(width = 800, height = 600, title = "My App", resizable = true)
-
-// Mixed: positional then keyword
-createWindow(800, 600, title = "My App", resizable = true)
-
-// Command-style with keyword arguments
-listDir withHidden = true, recursive = false
-playSound getUrl("1.mp3", cache = false), loop = true
-```
-
-Note: This syntax is specific to MiniSpec. The FullSpec uses `:` for field assignment in brace-style construction (e.g., `Point{x: 10, y: 20}`), while MiniSpec uses `=` for keyword arguments in function-style calls (e.g., `Point(x = 10, y = 20)`).
+**Key rules:**
+- The keyword parameter must be an optional parameter.
+- The keyword parameter must be the last parameter (without variadic) or second-to-last (with variadic).
+- When calling a function, keyword arguments must be placed after all normal parameters (including variadic parameters). This might seem inconsistent with the order of keyword and variadic parameters in a function declaration, but that's the rule.
 
 
 ### Built-in functions
