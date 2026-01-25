@@ -178,7 +178,7 @@ DomainTextLit = IDENT ++ RAWSTRING
 
 TupleLit = "(" ExpressionList ?"," ")"
 
-ListLit = LBRACK ?("..." | LambdaExpr % ",") RBRACK
+ListLit = "[" ?(LambdaExpr % ",") ?"," "]"
 
 LiteralValue = "{" ElementList "}"
 
@@ -192,11 +192,11 @@ Element = LiteralValue | LambdaExpr
 
 FunctionLit = "func" Signature Block
 
-CallOrConversion = "(" ?(ArgList) ?"..." ?"," ")"
+CallOrConversion = "(" ?(argExpr % ",") ?"..." ?"," ")"
 
-ArgList = (LambdaExpr | Kwarg) % ","
+argExpr = KwargExpr | LambdaExpr
 
-Kwarg = IDENT "=" LambdaExpr
+KwargExpr = IDENT "=" LambdaExpr
 
 SelectorOrTypeAssertion = "." (IDENT | "(" Type ")")
 
