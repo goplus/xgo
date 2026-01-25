@@ -1231,6 +1231,16 @@ XGo supports two styles for function and method calls: the traditional function-
 
 The traditional function-call syntax uses parentheses:
 
+**Syntax:**
+
+```go
+CallOrConversion = Operand "(" [ ArgList ] [ "..." ] [ "," ] ")" .
+ArgList          = (KwargExpr | LambdaExpr) { "," (KwargExpr | LambdaExpr) } .
+KwargExpr        = IDENT "=" LambdaExpr .
+```
+
+Examples:
+
 ```go
 echo("Hello world")
 fmt.Println("Hello, world")
@@ -1241,7 +1251,7 @@ fmt.Println("Hello, world")
 XGo recommends command-style code where the function name is followed by a space and then arguments, without parentheses:
 
 ```go
-CommandStmt = IDENT [ "." IDENT ] SPACE LambdaExprList [ "..." ] .
+CommandStmt = IDENT [ "." IDENT ] [ SPACE ArgList ] [ "..." ] .
 ```
 
 Examples:
@@ -1262,10 +1272,61 @@ os.Exit 1
 Variadic arguments are supported with the `...` operator:
 
 ```go
-echo min(elements...)
+echo elements...
 ```
 
 Both styles are equivalent and can be used interchangeably. XGo prefers command-style for its cleaner, more natural appearance, similar to shell commands. The built-in function `echo` is provided as an alias for `println` to emphasize this command-oriented approach.
+
+#### Keyword arguments
+
+XGo supports keyword arguments (kwargs) in commands and calls, allowing arguments to be specified by parameter name. When calling functions with many parameters, you can use `key=value` syntax to make your code more expressive and command-line-style.
+
+#### Using kwargs with tuples
+
+You can use tuples or tuple pointers as keyword parameters, which provides type safety:
+
+```go
+type Config (timeout, maxRetries int, debug bool)
+
+func run(task int, cfg Config?) {
+	if cfg.timeout == 0 {
+		cfg.timeout = 30
+	}
+	if cfg.maxRetries == 0 {
+		cfg.maxRetries = 3
+	}
+    echo "timeout:", cfg.timeout, "maxRetries:", cfg.maxRetries, "debug:", cfg.debug
+	echo "task:", task
+}
+
+run 100, timeout = 60, maxRetries = 5
+run 200
+```
+
+#### Using kwargs with maps
+
+You also can use maps as keyword parameters:
+
+```go
+func process(opts map[string]any?, args ...any) {
+    if name, ok := opts["name"]; ok {
+        echo "name:", name
+    }
+    if age, ok := opts["age"]; ok {
+        echo "age:", age
+    }
+    echo "args:", args
+}
+
+process name = "Ken", age = 17              // keyword parameters only
+process "extra", 1, name = "Ken", age = 17  // variadic parameters first, then keyword parameters
+process                                     // all parameters optional
+```
+
+**Key rules:**
+- The keyword parameter must be an optional parameter.
+- The keyword parameter must be the last parameter (without variadic) or second-to-last (with variadic).
+- When calling a function, keyword arguments must be placed after all normal parameters (including variadic parameters). This might seem inconsistent with the order of keyword and variadic parameters in a function declaration, but that's the rule.
 
 
 ### Built-in functions
