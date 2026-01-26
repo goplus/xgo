@@ -212,13 +212,32 @@ func compileMatrixLit(ctx *blockCtx, v *ast.MatrixLit) {
 }
 */
 
+func tryFileLine(cb *gogen.CodeBuilder, fset *token.FileSet, name *ast.Ident) int {
+	if sig, ok := cb.Get(-1).Type.(*types.Signature); ok {
+		params := sig.Params()
+		if params.Len() == 2 {
+			pos := fset.Position(name.NamePos)
+			tyPos := params.At(0).Type() // token.Position
+			log.Println("tyPos:", tyPos, pos)
+			cb.
+				Val(0).Val(pos.Filename). // string
+				Val(2).Val(pos.Line).     // int
+				Val(3).Val(pos.Column).   // int
+				StructLit(tyPos, 6, true, name)
+			return 2
+		}
+	}
+	return 1
+}
+
 func compileEnvExpr(ctx *blockCtx, v *ast.EnvExpr) {
 	cb := ctx.cb
 	if ctx.isClass { // in an XGo class file
 		if recv := classRecv(cb); recv != nil {
 			if xgoOp(cb, recv, "XGo_Env", "Gop_Env", v) == nil {
 				name := v.Name
-				cb.Val(name.Name, name).CallWith(1, 0, 0, v)
+				n := tryFileLine(cb, ctx.fset, name)
+				cb.Val(name.Name, name).CallWith(n, 0, 0, v)
 				return
 			}
 		}
@@ -322,7 +341,11 @@ func compileExpr(ctx *blockCtx, lhs int, expr ast.Expr, inFlags ...int) {
 		_, kind := compileIdent(ctx, v, flags)
 		if cmdNoArgs || kind == objXGoExecOrEnv {
 			cb := ctx.cb
+			n := 1
 			if kind == objXGoExecOrEnv {
+				if (clIdentInStringLitEx & flags) != 0 { // XGo_Env
+					n = tryFileLine(cb, ctx.fset, v)
+				}
 				cb.Val(v.Name, v)
 			} else {
 				err := callCmdNoArgs(ctx, expr, false)
@@ -333,7 +356,7 @@ func compileExpr(ctx *blockCtx, lhs int, expr ast.Expr, inFlags ...int) {
 					panic(err)
 				}
 			}
-			cb.CallWith(1, 0, 0, v)
+			cb.CallWith(n, 0, 0, v)
 		}
 	case *ast.BasicLit:
 		compileBasicLit(ctx, v)
