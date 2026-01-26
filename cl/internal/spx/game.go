@@ -16,6 +16,8 @@
 
 package spx
 
+import "go/token"
+
 const (
 	GopPackage = "github.com/goplus/xgo/cl/internal/spx/pkg"
 	Gop_sched  = "Sched,SchedNow"
@@ -35,7 +37,7 @@ func (p *MyGame) Capout(doSth func()) (string, error) {
 	return "", nil
 }
 
-func (p *MyGame) Gop_Env(name string) int {
+func (p *MyGame) Gop_Env(pos token.Position, name string) int {
 	return 0
 }
 
