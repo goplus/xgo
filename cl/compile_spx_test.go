@@ -199,7 +199,6 @@ echo ${PATH}, $id
 import (
 	"fmt"
 	"github.com/goplus/xgo/cl/internal/spx"
-	"go/token"
 )
 
 type bar struct {
@@ -211,7 +210,7 @@ type index struct {
 }
 
 func (this *index) MainEntry() {
-	fmt.Println(this.Gop_Env(token.Position{Filename: "/foo/index.tgmx", Line: 2, Column: 8}, "PATH"), this.Gop_Env(token.Position{Filename: "/foo/index.tgmx", Line: 2, Column: 16}, "id"))
+	fmt.Println(this.Gop_Env("PATH"), this.Gop_Env("id"))
 }
 func (this *index) Main() {
 	spx.Gopt_MyGame_Main(this)
@@ -232,7 +231,6 @@ echo "${PATH}"
 import (
 	"fmt"
 	"github.com/goplus/xgo/cl/internal/spx"
-	"go/token"
 	"strconv"
 )
 
@@ -245,7 +243,7 @@ type index struct {
 }
 
 func (this *index) MainEntry() {
-	fmt.Println(strconv.Itoa(this.Gop_Env(token.Position{Filename: "/foo/index.tgmx", Line: 2, Column: 9}, "PATH")))
+	fmt.Println(strconv.Itoa(this.Gop_Env("PATH")))
 }
 func (this *index) Main() {
 	spx.Gopt_MyGame_Main(this)
