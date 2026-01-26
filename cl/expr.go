@@ -218,11 +218,10 @@ func tryFileLine(cb *gogen.CodeBuilder, fset *token.FileSet, name *ast.Ident) in
 		if params.Len() == 2 {
 			pos := fset.Position(name.NamePos)
 			tyPos := params.At(0).Type() // token.Position
-			log.Println("tyPos:", tyPos, pos)
 			cb.
-				Val(0).Val(pos.Filename). // string
-				Val(2).Val(pos.Line).     // int
-				Val(3).Val(pos.Column).   // int
+				Val(0).Val(pos.Filename). // Field index 0: Filename
+				Val(2).Val(pos.Line).     // Field index 2: Line
+				Val(3).Val(pos.Column).   // Field index 3: Column
 				StructLit(tyPos, 6, true, name)
 			return 2
 		}
