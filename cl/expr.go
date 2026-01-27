@@ -258,9 +258,9 @@ func classRecv(cb *gogen.CodeBuilder) *types.Var {
 
 func xgoOp(cb *gogen.CodeBuilder, recv *types.Var, op1, op2 string, src ...ast.Node) error {
 	cb.Val(recv)
-	kind, e := cb.Member(op1, gogen.MemberFlagVal, src...)
+	kind, e := cb.Member(op1, 0, gogen.MemberFlagVal, src...)
 	if kind == gogen.MemberInvalid {
-		_, e = cb.Member(op2, gogen.MemberFlagVal, src...)
+		_, e = cb.Member(op2, 0, gogen.MemberFlagVal, src...)
 	}
 	return e
 }
@@ -282,7 +282,7 @@ func compileMember(ctx *blockCtx, v ast.Node, name string, flags int) error {
 	default:
 		mflag = gogen.MemberFlagMethodAlias
 	}
-	_, err := ctx.cb.Member(name, mflag, v)
+	_, err := ctx.cb.Member(name, 0, mflag, v)
 	return err
 }
 
@@ -1277,8 +1277,8 @@ func compileStringLitEx(ctx *blockCtx, cb *gogen.CodeBuilder, lit *ast.BasicLit)
 			compileExpr(ctx, 0, v, flags)
 			t := cb.Get(-1).Type
 			if t.Underlying() != types.Typ[types.String] {
-				if _, err := cb.Member("string", gogen.MemberFlagAutoProperty); err != nil {
-					if _, e2 := cb.Member("error", gogen.MemberFlagAutoProperty); e2 != nil {
+				if _, err := cb.Member("string", 0, gogen.MemberFlagAutoProperty); err != nil {
+					if _, e2 := cb.Member("error", 0, gogen.MemberFlagAutoProperty); e2 != nil {
 						if e, ok := err.(*gogen.CodeError); ok {
 							err = ctx.newCodeErrorf(v.Pos(), v.End(), "%s.string%s", ctx.LoadExpr(v), e.Msg)
 						}

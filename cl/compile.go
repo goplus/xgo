@@ -1557,7 +1557,7 @@ func loadFuncBody(ctx *blockCtx, fn *gogen.Func, body *ast.BlockStmt, sigBase *t
 	cb.SetComments(nil, false)
 	if initClass {
 		// this.XGo_Init()
-		if _, err := cb.VarVal("this").Member("XGo_Init", gogen.MemberFlagVal); err == nil {
+		if _, err := cb.VarVal("this").Member("XGo_Init", 0, gogen.MemberFlagVal); err == nil {
 			cb.Call(0).EndStmt()
 		} else {
 			// clean up the partial expression pushed by VarVal("this") when
@@ -1566,7 +1566,7 @@ func loadFuncBody(ctx *blockCtx, fn *gogen.Func, body *ast.BlockStmt, sigBase *t
 		}
 		if sigBase != nil {
 			// this.Sprite.Main(...) or this.Game.MainEntry(...)
-			cb.VarVal("this").MemberVal(ctx.baseClass.Name()).MemberVal(fn.Name())
+			cb.VarVal("this").MemberVal(ctx.baseClass.Name(), 0).MemberVal(fn.Name(), 0)
 			params := sigBase.Params()
 			n := params.Len()
 			for i := 0; i < n; i++ {
