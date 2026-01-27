@@ -108,7 +108,7 @@ func compileIdent(ctx *blockCtx, ident *ast.Ident, flags int) (pkg gogen.PkgRef,
 			if chkFlag&clIdentSelectorExpr != 0 { // TODO: remove this condition
 				chkFlag = clIdentCanAutoCall
 			}
-			if compileMember(ctx, ident, name, chkFlag) == nil { // class member object
+			if compileMember(ctx, 0, ident, name, chkFlag) == nil { // class member object
 				return
 			}
 			cb.InternalStack().PopN(1)
@@ -272,7 +272,7 @@ func isBuiltin(o types.Object) bool {
 	return false
 }
 
-func compileMember(ctx *blockCtx, v ast.Node, name string, flags int) error {
+func compileMember(ctx *blockCtx, lhs int, v ast.Node, name string, flags int) error {
 	var mflag gogen.MemberFlag
 	switch {
 	case (flags & clIdentLHS) != 0:
@@ -282,7 +282,7 @@ func compileMember(ctx *blockCtx, v ast.Node, name string, flags int) error {
 	default:
 		mflag = gogen.MemberFlagMethodAlias
 	}
-	_, err := ctx.cb.Member(name, 0, mflag, v)
+	_, err := ctx.cb.Member(name, lhs, mflag, v)
 	return err
 }
 
@@ -371,7 +371,7 @@ func compileExpr(ctx *blockCtx, lhs int, expr ast.Expr, inFlags ...int) {
 		compileCallExpr(ctx, lhs, v, flags)
 	case *ast.SelectorExpr:
 		flags, cmdNoArgs := identOrSelectorFlags(inFlags)
-		compileSelectorExpr(ctx, v, flags)
+		compileSelectorExpr(ctx, lhs, v, flags)
 		if cmdNoArgs {
 			callCmdNoArgs(ctx, expr, true)
 			return
@@ -514,7 +514,7 @@ func compileSelectorExprLHS(ctx *blockCtx, v *ast.SelectorExpr) {
 	ctx.cb.MemberRef(v.Sel.Name, v)
 }
 
-func compileSelectorExpr(ctx *blockCtx, v *ast.SelectorExpr, flags int) {
+func compileSelectorExpr(ctx *blockCtx, lhs int, v *ast.SelectorExpr, flags int) {
 	switch x := v.X.(type) {
 	case *ast.Ident:
 		if at, kind := compileIdent(ctx, x, flags|clIdentCanAutoCall|clIdentSelectorExpr); kind != objNormal {
@@ -529,7 +529,7 @@ func compileSelectorExpr(ctx *blockCtx, v *ast.SelectorExpr, flags int) {
 	default:
 		compileExpr(ctx, 0, v.X)
 	}
-	if err := compileMember(ctx, v, v.Sel.Name, flags); err != nil {
+	if err := compileMember(ctx, lhs, v, v.Sel.Name, flags); err != nil {
 		panic(err)
 	}
 }
@@ -717,7 +717,7 @@ func compileCallExpr(ctx *blockCtx, lhs int, v *ast.CallExpr, inFlags int) {
 			ifn = fn
 		}
 	case *ast.SelectorExpr:
-		compileSelectorExpr(ctx, fn, 0)
+		compileSelectorExpr(ctx, 0, fn, 0)
 	case *ast.ErrWrapExpr:
 		if v.IsCommand() {
 			callExpr := *v
