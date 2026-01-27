@@ -1,0 +1,3 @@
+v := map[string]map[string]any{"a": {"b": 1}}
+c, ok := v["b"]["c"].(int)
+echo c, ok
