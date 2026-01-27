@@ -433,7 +433,7 @@ func genTestFunc(pkg *gogen.Package, name, testType, param, paramType string) {
 
 	pkg.NewFunc(nil, name, params, nil, false).BodyStart(pkg).
 		Val(pkg.Builtin().Ref("new")).Val(pkg.Ref(testType)).Call(1).
-		MemberVal("TestMain").Val(paramT).Call(1).EndStmt().
+		MemberVal("TestMain", 0).Val(paramT).Call(1).EndStmt().
 		End()
 }
 
@@ -521,7 +521,7 @@ func gmxProjMain(pkg *gogen.Package, parent *pkgCtx, proj *gmxProject) {
 			old, _ := pkg.SetCurFile(defaultGoFile, true)
 			defer pkg.RestoreCurFile(old)
 
-			cb := fn.BodyStart(pkg).Typ(base.Type()).MemberVal("Main")
+			cb := fn.BodyStart(pkg).Typ(base.Type()).MemberVal("Main", 0)
 			stk := cb.InternalStack()
 
 			// force remove //line comments for main func
@@ -619,7 +619,7 @@ func genMainFunc(pkg *gogen.Package, gameClass string) {
 		// new(gameClass).Main()
 		new := pkg.Builtin().Ref("new")
 		pkg.NewFunc(nil, "main", nil, nil, false).BodyStart(pkg).
-			Val(new).Val(o).Call(1).MemberVal("Main").Call(0).EndStmt().
+			Val(new).Val(o).Call(1).MemberVal("Main", 0).Call(0).EndStmt().
 			End()
 	}
 }
