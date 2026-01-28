@@ -4,7 +4,7 @@ In the XGo programming language, tuple and struct are two distinct ways of organ
 
 ## Fundamental Differences in the Type System
 
-Tuple and struct behave very differently in the type system. For anonymous tuple types, their identity is structural, meaning `(a int, b string)` and `(c int, d string)` are **identical** types. However, named tuple types are distinct. For example, `type Point (x int, y int)` and `type Coord (a int, b int)` define two different types, even though they have the same underlying structure. In this context, tuple field names are compile-time aliases, but named tuple types provide nominal typing.
+Tuple and struct behave very differently in the type system.  Tuple types with the same element structure have identical underlying representations, meaning `(a int, b string)` and `(c int, d string)` are **identical** types. However, named tuple types are distinct. For example, `type Point (x int, y int)` and `type Coord (a int, b int)` define two different types, even though they have the same underlying structure. In this context, tuple field names are compile-time aliases, but named tuple types provide nominal typing.
 
 In contrast, struct type checking is much stricter. Even if two structs have exactly the same field types and order, they are considered different types if their definitions differ or their field names are different. This characteristic makes struct more suitable for expressing data structures with clear semantics.
 
@@ -24,7 +24,7 @@ In contrast, struct field names are fully preserved at runtime, which enables st
 
 In XGo's design philosophy, **tuple does not encourage objectification**, meaning it's not recommended to add methods to tuples. This aligns with tuple's positioning as a simple data container—it should remain lightweight and simple, avoiding the burden of excessive behavioral logic.
 
-If methods are genuinely needed for a data structure, XGo recommends using classfile to achieve more complete object-oriented features.
+If methods are genuinely needed for a data structure, XGo recommends using [classfile](classfile.md) to achieve more complete object-oriented features.
 
 ## Practical Application Limitations
 
