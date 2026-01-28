@@ -32,8 +32,20 @@ In practical applications, these differences lead to obvious usage limitations. 
 
 More broadly, almost all **functionalities that depend on reflect must use struct**. Common scenarios including JSON/XML serialization, database ORM, dependency injection, and struct tag parsing all require the complete runtime type information that struct provides.
 
+## XGo MiniSpec Recommendation
+
+An important consideration when choosing between tuple and struct is their position in **XGo's recommended syntax set (XGo MiniSpec)**. Tuple is included in the XGo MiniSpec, while struct is not.
+
+This design choice reflects XGo's philosophy that **tuple combined with [classfile](classfile.md) can completely replace all scenarios where struct is used in Go**. The combination provides:
+- Tuple for lightweight data containers and function return values
+- Classfile for complex types requiring encapsulation, methods, and object-oriented features
+
+By promoting this tuple + classfile approach, XGo MiniSpec aims to provide a more streamlined and consistent way of organizing data and behavior, reducing the conceptual overhead of having multiple overlapping constructs.
+
 ## Summary
 
 Tuple and struct each have their appropriate use cases in XGo. Tuple is suitable as a lightweight, temporary data container for returning multiple values from functions or simple data combinations. Struct, however, is more appropriate for defining data types with clear semantics, especially in scenarios requiring encapsulation, reflection support, or method binding.
+
+For developers following XGo MiniSpec, the recommended approach is to use tuple for simple data combinations and classfile when object-oriented features are needed, avoiding struct altogether. This provides a cleaner conceptual model while maintaining full functionality.
 
 Understanding these differences helps developers choose the appropriate data structure for the right scenarios, leading to clearer and more efficient code.
