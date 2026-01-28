@@ -1,4 +1,4 @@
-# Tuple vs. Struct
+# Tuples vs. Structs
 
 In the XGo programming language, tuple and struct are two distinct ways of organizing data. While both can combine multiple values together, they differ significantly in their type system, visibility rules, runtime characteristics, and other aspects. Understanding these differences is crucial for choosing the right data structure.
 
