@@ -4,7 +4,7 @@ In the XGo programming language, tuple and struct are two distinct ways of organ
 
 ## Fundamental Differences in the Type System
 
-Tuple and struct behave very differently in the type system. For tuple types, `(a, b int)` and `(c, d int)` are considered **the same type**. This is because tuple type checking is based solely on the types and order of fields, not on field names. In other words, tuple is a structural type where field names are merely syntactic sugar at compile time.
+Tuple and struct behave very differently in the type system. For anonymous tuple types, their identity is structural, meaning `(a int, b string)` and `(c int, d string)` are **identical** types. However, named tuple types are distinct. For example, `type Point (x int, y int)` and `type Coord (a int, b int)` define two different types, even though they have the same underlying structure. In this context, tuple field names are compile-time aliases, but named tuple types provide nominal typing.
 
 In contrast, struct type checking is much stricter. Even if two structs have exactly the same field types and order, they are considered different types if their definitions differ or their field names are different. This characteristic makes struct more suitable for expressing data structures with clear semantics.
 
