@@ -626,12 +626,17 @@ func genMainFunc(pkg *gogen.Package, gameClass string) {
 
 func findMethod(o types.Object, name string) *types.Func {
 	if obj, ok := o.(*types.TypeName); ok {
-		if t, ok := obj.Type().(*types.Named); ok {
-			for i, n := 0, t.NumMethods(); i < n; i++ {
-				f := t.Method(i)
-				if f.Name() == name {
-					return f
-				}
+		return findMethodByType(obj.Type(), name)
+	}
+	return nil
+}
+
+func findMethodByType(typ types.Type, name string) *types.Func {
+	if t, ok := typ.(*types.Named); ok {
+		for i, n := 0, t.NumMethods(); i < n; i++ {
+			f := t.Method(i)
+			if f.Name() == name {
+				return f
 			}
 		}
 	}
