@@ -1552,25 +1552,30 @@ var unaryXGoNames = map[string]string{
 	"<-": "XGo_Recv",
 }
 
+// shouldCallXGoInit checks if XGo_Init is directly defined on the receiver type (not through embedding)
+func shouldCallXGoInit(fn *gogen.Func) bool {
+	recv := fn.Func.Type().(*types.Signature).Recv()
+	if recv == nil {
+		return false
+	}
+	typ := recv.Type()
+	if pt, ok := typ.(*types.Pointer); ok {
+		typ = pt.Elem()
+	}
+	if named, ok := typ.(*types.Named); ok {
+		return findMethod(named.Obj(), "XGo_Init") != nil
+	}
+	return false
+}
+
 func loadFuncBody(ctx *blockCtx, fn *gogen.Func, body *ast.BlockStmt, sigBase *types.Signature, src ast.Node, initClass bool) {
 	cb := fn.BodyStart(ctx.pkg, body)
 	cb.SetComments(nil, false)
+	if initClass && shouldCallXGoInit(fn) {
+		// this.XGo_Init()
+		cb.VarVal("this").MemberVal("XGo_Init", 0).Call(0).EndStmt()
+	}
 	if initClass {
-		// Check if current type directly defines XGo_Init (not through embedding)
-		recv := fn.Func.Type().(*types.Signature).Recv()
-		if recv != nil {
-			typ := recv.Type()
-			if pt, ok := typ.(*types.Pointer); ok {
-				typ = pt.Elem()
-			}
-			if named, ok := typ.(*types.Named); ok {
-				// Only call XGo_Init if it's directly defined on this type
-				if f := findMethod(named.Obj(), "XGo_Init"); f != nil {
-					// this.XGo_Init()
-					cb.VarVal("this").MemberVal("XGo_Init", 0).Call(0).EndStmt()
-				}
-			}
-		}
 		if sigBase != nil {
 			// this.Sprite.Main(...) or this.Game.MainEntry(...)
 			cb.VarVal("this").MemberVal(ctx.baseClass.Name(), 0).MemberVal(fn.Name(), 0)
