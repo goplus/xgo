@@ -1552,18 +1552,30 @@ var unaryXGoNames = map[string]string{
 	"<-": "XGo_Recv",
 }
 
+// shouldCallXGoInit checks if XGo_Init is directly defined on the receiver type (not through embedding)
+func shouldCallXGoInit(fn *gogen.Func) bool {
+	recv := fn.Func.Type().(*types.Signature).Recv()
+	if recv == nil {
+		return false
+	}
+	typ := recv.Type()
+	if pt, ok := typ.(*types.Pointer); ok {
+		typ = pt.Elem()
+	}
+	if named, ok := typ.(*types.Named); ok {
+		return findMethod(named.Obj(), "XGo_Init") != nil
+	}
+	return false
+}
+
 func loadFuncBody(ctx *blockCtx, fn *gogen.Func, body *ast.BlockStmt, sigBase *types.Signature, src ast.Node, initClass bool) {
 	cb := fn.BodyStart(ctx.pkg, body)
 	cb.SetComments(nil, false)
-	if initClass {
+	if initClass && shouldCallXGoInit(fn) {
 		// this.XGo_Init()
-		if _, err := cb.VarVal("this").Member("XGo_Init", 0, gogen.MemberFlagVal); err == nil {
-			cb.Call(0).EndStmt()
-		} else {
-			// clean up the partial expression pushed by VarVal("this") when
-			// the XGo_Init member lookup fails
-			cb.ResetStmt()
-		}
+		cb.VarVal("this").MemberVal("XGo_Init", 0).Call(0).EndStmt()
+	}
+	if initClass {
 		if sigBase != nil {
 			// this.Sprite.Main(...) or this.Game.MainEntry(...)
 			cb.VarVal("this").MemberVal(ctx.baseClass.Name(), 0).MemberVal(fn.Name(), 0)
