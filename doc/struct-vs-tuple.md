@@ -36,7 +36,7 @@ var pt2 = Point(x = 3, y = 4)
 
 // Both forms use function-call syntax
 // Type conversion: same function-like syntax!
-var cd = Coord(pt1)
+var cd = Coord(pt1) // Type conversion (structurally compatible)
 
 // Notice: Point(3, 4) creates a tuple, Coord(pt1) converts types
 // Both use identical syntax pattern - no new syntax to learn
