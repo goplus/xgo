@@ -1415,7 +1415,7 @@ result := grammar.parseExpr("10+5*2", nil)
 echo result
 ```
 
-Learn more in the [[TPL documentation](https://claude.ai/tpl/README.md)](../tpl/README.md).
+Learn more in the [TPL documentation](../tpl/README.md).
 
 ### JSON
 
@@ -1428,7 +1428,7 @@ config := json`{
 	"features": ["auth", "logging"]
 }`!
 
-echo config.port  // Type-safe access
+echo config.port
 ```
 
 ### XML

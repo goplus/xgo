@@ -1,0 +1,7 @@
+config := json`{
+	"server": "localhost",
+	"port": 8080,
+	"features": ["auth", "logging"]
+}`!
+
+echo config.port

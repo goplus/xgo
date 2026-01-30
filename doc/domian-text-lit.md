@@ -66,7 +66,7 @@ config := json`{
 	"features": ["auth", "logging"]
 }`!
 
-echo config.port  // Type-safe access
+echo config.port
 ```
 
 ### XML
