@@ -53,7 +53,7 @@ result := grammar.parseExpr("10+5*2", nil)
 echo result
 ```
 
-Learn more in the [[TPL documentation](https://claude.ai/tpl/README.md)](../tpl/README.md).
+Learn more in the [TPL documentation](../tpl/README.md).
 
 ### JSON
 
@@ -214,7 +214,7 @@ data := json`{"invalid": }`!
 
 The journey of domain text literals in XGo began with a [[community proposal in early 2024](https://github.com/goplus/xgo/issues/1770)](https://github.com/goplus/xgo/issues/1770) suggesting adding JSX syntax support to XGo. While JSX has gained widespread adoption in frontend development, particularly in React-based applications, the immediate benefits of building JSX syntax directly into XGo weren't immediately clear, causing the proposal to be temporarily shelved.
 
-The turning point came when XGo needed to support [[TPL (Text Processing Language)](https://claude.ai/tpl/README.md)](../tpl/README.md) syntax for the [[XGo Mini Spec](https://claude.ai/chat/spec-mini.md)](spec-mini.md) project. This necessity prompted a reconsideration of how XGo should handle domain-specific notations more broadly.
+The turning point came when XGo needed to support [TPL (Text Processing Language)](../tpl/README.md) syntax for the [XGo Mini Spec](spec-mini.md) project. This necessity prompted a reconsideration of how XGo should handle domain-specific notations more broadly.
 
 ### The Philosophy Behind Domain Text Literals
 
