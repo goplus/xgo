@@ -1379,73 +1379,128 @@ hasFailed := {for x in students if x.score < 60}     // is any student failed?
 
 ## Domain-Specific Text Literals
 
-XGo supports domain-specific text literals, which allow you to embed domain-specific languages directly in your code with syntax highlighting and type safety. This feature is inspired by Markdown code blocks but designed for seamless integration with XGo code.
+Domain-specific text literals allow you to write inline code in specialized formats—such as JSON, XML, regular expressions, or custom DSLs—without sacrificing the benefits of compile-time checking and editor support.
 
-### Syntax
+**Basic syntax:**
 
 ```go
-domainTag`text content`
+result := domainTag`content`
 ```
 
-For domain text literals with arguments:
+**With parameters:**
 
 ```go
-domainTag`> arg1, arg2, ...
-  text content
+result := domainTag`> param1, param2
+content
 `
 ```
 
-### Built-in Domain Text Formats
+The `!` suffix forces error handling, causing a panic if parsing fails—useful for literals you expect to always be valid.
 
-#### Text Processing Language (tpl)
+## Built-in Formats
 
-A grammar-based language for text processing that offers a more readable and maintainable alternative to regular expressions. For more details, see [tpl/README.md](../tpl/README.md).
+XGo currently supports several domain text literals natively:
 
-```go
-cl := tpl`expr = INT % ("+" | "-")`!
-echo cl.parseExpr("1+2-3", nil)
-```
+### Text Processing Language (tpl)
 
-#### JSON
+A grammar-based alternative to regular expressions that emphasizes clarity and composability. Ideal for defining parsers and text processors.
 
 ```go
-echo json`{"a":1, "b":2}`
+grammar := tpl`
+expr = term % ("+" | "-")
+term = INT % ("*" | "/")
+`!
+
+result := grammar.parseExpr("10+5*2", nil)
+echo result
 ```
 
-#### XML
+Learn more in the [TPL documentation](../tpl/README.md).
+
+### JSON
+
+Parse and validate JSON structures inline:
 
 ```go
-echo xml`<a>1</a>`
+config := json`{
+	"server": "localhost",
+	"port": 8080,
+	"features": ["auth", "logging"]
+}`!
+
+echo config.port
 ```
 
-#### CSV
+### XML
+
+Work with XML documents directly:
 
 ```go
-echo csv`a,b`
+doc := xml`
+<configuration>
+	<database>
+		<host>localhost</host>
+		<port>5432</port>
+	</database>
+</configuration>
+`!
 ```
 
-#### HTML
+### CSV
+
+Define tabular data inline:
+
+```go
+data := csv`
+name,age,city
+Alice,30,NYC
+Bob,25,SF
+`!
+```
+
+### HTML
+
+Embed HTML with proper parsing (requires `golang.org/x/net/html`):
 
 ```go
 import "golang.org/x/net/html"
 
-echo html`<html><body><h1>hello</h1></body></html>`
+page := html`
+<html>
+	<body>
+		<h1>Welcome</h1>
+		<p>Domain-specific literals in action</p>
+	</body>
+</html>
+`!
 ```
 
-#### Regular Expressions
+### Regular Expressions
+
+Define regex patterns with improved readability. XGo supports both standard and POSIX regex:
 
 ```go
-re := regexp`^[a-z]+\[[0-9]+\]$`!
-echo re.matchString("adam[23]")
+pattern := regexp`^[a-z]+\[[0-9]+\]$`!
+
+if pattern.matchString("item[42]") {
+	echo "Match found"
+}
+
+// POSIX variant
+posixPattern := regexposix`[[:alpha:]]+`!
 ```
 
-### How It Works
+## Implementation Details
 
-Each domain text literal is essentially a function call to a `New()` function in the corresponding package. For example, `json`{...}`` is equivalent to calling `json.New(...)`.
+Domain text literals compile to function calls to the corresponding package's `New()` function. For example:
 
-### Extensibility
+```go
+json`{"key": "value"}`
+// Compiles to:
+json.New(`{"key": "value"}`)
+```
 
-You can add support for custom domain text formats by creating a package with a global `func New(string)` function. This makes the system highly extensible for your specific needs.
+This design keeps the feature simple while allowing seamless integration with existing Go packages. The `domainTag` represents a package that must have a global `func New(string)` function with any return type.
 
 <h5 align="right"><a href="#table-of-contents">⬆ back to toc</a></h5>
 
