@@ -29,14 +29,14 @@ type Coord (a, b int)
 
 // Tuple initialization has two equivalent forms:
 // Form 1: positional arguments (like function calls)
-var pt1 Point = Point(3, 4)
+var pt1 = Point(3, 4)
 
 // Form 2: named arguments (explicit field names)
-var pt2 Point = Point(x = 3, y = 4)
+var pt2 = Point(x = 3, y = 4)
 
 // Both forms use function-call syntax
 // Type conversion: same function-like syntax!
-var cd Coord = Coord(pt1)    // Positional conversion
+var cd = Coord(pt1)
 
 // Notice: Point(3, 4) creates a tuple, Coord(pt1) converts types
 // Both use identical syntax pattern - no new syntax to learn
@@ -56,14 +56,14 @@ type Coord struct {
 
 // Struct initialization also has two equivalent forms:
 // Form 1: positional arguments
-var pt1 Point = Point{3, 4}
+var pt1 = Point{3, 4}
 
 // Form 2: named fields (explicit field names)
-var pt2 Point = Point{X: 3, Y: 4}
+var pt2 = Point{X: 3, Y: 4}
 
 // Type conversion still requires explicit field access
-var cd Coord = pt1                 // ✗ Error: different types
-var cd Coord = Coord{pt1.X, pt1.Y} // Positional conversion
+var cd = Coord(pt1)          // ✗ Error: different types
+var cd = Coord{pt1.X, pt1.Y} // Positional conversion
 
 // Struct requires learning the {field: value} syntax separately
 // No unified pattern across initialization and conversion
