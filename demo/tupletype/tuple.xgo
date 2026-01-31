@@ -11,3 +11,7 @@ echo pt2
 
 pt3 := Point(y = 5, x = 3)
 echo pt3.x, pt3.y
+
+pts := make(map[Point]string)
+pts[(0, 0)] = "origin"
+echo pts
