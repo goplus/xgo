@@ -111,6 +111,45 @@ largeCache := make(map[string][]byte, 10000)
 
 ## Map Operations
 
+### Adding and Updating Elements
+
+You can add new elements or update existing ones using either notation:
+
+```go
+a := {"a": 1, "b": 0}
+
+// Using bracket notation
+a["c"] = 100
+
+// Using field notation
+a.d = 200
+
+echo a  // Output: map[a:1 b:0 c:100 d:200]
+
+// Works with maps created by make too
+m := make(map[string]int)
+m["x"] = 10
+m.y = 20
+echo m  // Output: map[x:10 y:20]
+```
+
+### Deleting Elements
+
+Use the `delete` function to remove elements from a map:
+
+```go
+a := {"a": 1, "b": 0, "c": 100}
+delete(a, "b")
+echo a  // Output: map[a:1 c:100]
+
+// Works with any key type
+m := make(map[int]string)
+m[1] = "one"
+m[2] = "two"
+delete(m, 1)
+echo m  // Output: map[2:two]
+```
+
 ### Getting Map Length
 
 You can get the number of elements in a map using the `len` function:
@@ -306,45 +345,6 @@ if c, ok := apiResponse.user.address.city.(string); ok {
 echo "City:", city
 ```
 
-### Adding and Updating Elements
-
-You can add new elements or update existing ones using either notation:
-
-```go
-a := {"a": 1, "b": 0}
-
-// Using bracket notation
-a["c"] = 100
-
-// Using field notation
-a.d = 200
-
-echo a  // Output: map[a:1 b:0 c:100 d:200]
-
-// Works with maps created by make too
-m := make(map[string]int)
-m["x"] = 10
-m.y = 20
-echo m  // Output: map[x:10 y:20]
-```
-
-### Deleting Elements
-
-Use the `delete` function to remove elements from a map:
-
-```go
-a := {"a": 1, "b": 0, "c": 100}
-delete(a, "b")
-echo a  // Output: map[a:1 c:100]
-
-// Works with any key type
-m := make(map[int]string)
-m[1] = "one"
-m[2] = "two"
-delete(m, 1)
-echo m  // Output: map[2:two]
-```
-
 ### Iterating Over Maps
 
 XGo provides two forms of `for in` loop for iterating over maps:
@@ -366,6 +366,17 @@ for name, age in ages {
 }
 ```
 
+#### Iterate Over Keys Only
+
+To iterate over just the keys, you can use the blank identifier `_` for the value part.
+
+```go
+m := {"x": 10, "y": 20, "z": 30}
+for key, _ in m {
+    echo key
+}
+```
+
 #### Iterate Over Values Only
 
 ```go
@@ -374,6 +385,68 @@ for value in m {
     echo value
 }
 ```
+
+## Map Comprehensions
+
+Map comprehensions provide a concise and expressive way to create new maps by transforming or filtering existing sequences. They follow a syntax similar to Python's dictionary comprehensions.
+
+### Basic Syntax
+
+The general form of a map comprehension is:
+
+```go
+{keyExpr: valueExpr for vars in iterable}
+```
+
+This creates a new map where each element from the `iterable` is transformed into a key-value pair.
+
+#### Creating Maps from Slices
+
+```go
+// Map slice values to their indices
+numbers := [10, 20, 30, 40, 50]
+valueToIndex := {v: i for i, v in numbers}
+echo valueToIndex  // Output: map[10:0 20:1 30:2 40:3 50:4]
+```
+
+#### Creating Maps from Strings
+
+```go
+// Character positions in a string
+word := "hello"
+charPositions := {char: i for i, char in word}
+echo charPositions  // Output: map[h:0 e:1 l:3 o:4]
+// Note: 'l' appears twice, so the last occurrence (index 3) is kept
+```
+
+### Comprehensions with Conditions
+
+Add an `if` clause to filter elements:
+
+```go
+{keyExpr: valueExpr for vars in iterable if condition}
+```
+
+#### Filtering Even/Odd Elements
+
+```go
+numbers := [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+// Only even numbers
+evenSquares := {v: v * v for v in numbers if v%2 == 0}
+echo evenSquares  // Output: map[2:4 4:16 6:36 8:64 10:100]
+
+// Only odd indices
+oddIndexValues := {i: v for i, v in numbers if i%2 == 1}
+echo oddIndexValues  // Output: map[1:2 3:4 5:6 7:8 9:10]
+```
+
+### Best Practices for Comprehensions
+
+1. **Use comprehensions for simple transformations**: They're most readable when the logic is straightforward
+2. **Consider traditional loops for complex logic**: If you need multiple statements or complex conditions, a regular loop may be clearer
+3. **Watch for duplicate keys**: In comprehensions, later values overwrite earlier ones for the same key
+4. **Keep conditions simple**: Complex filtering logic is often better in a traditional loop
 
 ## Common Patterns
 
@@ -423,6 +496,13 @@ wordCounts := make(map[string]int, 1000)
 for word in words {
     wordCounts[word]++
 }
+
+// Using comprehension to initialize
+words := ["apple", "banana", "apple", "orange", "banana", "apple"]
+uniqueWords := {w: 0 for w in words}  // Initialize all to 0
+for word in words {
+    uniqueWords[word]++
+}
 ```
 
 ### Lookup Tables
@@ -436,6 +516,10 @@ statusCodes := {
 }
 
 echo statusCodes.ok  // Output: 200
+
+// Using comprehension to reverse the mapping
+codeToStatus := {code: status for status, code in statusCodes}
+echo codeToStatus[200]  // Output: ok
 ```
 
 ### Caching
@@ -482,10 +566,11 @@ for category, items in groups {
 3. **Use comma-ok form** when working with uncertain data structures (APIs, JSON, dynamic data)
 4. **Use map literals** for quick initialization with known data
 5. **Use `make`** when you need specific types, non-string keys, or want to pre-allocate capacity
-6. Check for key existence before accessing values when the key might not exist
-7. Pre-allocate capacity with `make` for large maps when the approximate size is known
-8. Use consistent value types when possible for type safety
-9. Consider using `make` with explicit types for better code documentation and type safety in larger projects
+6. **Use map comprehensions** for simple transformations and filtering of sequences
+7. Check for key existence before accessing values when the key might not exist
+8. Pre-allocate capacity with `make` for large maps when the approximate size is known
+9. Use consistent value types when possible for type safety
+10. Consider using `make` with explicit types for better code documentation and type safety in larger projects
 
 ## Performance Tips
 
@@ -493,3 +578,4 @@ for category, items in groups {
 2. **Avoid frequent reallocations**: Maps grow dynamically, but pre-allocation prevents repeated internal resizing
 3. **Use appropriate key types**: Simple types (int, string) as keys are more efficient than complex structs
 4. **Consider zero values**: Accessing non-existent keys returns zero values, which can be useful for counters
+5. **Comprehensions vs loops**: For large datasets or complex transformations, traditional loops with pre-allocation may be more efficient than comprehensions
