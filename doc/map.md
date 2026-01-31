@@ -2,9 +2,11 @@
 
 XGo provides a concise syntax for working with maps. Maps are key-value data structures that allow you to store and retrieve values using keys.
 
-## Map Literal Syntax
+## Creating Maps
 
-### Creating Maps
+XGo provides two ways to create maps: using map literals for quick initialization with data, and using the `make` function for more control over map types and capacity.
+
+### Map Literal Syntax
 
 In XGo, you can create maps using curly braces `{}`:
 
@@ -15,24 +17,97 @@ c := {"Hello": 1, "xsw": "XGo"} // map[string]any
 d := {}                         // map[string]any
 ```
 
-### Automatic Type Inference
+#### Automatic Type Inference
 
 XGo automatically infers the complete map type `map[KeyType]ValueType` based on the literal syntax and values provided.
 
-#### Type Inference Rules
+**Type Inference Rules**
 
 Both `KeyType` and `ValueType` follow the same inference rules:
 
 1. **All elements have the same type**: The type is that common type. Note that untyped literals (such as untyped integers and untyped floats) follow Go's conversion rules - untyped values can be implicitly converted to a common type when compatible (e.g., untyped integer literals like `1` can be converted to `float64` when mixed with untyped float literals like `3.4`)
 2. **Not all elements have the same type**: The type is `any` (which can hold any value)
 
-#### Empty Map Special Case
+**Empty Map Special Case**
 
 The empty map literal `{}` is a special case:
 - `KeyType` is inferred as `string`
 - `ValueType` is inferred as `any`
 
 This provides the most flexible type for an empty map, allowing you to add any string-keyed values dynamically.
+
+### Creating Maps with `make`
+
+While map literals are convenient for initializing maps with data, XGo also supports the standard `make` function for creating maps, particularly when you need more control over the map type or capacity.
+
+#### Basic `make` Syntax
+
+```go
+// Create an empty map with specific types
+m := make(map[string]int)
+m["count"] = 42
+echo m  // Output: map[count:42]
+
+// Create a map with non-string keys
+ages := make(map[int]string)
+ages[1] = "Alice"
+ages[2] = "Bob"
+echo ages  // Output: map[1:Alice 2:Bob]
+
+// Create a map with complex key types
+type Point (x, y int)
+positions := make(map[Point]string)
+positions[(0, 0)] = "origin"
+```
+
+#### Pre-allocating Capacity
+
+For performance optimization, you can specify an initial capacity hint:
+
+```go
+// Create a map with initial capacity for ~100 elements
+largeMap := make(map[string]int, 100)
+
+// This doesn't limit the map size, but helps reduce allocations
+for i := 0; i < 150; i++ {
+    largeMap["key${i}"] = i
+}
+```
+
+The capacity hint doesn't limit the map's size but helps the runtime allocate memory more efficiently when you know approximately how many elements you'll add.
+
+#### When to Use `make` vs Literals
+
+**Use map literals** (`{}`) when:
+- You have initial data to populate
+- You want automatic type inference
+- The empty map type `map[string]any` is acceptable
+- You prefer concise, readable code
+
+**Use `make`** when:
+- You need a specific key type (not string)
+- You need a specific value type for an empty map
+- You want to pre-allocate capacity for performance
+- You prefer explicit type specification
+- Working with standard Go code patterns
+
+```go
+// Literal - quick and convenient
+config := {"host": "localhost", "port": 8080}
+
+// make - explicit type control
+var settings = make(map[string]int)
+settings["timeout"] = 30
+settings["retries"] = 3
+
+// make - non-string keys
+userIDs := make(map[int]string)
+userIDs[1001] = "Alice"
+userIDs[1002] = "Bob"
+
+// make - performance optimization
+largeCache := make(map[string][]byte, 10000)
+```
 
 ## Map Operations
 
@@ -43,49 +118,214 @@ You can get the number of elements in a map using the `len` function:
 ```go
 a := {"a": 1, "b": 2, "c": 3}
 echo len(a)  // Output: 3
+
+b := make(map[string]int)
+b["x"] = 10
+echo len(b)  // Output: 1
 ```
 
 ### Accessing Elements
 
-You can access map elements using the `[]` operator with a key:
+XGo provides two ways to access map elements: bracket notation and field access notation.
+
+#### Bracket Notation
+
+The traditional way to access map elements is using the `[]` operator with a key:
 
 ```go
 a := {"name": "Alice", "age": 25}
 echo a["name"]  // Output: Alice
+
+// Works with any key type
+m := make(map[int]string)
+m[42] = "answer"
+echo m[42]  // Output: answer
 ```
 
-### Checking Key Existence
+#### Field Access Notation
 
-To check if a key exists in the map, use the two-value assignment form. The second value is a boolean indicating whether the key exists:
+For string-keyed maps, XGo allows you to use dot notation when the key is a valid identifier:
+
+```go
+config := {"host": "localhost", "port": 8080}
+echo config.host  // Output: localhost
+echo config.port  // Output: 8080
+
+// Equivalent to:
+echo config["host"]
+echo config["port"]
+```
+
+**Field access is pure syntax sugar** - `m.field` and `m["field"]` behave identically in all contexts.
+
+##### When to Use Each Style
+
+**Use field notation** (`m.field`) when:
+- Keys are known at development time
+- Keys are valid identifiers (letters, digits, underscores only)
+- You want more readable code
+
+**Use bracket notation** (`m["key"]`) when:
+- Keys are computed at runtime
+- Keys contain special characters, spaces, or start with digits
+- You need explicit compatibility with standard Go
+- Working with non-string key types
+
+```go
+// Field notation - clean and readable
+user := {"name": "Alice", "age": 30}
+echo user.name
+echo user.age
+
+// Bracket notation - necessary for dynamic or special keys
+keyName := "name"
+echo user[keyName]           // Dynamic key
+echo user["first-name"]      // Key with hyphen
+echo user["2024-score"]      // Key starting with digit
+
+// Bracket notation - required for non-string keys
+scores := make(map[int]float64)
+scores[1] = 95.5
+echo scores[1]  // Must use bracket notation
+```
+
+##### Nested Access
+
+Field notation works seamlessly with nested maps:
+
+```go
+data := {
+    "user": {
+        "profile": {
+            "name": "Alice",
+            "age": 30,
+        },
+    },
+}
+
+// Clean nested access
+echo data.user.profile.name  // Output: Alice
+
+// Equivalent to:
+echo data["user"]["profile"]["name"]
+```
+
+##### Working with `any` Type
+
+Field notation also works with variables of type `any`, automatically treating them as `map[string]any`:
+
+```go
+var response any = {"status": "ok", "code": 200}
+echo response.status  // Output: ok
+echo response.code    // Output: 200
+```
+
+#### Safe Access with Comma-ok
+
+When accessing uncertain data (such as from JSON or external APIs), use the comma-ok form to safely check if a path exists. The comma-ok form returns two values:
+- The value itself (or zero value if path doesn't exist)
+- A boolean indicating whether the access succeeded
 
 ```go
 a := {"a": 1, "b": 0}
 
-// Method 1: Using two return values
+// Check if key exists
 v, ok := a["c"]
-echo v, ok  // Output: 0 false (0 is the default value, false means key doesn't exist)
+echo v, ok  // Output: 0 false (key doesn't exist)
 
 v, ok = a["b"]
-echo v, ok  // Output: 0 true (0 is the actual value, true means key exists)
+echo v, ok  // Output: 0 true (key exists with value 0)
 
-// Method 2: Direct conditional check
+// Works with field notation too
+v, ok = a.c
+echo v, ok  // Output: 0 false
+
+// Direct conditional check
 if v, ok := a["c"]; ok {
     echo "Found:", v
 } else {
-    echo "Not found"
+    echo "Not found"  // Output: Not found
 }
-// Output: Not found
+```
+
+**With comma-ok, accessing non-existent paths never panics** - it simply returns `false`:
+
+```go
+data := {"user": {"name": "Alice"}}
+
+// Safe single-level access
+name, ok := data.user
+if ok {
+    echo "User found:", name
+}
+
+// Safe nested access
+profile, ok := data.user.profile
+if !ok {
+    echo "Profile not found"  // This will print
+}
+
+// Safe access with type assertion
+var response any = {"status": "ok", "code": 200}
+code, ok := response.code.(int)
+if ok {
+    echo "Status code:", code
+}
+```
+
+This is especially useful when working with dynamic data:
+
+```go
+var data any = {"user": "Alice"}
+
+// Without comma-ok - may panic if structure is wrong
+// name := data.user.profile.name  // Would panic!
+
+// With comma-ok - safe, never panics
+name, ok := data.user.profile.name
+if !ok {
+    echo "Path does not exist"  // Output: Path does not exist
+    name = "Unknown"
+}
+
+// Processing API response
+var apiResponse any = fetchFromAPI()
+
+// Safely extract nested values
+if userID, ok := apiResponse.data.user.id.(string); ok {
+    processUser(userID)
+} else {
+    echo "Invalid response structure"
+}
+
+// With fallback values
+city := "Unknown"
+if c, ok := apiResponse.user.address.city.(string); ok {
+    city = c
+}
+echo "City:", city
 ```
 
 ### Adding and Updating Elements
 
-You can add new elements or update existing ones using the `[]` operator:
+You can add new elements or update existing ones using either notation:
 
 ```go
 a := {"a": 1, "b": 0}
-a["c"] = 100  // Add new element
-a["b"] = 200  // Update existing element
-echo a  // Output: map[a:1 b:200 c:100]
+
+// Using bracket notation
+a["c"] = 100
+
+// Using field notation
+a.d = 200
+
+echo a  // Output: map[a:1 b:0 c:100 d:200]
+
+// Works with maps created by make too
+m := make(map[string]int)
+m["x"] = 10
+m.y = 20
+echo m  // Output: map[x:10 y:20]
 ```
 
 ### Deleting Elements
@@ -96,6 +336,13 @@ Use the `delete` function to remove elements from a map:
 a := {"a": 1, "b": 0, "c": 100}
 delete(a, "b")
 echo a  // Output: map[a:1 c:100]
+
+// Works with any key type
+m := make(map[int]string)
+m[1] = "one"
+m[2] = "two"
+delete(m, 1)
+echo m  // Output: map[2:two]
 ```
 
 ### Iterating Over Maps
@@ -108,6 +355,14 @@ XGo provides two forms of `for in` loop for iterating over maps:
 m := {"x": 10, "y": 20, "z": 30}
 for key, value in m {
     echo key, value
+}
+
+// Works with any map type
+ages := make(map[string]int)
+ages["Alice"] = 30
+ages["Bob"] = 25
+for name, age in ages {
+    echo name, "is", age, "years old"
 }
 ```
 
@@ -125,35 +380,116 @@ for value in m {
 ### Configuration Maps
 
 ```go
+// Using literals for initial configuration
 config := {
     "host": "localhost",
     "port": 8080,
     "debug": true,
 }
+
+// Access with field notation
+echo "Connecting to", config.host, "on port", config.port
+
+// Using make for type-safe configuration
+settings := make(map[string]int)
+settings["maxConnections"] = 100
+settings["timeout"] = 30
+```
+
+### Processing JSON Responses
+
+```go
+var response any = parseJSON(apiData)
+
+// Safe extraction with defaults
+userID, ok := response.user.id.(string)
+if !ok {
+    userID = "guest"
+}
+
+userName, ok := response.user.name.(string)
+if !ok {
+    userName = "Anonymous"
+}
+
+echo "User:", userName, "(", userID, ")"
 ```
 
 ### Counting Occurrences
 
 ```go
-counts := {}
-for item in items {
-    counts[item] = counts[item] + 1
+// Using make with pre-allocated capacity
+wordCounts := make(map[string]int, 1000)
+for word in words {
+    wordCounts[word]++
 }
 ```
 
 ### Lookup Tables
 
 ```go
+// Simple lookup table with literals
 statusCodes := {
     "ok": 200,
     "not_found": 404,
     "error": 500,
 }
+
+echo statusCodes.ok  // Output: 200
+```
+
+### Caching
+
+```go
+// Cache with pre-allocated capacity for performance
+cache := make(map[string][]byte, 10000)
+
+func getCachedData(key string) []byte {
+    if data, ok := cache[key]; ok {
+        return data
+    }
+
+    data := fetchData(key)
+    cache[key] = data
+    return data
+}
+```
+
+### Grouping Data
+
+```go
+// Group items by category
+groups := make(map[string][]string)
+
+for item in items {
+    category := getCategory(item)
+    groups[category] = append(groups[category], item)
+}
+
+// Access grouped data
+for category, items in groups {
+    echo "Category:", category
+    for item in items {
+        echo "  -", item
+    }
+}
 ```
 
 ## Best Practices
 
-1. Use descriptive key names for better code readability
-2. Check for key existence before accessing values when the key might not exist
-3. Initialize empty maps with `{}` when you plan to add elements dynamically
-4. Use consistent value types when possible for type safety
+1. **Use field notation for readability** when keys are known and are valid identifiers
+2. **Use bracket notation** when keys are dynamic, contain special characters, or are non-string types
+3. **Use comma-ok form** when working with uncertain data structures (APIs, JSON, dynamic data)
+4. **Use map literals** for quick initialization with known data
+5. **Use `make`** when you need specific types, non-string keys, or want to pre-allocate capacity
+6. Check for key existence before accessing values when the key might not exist
+7. Pre-allocate capacity with `make` for large maps when the approximate size is known
+8. Use consistent value types when possible for type safety
+9. Consider using `make` with explicit types for better code documentation and type safety in larger projects
+
+## Performance Tips
+
+1. **Pre-allocate capacity**: When you know the approximate size, use `make(map[K]V, size)` to reduce allocations
+2. **Avoid frequent reallocations**: Maps grow dynamically, but pre-allocation prevents repeated internal resizing
+3. **Use appropriate key types**: Simple types (int, string) as keys are more efficient than complex structs
+4. **Consider zero values**: Accessing non-existent keys returns zero values, which can be useful for counters
