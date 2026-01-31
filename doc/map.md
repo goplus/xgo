@@ -14,12 +14,22 @@ In XGo, you can create maps using curly braces `{}`:
 a := {"Hello": 1, "xsw": 3}     // map[string]int
 b := {"Hello": 1, "xsw": 3.4}   // map[string]float64
 c := {"Hello": 1, "xsw": "XGo"} // map[string]any
+e := {1: "one", 2: "two"}       // map[int]string
 d := {}                         // map[string]any
 ```
 
+You can also explicitly specify the map type to override automatic type inference:
+
+```go
+var a map[string]float64 = {"Hello": 1, "xsw": 3}  // Values converted to float64
+var c map[string]any = {"x": 1, "y": "text"}       // Explicit any type
+```
+
+When a type is explicitly declared, the literal values are converted to match the declared type.
+
 #### Automatic Type Inference
 
-XGo automatically infers the complete map type `map[KeyType]ValueType` based on the literal syntax and values provided.
+When using the `:=` syntax without explicit type declaration, XGo automatically infers the complete map type `map[KeyType]ValueType` based on the literal syntax and values provided.
 
 **Type Inference Rules**
 
@@ -80,32 +90,34 @@ The capacity hint doesn't limit the map's size but helps the runtime allocate me
 
 **Use map literals** (`{}`) when:
 - You have initial data to populate
-- You want automatic type inference
-- The empty map type `map[string]any` is acceptable
+- You want automatic type inference for convenience
 - You prefer concise, readable code
 
+**Use map literals with explicit type** (`var m map[K]V = {}`) when:
+- You have initial data with a specific type requirement
+- You need type safety while keeping syntax concise
+- You want to ensure value types are converted correctly
+
 **Use `make`** when:
-- You need a specific key type (not string)
-- You need a specific value type for an empty map
+- You're creating an empty map and plan to add elements later
 - You want to pre-allocate capacity for performance
-- You prefer explicit type specification
-- Working with standard Go code patterns
+- You prefer the traditional Go style
+- Working with codebases that consistently use `make`
 
 ```go
-// Literal - quick and convenient
+// Literal with auto inference - quick and convenient
 config := {"host": "localhost", "port": 8080}
 
-// make - explicit type control
-var settings = make(map[string]int)
-settings["timeout"] = 30
-settings["retries"] = 3
+// Literal with explicit type - type safety with initial data
+var settings map[string]int = {"timeout": 30, "retries": 3}
+var userIDs map[int]string = {1001: "Alice", 1002: "Bob"}
 
-// make - non-string keys
-userIDs := make(map[int]string)
-userIDs[1001] = "Alice"
-userIDs[1002] = "Bob"
+// make - empty map with planned additions
+options := make(map[string]int)
+options["timeout"] = 30
+options["retries"] = 3
 
-// make - performance optimization
+// make - performance optimization with capacity
 largeCache := make(map[string][]byte, 10000)
 ```
 
@@ -463,10 +475,16 @@ config := {
 // Access with field notation
 echo "Connecting to", config.host, "on port", config.port
 
+// Using explicit type for type safety
+var settings map[string]int = {
+    "maxConnections": 100,
+    "timeout": 30,
+}
+
 // Using make for type-safe configuration
-settings := make(map[string]int)
-settings["maxConnections"] = 100
-settings["timeout"] = 30
+options := make(map[string]int)
+options["maxConnections"] = 100
+options["timeout"] = 30
 ```
 
 ### Processing JSON Responses
@@ -565,12 +583,13 @@ for category, items in groups {
 2. **Use bracket notation** when keys are dynamic, contain special characters, or are non-string types
 3. **Use comma-ok form** when working with uncertain data structures (APIs, JSON, dynamic data)
 4. **Use map literals** for quick initialization with known data
-5. **Use `make`** when you need specific types, non-string keys, or want to pre-allocate capacity
-6. **Use map comprehensions** for simple transformations and filtering of sequences
-7. Check for key existence before accessing values when the key might not exist
-8. Pre-allocate capacity with `make` for large maps when the approximate size is known
-9. Use consistent value types when possible for type safety
-10. Consider using `make` with explicit types for better code documentation and type safety in larger projects
+5. **Use explicit type declaration** with literals when you need type safety or specific conversions
+6. **Use `make`** when you need specific types, non-string keys, or want to pre-allocate capacity
+7. **Use map comprehensions** for simple transformations and filtering of sequences
+8. Check for key existence before accessing values when the key might not exist
+9. Pre-allocate capacity with `make` for large maps when the approximate size is known
+10. Use consistent value types when possible for type safety
+11. Consider using `make` with explicit types for better code documentation and type safety in larger projects
 
 ## Performance Tips
 
