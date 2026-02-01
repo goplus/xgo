@@ -505,28 +505,115 @@ This is equivalent to Go's append operations:
 
 ### Maps
 
+#### Creating Maps
+
+XGo uses curly braces `{}` for quick initialization.
+
 ```go
 a := {"Hello": 1, "xsw": 3}     // map[string]int
 b := {"Hello": 1, "xsw": 3.4}   // map[string]float64
 c := {"Hello": 1, "xsw": "XGo"} // map[string]any
+e := {1: "one", 2: "two"}       // map[int]string
 d := {}                         // map[string]any
 ```
 
-If a key is not found, a zero value is returned by default:
+Use `make` for empty maps or to **pre-allocate capacity** for better performance.
 
 ```go
-a := {"Hello": 1, "xsw": 3}
-c := {"Hello": 1, "xsw": "XGo"}
-echo a["bad_key"] // 0
-echo c["bad_key"] // <nil>
+m := make(map[string]int)          // Basic creation
+large := make(map[string]int, 100) // Pre-allocated for ~100 elements
 ```
 
-You can also check, if a key is present, and get its value.
+#### Map Operations
+
+Before manipulating maps, it is important to understand that XGo supports two notations for referencing keys:
+
+- **Bracket Notation** (`m["key"]`): The universal syntax. It works for all key types and allows using variables as keys.
+- **Field Access Notation** (`m.key`): A convenient shorthand for string-keyed maps when the key is a valid identifier (no spaces or special characters).
+
+**Field access is pure syntax sugar** - `m.field` and `m["field"]` behave identically in all contexts.
+
+Both notations are used for both **assigning** values and **retrieving** them.
+
+##### Adding and Updating Elements
 
 ```go
-a := {"Hello": 1, "xsw": 3}
-if v, ok := a["xsw"]; ok {
-    echo "its value is", v
+a := {"a": 1, "b": 0}
+
+// Using bracket notation
+a["c"] = 100
+
+// Using field notation
+a.d = 200
+
+echo a  // Output: map[a:1 b:0 c:100 d:200]
+
+// Works with maps created by make too
+m := make(map[string]int)
+m["x"] = 10
+m.y = 20
+echo m  // Output: map[x:10 y:20]
+```
+
+##### Deleting Elements
+
+Use the `delete` function to remove elements from a map:
+
+```go
+a := {"a": 1, "b": 0, "c": 100}
+delete(a, "b")
+echo a  // Output: map[a:1 c:100]
+```
+
+##### Getting Map Length
+
+You can get the number of elements in a map using the `len` function:
+
+```go
+a := {"a": 1, "b": 2, "c": 3}
+echo len(a)  // Output: 3
+```
+
+##### Accessing Elements
+
+```go
+config := {"host": "localhost", "port": 8080}
+echo config.host  // Output: localhost
+echo config.port  // Output: 8080
+
+// Equivalent to:
+echo config["host"]
+echo config["port"]
+```
+
+###### Working with `any` Type
+
+Either notation also works with variables of type `any`, automatically treating them as `map[string]any`:
+
+```go
+var response any = {"status": "ok", "code": 200}
+echo response.status  // Output: ok
+echo response.code    // Output: 200
+```
+
+###### Safe Access with Comma-ok
+
+When accessing uncertain data (such as from JSON or external APIs), use the comma-ok form to safely check if a path exists. The comma-ok form returns two values:
+- The value itself (or zero value if path doesn't exist)
+- A boolean indicating whether the access succeeded
+
+**With comma-ok, accessing non-existent paths never panics** - it simply returns `false`:
+
+```go
+var data any = fetchFromAPI()
+
+// Without comma-ok - may panic if structure is wrong
+// name := data.user.profile.name.(string)
+
+// With comma-ok - safe, never panics
+name, ok := data.user.profile.name.(string)
+if ok {
+    // ...
 }
 ```
 
