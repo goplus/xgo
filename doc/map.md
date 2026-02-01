@@ -43,15 +43,55 @@ Both `KeyType` and `ValueType` follow the same inference rules:
 
 Use `make` when you need an empty map or want to optimize performance by pre-allocating capacity.
 
+#### Basic `make` Syntax
+
 ```go
 // Basic creation
 m := make(map[string]int)
 
+m["count"] = 42
+echo m  // Output: map[count:42]
+
+// Create a map with complex key types
+type Point (x, y int)
+positions := make(map[Point]string)
+positions[(0, 0)] = "origin"
+```
+
+#### Pre-allocating Capacity
+
+For performance optimization, you can specify an initial capacity hint:
+
+```go
+// Create a map with initial capacity for ~100 elements
 // Pre-allocating capacity (helps performance for large maps)
 largeMap := make(map[string]int, 100)
+
+// This doesn't limit the map size, but helps reduce allocations
+for i := 0; i < 150; i++ {
+    largeMap["key${i}"] = i
+}
 ```
 
 The capacity hint doesn't limit the map's size but helps the runtime allocate memory more efficiently when you know approximately how many elements you'll add.
+
+#### When to Use `make` vs Literals
+
+**Use map literals** (`{}`) when:
+- You have initial data to populate
+- You want automatic type inference for convenience
+- You prefer concise, readable code
+
+**Use map literals with explicit type** (`var m map[K]V = {}`) when:
+- You have initial data with a specific type requirement
+- You need type safety while keeping syntax concise
+- You want to ensure value types are converted correctly
+
+**Use `make`** when:
+- You're creating an empty map and plan to add elements later
+- You want to pre-allocate capacity for performance
+- You prefer the traditional Go style
+- Working with codebases that consistently use `make`
 
 ## Map Operations
 
