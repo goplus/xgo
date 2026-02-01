@@ -100,6 +100,8 @@ Before manipulating maps, it is important to understand that XGo supports two no
 - **Bracket Notation** (`m["key"]`): The universal syntax. It works for all key types and allows using variables as keys.
 - **Field Access Notation** (`m.key`): A convenient shorthand for string-keyed maps when the key is a valid identifier (no spaces or special characters).
 
+**Field access is pure syntax sugar** - `m.field` and `m["field"]` behave identically in all contexts.
+
 Both notations are used for both **assigning** values and **retrieving** them.
 
 ### Adding and Updating Elements
@@ -186,8 +188,6 @@ echo config["host"]
 echo config["port"]
 ```
 
-**Field access is pure syntax sugar** - `m.field` and `m["field"]` behave identically in all contexts.
-
 ##### When to Use Each Style
 
 **Use field notation** (`m.field`) when:
@@ -242,12 +242,15 @@ echo data["user"]["profile"]["name"]
 
 ##### Working with `any` Type
 
-Field notation also works with variables of type `any`, automatically treating them as `map[string]any`:
+Either notation also works with variables of type `any`, automatically treating them as `map[string]any`:
 
 ```go
 var response any = {"status": "ok", "code": 200}
 echo response.status  // Output: ok
 echo response.code    // Output: 200
+
+echo response["status"]  // Output: ok
+echo response["code"]    // Output: 200
 ```
 
 #### Safe Access with Comma-ok
