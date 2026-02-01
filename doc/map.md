@@ -35,97 +35,36 @@ When using the `:=` syntax without explicit type declaration, XGo automatically 
 
 Both `KeyType` and `ValueType` follow the same inference rules:
 
-1. **All elements have the same type**: The type is that common type. Note that untyped literals (such as untyped integers and untyped floats) follow Go's conversion rules - untyped values can be implicitly converted to a common type when compatible (e.g., untyped integer literals like `1` can be converted to `float64` when mixed with untyped float literals like `3.4`)
-2. **Not all elements have the same type**: The type is `any` (which can hold any value)
-
-**Empty Map Special Case**
-
-The empty map literal `{}` is a special case:
-- `KeyType` is inferred as `string`
-- `ValueType` is inferred as `any`
-
-This provides the most flexible type for an empty map, allowing you to add any string-keyed values dynamically.
+1. **Uniform Types**: If all elements have the same type, that type is used.
+2. **Mixed Types**: If elements have different types, the type is inferred as `any`.
+3. **Empty Map** `{}`: Inferred as `map[string]any` by default for maximum flexibility.
 
 ### Creating Maps with `make`
 
-While map literals are convenient for initializing maps with data, XGo also supports the standard `make` function for creating maps, particularly when you need more control over the map type or capacity.
-
-#### Basic `make` Syntax
+Use `make` when you need an empty map or want to optimize performance by pre-allocating capacity.
 
 ```go
-// Create an empty map with specific types
+// Basic creation
 m := make(map[string]int)
-m["count"] = 42
-echo m  // Output: map[count:42]
 
-// Create a map with non-string keys
-ages := make(map[int]string)
-ages[1] = "Alice"
-ages[2] = "Bob"
-echo ages  // Output: map[1:Alice 2:Bob]
-
-// Create a map with complex key types
-type Point (x, y int)
-positions := make(map[Point]string)
-positions[(0, 0)] = "origin"
-```
-
-#### Pre-allocating Capacity
-
-For performance optimization, you can specify an initial capacity hint:
-
-```go
-// Create a map with initial capacity for ~100 elements
+// Pre-allocating capacity (helps performance for large maps)
 largeMap := make(map[string]int, 100)
-
-// This doesn't limit the map size, but helps reduce allocations
-for i := 0; i < 150; i++ {
-    largeMap["key${i}"] = i
-}
 ```
 
 The capacity hint doesn't limit the map's size but helps the runtime allocate memory more efficiently when you know approximately how many elements you'll add.
 
-#### When to Use `make` vs Literals
-
-**Use map literals** (`{}`) when:
-- You have initial data to populate
-- You want automatic type inference for convenience
-- You prefer concise, readable code
-
-**Use map literals with explicit type** (`var m map[K]V = {}`) when:
-- You have initial data with a specific type requirement
-- You need type safety while keeping syntax concise
-- You want to ensure value types are converted correctly
-
-**Use `make`** when:
-- You're creating an empty map and plan to add elements later
-- You want to pre-allocate capacity for performance
-- You prefer the traditional Go style
-- Working with codebases that consistently use `make`
-
-```go
-// Literal with auto inference - quick and convenient
-config := {"host": "localhost", "port": 8080}
-
-// Literal with explicit type - type safety with initial data
-var settings map[string]int = {"timeout": 30, "retries": 3}
-var userIDs map[int]string = {1001: "Alice", 1002: "Bob"}
-
-// make - empty map with planned additions
-options := make(map[string]int)
-options["timeout"] = 30
-options["retries"] = 3
-
-// make - performance optimization with capacity
-largeCache := make(map[string][]byte, 10000)
-```
-
 ## Map Operations
+
+Before manipulating maps, it is important to understand that XGo supports two notations for referencing keys:
+
+- **Bracket Notation** (`m["key"]`): The universal syntax. It works for all key types and allows using variables as keys.
+- **Field Access Notation** (`m.key`): A convenient shorthand for string-keyed maps when the key is a valid identifier (no spaces or special characters).
+
+Both notations are used for both **assigning** values and **retrieving** them.
 
 ### Adding and Updating Elements
 
-You can add new elements or update existing ones using either notation:
+To add a new key-value pair or update an existing one, assign a value to a key using either notation. If the key exists, its value is updated; otherwise, a new entry is created.
 
 ```go
 a := {"a": 1, "b": 0}
@@ -177,7 +116,7 @@ echo len(b)  // Output: 1
 
 ### Accessing Elements
 
-XGo provides two ways to access map elements: bracket notation and field access notation.
+XGo provides flexible ways to retrieve map values, including safety checks for missing keys.
 
 #### Bracket Notation
 
