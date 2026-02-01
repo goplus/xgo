@@ -18,15 +18,6 @@ e := {1: "one", 2: "two"}       // map[int]string
 d := {}                         // map[string]any
 ```
 
-You can also explicitly specify the map type to override automatic type inference:
-
-```go
-var a map[string]float64 = {"Hello": 1, "xsw": 3}  // Values converted to float64
-var c map[string]any = {"x": 1, "y": "text"}       // Explicit any type
-```
-
-When a type is explicitly declared, the literal values are converted to match the declared type.
-
 #### Automatic Type Inference
 
 When using the `:=` syntax without explicit type declaration, XGo automatically infers the complete map type `map[KeyType]ValueType` based on the literal syntax and values provided.
@@ -38,6 +29,15 @@ Both `KeyType` and `ValueType` follow the same inference rules:
 1. **Uniform Types**: If all elements have the same type, that type is used.
 2. **Mixed Types**: If elements have different types, the type is inferred as `any`.
 3. **Empty Map** `{}`: Inferred as `map[string]any` by default for maximum flexibility.
+
+You can also explicitly specify the map type to override automatic type inference:
+
+```go
+var a map[string]float64 = {"Hello": 1, "xsw": 3}  // Values converted to float64
+var c map[string]any = {"x": 1, "y": "text"}       // Explicit any type
+```
+
+When a type is explicitly declared, the literal values are converted to match the declared type.
 
 ### Creating Maps with `make`
 
