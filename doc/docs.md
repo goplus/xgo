@@ -505,9 +505,7 @@ This is equivalent to Go's append operations:
 
 ### Maps
 
-#### Creating Maps
-
-XGo uses curly braces `{}` for quick initialization.
+A map literal is a list of expressions surrounded by curly braces.
 
 ```go
 a := {"Hello": 1, "xsw": 3}     // map[string]int
@@ -524,8 +522,6 @@ m := make(map[string]int)          // Basic creation
 large := make(map[string]int, 100) // Pre-allocated for ~100 elements
 ```
 
-#### Map Operations
-
 Before manipulating maps, it is important to understand that XGo supports two notations for referencing keys:
 
 - **Bracket Notation** (`m["key"]`): The universal syntax. It works for all key types and allows using variables as keys.
@@ -535,7 +531,7 @@ Before manipulating maps, it is important to understand that XGo supports two no
 
 Both notations are used for both **assigning** values and **retrieving** them.
 
-##### Adding and Updating Elements
+#### Adding and Updating Elements
 
 ```go
 a := {"a": 1, "b": 0}
@@ -555,7 +551,7 @@ m.y = 20
 echo m  // Output: map[x:10 y:20]
 ```
 
-##### Deleting Elements
+#### Deleting Elements
 
 Use the `delete` function to remove elements from a map:
 
@@ -565,7 +561,7 @@ delete(a, "b")
 echo a  // Output: map[a:1 c:100]
 ```
 
-##### Getting Map Length
+#### Getting Map Length
 
 You can get the number of elements in a map using the `len` function:
 
@@ -574,7 +570,7 @@ a := {"a": 1, "b": 2, "c": 3}
 echo len(a)  // Output: 3
 ```
 
-##### Accessing Elements
+#### Accessing Elements
 
 ```go
 config := {"host": "localhost", "port": 8080}
@@ -586,7 +582,7 @@ echo config["host"]
 echo config["port"]
 ```
 
-###### Working with `any` Type
+##### Working with `any` Type
 
 Either notation also works with variables of type `any`, automatically treating them as `map[string]any`:
 
@@ -596,13 +592,13 @@ echo response.status  // Output: ok
 echo response.code    // Output: 200
 ```
 
-###### Safe Access with Comma-ok
+##### Safe Access with Comma-ok
 
 When accessing uncertain data (such as from JSON or external APIs), use the comma-ok form to safely check if a path exists. The comma-ok form returns two values:
 - The value itself (or zero value if path doesn't exist)
 - A boolean indicating whether the access succeeded
 
-**With comma-ok, accessing non-existent paths never panics** - it simply returns `false`:
+With comma-ok, accessing non-existent paths **never panics** - it simply returns `false`:
 
 ```go
 var data any = fetchFromAPI()
