@@ -2,7 +2,7 @@
 
 A slice is a dynamically-sized, flexible view into the elements of an array. Slices are one of the most commonly used data structures in XGo, providing efficient and convenient ways to work with sequences of elements.
 
-**Note**: In XGo, the terms **slice** and **list** are interchangeable and refer to the same data structure. The term "slice" comes from Go's terminology, while "list" aligns with Python's naming convention. Both `[]int` (slice syntax) and list operations work identically.
+**Note**: In XGo, the terms **slice** and **list** are identical and refer to the same data structure. The term "slice" comes from Go's terminology, while "list" aligns with Python's naming convention.
 
 ## Understanding Slices
 
@@ -147,25 +147,59 @@ echo nums  // Output: [100 2 300 4 5]
 
 ### Appending Elements
 
-XGo provides an intuitive `<-` operator for appending elements to slices:
+XGo provides two ways to append elements to slices: the `<-` operator and the `append` built-in function.
+
+#### Using the `<-` Operator
+
+The `<-` operator provides an intuitive way to append elements:
 
 ```go
-// Append single element
 nums := [1, 2, 3]
-nums <- 4
-echo nums  // Output: [1 2 3 4]
+nums <- 4           // Append single element
+nums <- 5, 6, 7     // Append multiple elements
 
-// Append multiple elements
-nums <- 5, 6, 7
-echo nums  // Output: [1 2 3 4 5 6 7]
-
-// Append another slice using the spread operator
 more := [8, 9, 10]
-nums <- more...
+nums <- more...     // Append another slice
+
 echo nums  // Output: [1 2 3 4 5 6 7 8 9 10]
 ```
 
-The `<-` operator automatically handles capacity growth when needed, making it safe and convenient to use.
+#### Using the `append` Function
+
+The `append` function returns a new slice with elements added or removed:
+
+```go
+// Adding elements
+nums := [1, 2, 3]
+nums = append(nums, 4)        // Append single element
+nums = append(nums, 5, 6, 7)  // Append multiple elements
+
+more := [8, 9, 10]
+nums = append(nums, more...)  // Append another slice
+
+echo nums  // Output: [1 2 3 4 5 6 7 8 9 10]
+```
+
+**Important**: The `append` function returns a new slice, so you must assign the result back to a variable.
+
+#### Removing Elements with `append`
+
+The `append` function can also remove consecutive elements by concatenating slices before and after the range to remove:
+
+```go
+nums := [1, 2, 3, 4, 5]
+
+// Remove element at index 2 (value 3)
+nums = append(nums[:2], nums[3:]...)
+echo nums  // Output: [1 2 4 5]
+
+// Remove multiple consecutive elements (indices 1-2)
+nums = [1, 2, 3, 4, 5]
+nums = append(nums[:1], nums[3:]...)
+echo nums  // Output: [1 4 5]
+```
+
+This pattern uses slice notation to select everything before the removal range (`nums[:start]`) and everything after it (`nums[end:]`), then concatenates them together. This effectively removes the elements in the slice `nums[start:end]`.
 
 ### Accessing Elements
 
@@ -479,34 +513,6 @@ merged <- b...
 merged <- c...
 
 echo merged  // Output: [1 2 3 4 5 6 7 8 9]
-```
-
-### Removing Elements
-
-```go
-nums := [1, 2, 3, 4, 5]
-
-// Remove element at index 2 (value 3)
-index := 2
-nums = append(nums[:index], nums[index+1:]...)
-
-echo nums  // Output: [1 2 4 5]
-```
-
-Alternatively, build a new slice without the unwanted element:
-
-```go
-nums := [1, 2, 3, 4, 5]
-indexToRemove := 2
-result := []
-
-for i, v in nums {
-    if i != indexToRemove {
-        result <- v
-    }
-}
-
-echo result  // Output: [1 2 4 5]
 ```
 
 ### Summing Elements
@@ -840,7 +846,7 @@ XGo's slices provide a powerful and flexible way to work with sequences of eleme
 
 1. **Simple Literal Syntax**: Use `[]` for concise slice creation
 2. **Automatic Type Inference**: No need for explicit type specification in most cases
-3. **Intuitive Append Operation**: Use the `<-` operator for adding elements
+3. **Intuitive Append Operations**: Use the `<-` operator or `append` function for adding elements
 4. **Flexible Slicing**: Create sub-slices with simple range syntax
 5. **Multiple Iteration Styles**: Choose the iteration pattern that fits your needs
 
