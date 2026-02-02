@@ -37,8 +37,8 @@ When using the `:=` syntax without explicit type declaration, XGo automatically 
 **Type Inference Rules**
 
 1. **Uniform Types**: If all elements have the same type, that type is used.
-3. **Mixed Types**: If elements have incompatible types, the type is inferred as `any`.
-4. **Empty Slice** `[]`: Inferred as `[]any` by default for maximum flexibility.
+2. **Mixed Types**: If elements have incompatible types, the type is inferred as `any`.
+3. **Empty Slice** `[]`: Inferred as `[]any` by default for maximum flexibility.
 
 You can also explicitly specify the slice type to override automatic type inference:
 
@@ -265,7 +265,7 @@ echo squares  // Output: [1 4 9 16 25]
 
 // Convert to strings
 words := ["hello", "world"]
-upper := [v.upper() for v in words]
+upper := [v.toUpper for v in words]
 echo upper  // Output: ["HELLO" "WORLD"]
 
 // Extract from index-value pairs
@@ -287,19 +287,6 @@ echo evens  // Output: [0 2 4 6 8]
 // With step
 odds := [i for i in 1:10:2]
 echo odds  // Output: [1 3 5 7 9]
-```
-
-#### Creating Lists from Strings
-
-```go
-// Extract characters
-word := "hello"
-chars := [char for char in word]
-echo chars  // Output: ["h" "e" "l" "l" "o"]
-
-// With transformation
-upperChars := [char.upper() for char in word]
-echo upperChars  // Output: ["H" "E" "L" "L" "O"]
 ```
 
 ### Comprehensions with Conditions
@@ -336,10 +323,6 @@ numbers := [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
 // Elements at even indices
 evenIndexValues := [v for i, v in numbers if i % 2 == 0]
 echo evenIndexValues  // Output: [10 30 50 70 90]
-
-// Elements where both index and value are even
-filtered := [v for i, v in numbers if i % 2 == 0 && v % 20 == 0]
-echo filtered  // Output: [20 60 100]
 ```
 
 ### Nested Comprehensions
@@ -360,26 +343,6 @@ echo table
 // Extract diagonal elements
 diagonal := [matrix[i][i] for i in :len(matrix)]
 echo diagonal  // Output: [1 5 9]
-```
-
-### Complex Transformations
-
-```go
-// String processing
-words := ["hello", "world", "xgo"]
-lengths := [len(w) for w in words]
-echo lengths  // Output: [5 5 3]
-
-// Conditional expressions (ternary-like)
-numbers := [1, 2, 3, 4, 5]
-labels := ["even" if v % 2 == 0 else "odd" for v in numbers]
-echo labels  // Output: ["odd" "even" "odd" "even" "odd"]
-
-// Combining multiple sources
-list1 := [1, 2, 3]
-list2 := [10, 20, 30]
-combined := [a + b for a, b in zip(list1, list2)]
-echo combined  // Output: [11 22 33]
 ```
 
 ### Best Practices for Comprehensions
