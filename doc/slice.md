@@ -199,7 +199,7 @@ nums = append(nums[:1], nums[3:]...)
 echo nums  // Output: [1 4 5]
 ```
 
-This pattern uses slice notation to select everything before the removal range (`nums[:start]`) and everything after it (`nums[end:]`), then concatenates them together.
+This pattern uses slice notation to select everything before the removal range (`nums[:start]`) and everything after it (`nums[end:]`), then concatenates them together. This effectively removes the elements in the slice `nums[start:end]`.
 
 ### Accessing Elements
 
