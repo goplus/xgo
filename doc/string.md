@@ -428,11 +428,6 @@ for char in s {
 ### Practical Example: Character vs Byte Processing
 
 ```go
-// Process English text (safe with either method)
-english := "Hello"
-echo "Length:", english.len  // 5
-echo "Characters:", countChars(english)  // 5
-
 // Process mixed text (need character iteration)
 mixed := "Hello你好"
 echo "Byte length:", mixed.len  // 11 (5 ASCII + 6 for Chinese)
@@ -454,7 +449,7 @@ for i, char in mixed {
 // Character 3: l
 // Character 4: o
 // Character 5: 你
-// Character 6: 好
+// Character 8: 好
 ```
 
 ## Common Patterns
@@ -536,14 +531,6 @@ func generateEmail(name, action, link string) string {
 
 email := generateEmail("Alice", "verify your email", "https://example.com/verify")
 echo email
-
-// HTML template
-func generateHTML(title, content string) string {
-    return "\n${title}\n\n${title}\n${content}\n\n"
-}
-
-html := generateHTML("Welcome", "Welcome to our website!")
-echo html
 ```
 
 ### Text Processing
@@ -564,8 +551,8 @@ echo result  // The Quick Brown Fox Jumps Over The Lazy Dog
 
 // Remove extra spaces
 messyText := "  Too   many    spaces   "
-cleaned := messyText.split(" ").join(" ")
-echo cleaned
+cleaned := [s for s in messyText.split(" ") if s != ""].join(" ")
+echo cleaned  // Too many spaces
 ```
 
 ### Building Complex Strings
