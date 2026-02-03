@@ -1,8 +1,8 @@
 # Slice Type
 
-A slice is a dynamically-sized, flexible view into the elements of an array. Slices are one of the most commonly used data structures in XGo, providing efficient and convenient ways to work with sequences of elements.
+A `slice` (also named `list`) is a dynamically-sized, flexible view into the elements of an array. Slices are one of the most commonly used data structures in XGo, providing efficient and convenient ways to work with sequences of elements.
 
-**Note**: In XGo, the terms **slice** and **list** are identical and refer to the same data structure. The term "slice" comes from Go's terminology, while "list" aligns with Python's naming convention.
+**Note**: In XGo, the terms `slice` and `list` are identical and refer to the same data structure. The term "slice" comes from Go's terminology, while "list" aligns with Python's naming convention.
 
 ## Understanding Slices
 
@@ -104,7 +104,7 @@ The capacity hint doesn't limit the slice's size but helps the runtime allocate 
 - You're creating an empty slice and plan to add elements later
 - Working with codebases that consistently use `make`
 
-### Creating Slices from Arrays or Slices
+### Creating Slices from Slices
 
 You can create new slices by slicing existing arrays or slices using the range syntax `[start:end]`:
 
