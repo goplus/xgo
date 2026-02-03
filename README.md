@@ -84,7 +84,7 @@ Code style is just the first step. We have made many efforts to make the code mo
 | fmt.Println("Hi") | echo("Hi") | More builtin functions: It simplifies the expression of the most common tasks |
 | fmt.Println("Hi") | echo "Hi" | Command-line style code: It reduces the number of parentheses in the code as much as possible, making it closer to natural language |
 | name := "Ken"<br>fmt.Printf(<br>&nbsp;&nbsp;"Hi %s\n", name) | name := "Ken"<br>echo "Hi ${name}" | [Goodbye printf](doc/goodbye-printf.md), use `${expr}` in [string](doc/string.md) literals |
-| a := []int{1, 2, 3} | a := [1, 2, 3] | List/[Slice](doc/slice.md) literals |
+| a := []int{1, 2, 3} | a := [1, 2, 3] | [List/Slice](doc/slice.md) literals |
 | a = append(a, 4)<br>a = append(a, 5, 6, 7) | a <- 4<br>a <- 5, 6, 7 | Append values to a list |
 | a := map[string]int{<br>&nbsp;&nbsp;&nbsp;&nbsp;"Monday": 1,<br>&nbsp;&nbsp;&nbsp;&nbsp;"Tuesday": 2,<br>} | a := {<br>&nbsp;&nbsp;&nbsp;&nbsp;"Monday": 1,<br>&nbsp;&nbsp;&nbsp;&nbsp;"Tuesday": 2,<br>} | [Map](doc/map.md) literals |
 | OnStart(func() {<br>&nbsp;&nbsp;&nbsp;&nbsp;...<br>}) | onStart => {<br>&nbsp;&nbsp;&nbsp;&nbsp;...<br>} | Lambda expressions |
