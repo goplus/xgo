@@ -80,4 +80,8 @@ func TestTypeAndValue(t *testing.T) {
 	if !ret.IsBuiltin() {
 		t.Fatal("NewTypeAndValueForObject: not builtin?")
 	}
+	ret = NewTypeAndValueForBuiltin(types.Universe.Lookup("len"))
+	if !ret.IsBuiltin() {
+		t.Fatal("NewTypeAndValueForObject: not builtin?")
+	}
 }

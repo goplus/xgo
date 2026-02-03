@@ -166,6 +166,9 @@ type Recorder interface {
 	//     *ast.LambdaExpr2
 	//
 	Scope(ast.Node, *types.Scope)
+
+	// Go+ builtin name object
+	Builtin(name string, obj types.Object)
 }
 
 // -----------------------------------------------------------------------------
