@@ -16,6 +16,57 @@ message := "Hello, World!"
 empty := ""
 ```
 
+### Raw String Literals
+
+XGo also supports raw string literals using backticks (`` ` ``). Raw strings treat backslashes and other special characters literally, making them ideal for regular expressions, file paths, and multi-line text:
+
+```go
+// Raw strings ignore escape sequences
+path := `C:\Users\Bob\Documents`  // Backslashes are literal
+regex := `\d+\.\d+`               // No need to escape backslashes
+
+// Multi-line raw strings
+multiline := `Line 1
+Line 2
+Line 3`
+
+// JSON or code snippets
+json := `{
+    "name": "Alice",
+    "age": 30
+}`
+
+// SQL queries
+query := `SELECT * FROM users
+          WHERE age > 18
+          ORDER BY name`
+```
+
+**Key differences between double-quoted and raw strings:**
+
+| Feature | Double-quoted `"..."` | Raw (backtick) `` `...` `` |
+|---------|----------------------|---------------------------|
+| Escape sequences | Processed (`\n`, `\t`, etc.) | Literal (ignored) |
+| Multi-line | Requires `\n` | Natural line breaks |
+| Backslashes | Must escape `\\` | Literal `\` |
+| Interpolation | Supported `${...}` | Not supported |
+| Use case | General strings, interpolation | Paths, regex, multi-line text |
+
+```go
+// Comparison example
+escaped := "Line 1\nLine 2"    // Two lines when printed
+raw := `Line 1\nLine 2`        // Literal \n characters
+
+echo escaped
+// Output:
+// Line 1
+// Line 2
+
+echo raw
+// Output:
+// Line 1\nLine 2
+```
+
 ### Escape Sequences
 
 XGo supports various escape sequences for special characters:
@@ -608,6 +659,8 @@ echo report
 8. **Use escape sequences** for special characters rather than trying to insert them literally
 9. **Be aware of byte vs. character distinction** when working with internationalized text
 10. **Use appropriate string methods** (`.toUpper`, `.toLower`, etc.) for case-insensitive operations
+11. **Use raw strings** (backticks) for paths, regular expressions, and multi-line text to avoid escape sequence hassles
+12. **Choose the right string literal type**: double quotes for interpolation and escape sequences, backticks for literal text
 
 ## Performance Tips
 
@@ -641,4 +694,3 @@ echo report
 4. **Consider byte operations**: For performance-critical ASCII-only operations, byte-level processing can be faster
 
 5. **Preallocate when building large strings**: If you know the approximate size, preallocate capacity
-
