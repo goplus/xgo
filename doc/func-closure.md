@@ -405,7 +405,10 @@ func transform(a []float64, f func(float64) float64) []float64 {
     return [f(x) for x in a]
 }
 
+// The lambda parameter type is inferred from transform's function parameter type
+// which expects func(float64) float64
 y := transform([1, 2, 3], x => x*x)           // [1 4 9]
+
 z := transform([-3, 1, -5], x => {
     if x < 0 {
         return -x
@@ -472,6 +475,7 @@ onStart => {
     echo "Game started!"
     initializeGame()
 }
+
 // With multiple arguments, use a comma to separate them.
 onMsg "game over", => {
     echo "Game over!"
