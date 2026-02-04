@@ -326,7 +326,7 @@ run                                        // uses default values
 
 1. **Parameter Position Requirements**
    - The keyword parameter must be an optional parameter (marked with `?`)
-   - The keyword parameter must be the last parameter, or second-to-last when variadic parameters are present
+   - The keyword parameter must be the last parameter (if no variadic parameters), or second-to-last when variadic parameters are present
    
 2. **Call Order Requirements**
    - When calling a function, keyword arguments must be placed after all normal parameters (including variadic parameters)
@@ -405,7 +405,10 @@ func transform(a []float64, f func(float64) float64) []float64 {
     return [f(x) for x in a]
 }
 
+// The lambda parameter type is inferred from transform's function parameter type
+// which expects func(float64) float64
 y := transform([1, 2, 3], x => x*x)           // [1 4 9]
+
 z := transform([-3, 1, -5], x => {
     if x < 0 {
         return -x
@@ -459,16 +462,39 @@ evens := filter(numbers, x => x % 2 == 0)  // [2 4 6]
 sort.Slice(products, (i, j) => products[i].Price < products[j].Price)
 ```
 
-### Type Inference
-
-Parameter and return types are inferred from context:
+**Event handling:**
 
 ```go
-// Type inference (preferred)
+// Event registration functions
+func OnStart(onStart func())
+func OnMsg(msg string, onMsg func())
+
+// Register event handlers with lambdas
+// With one argument (the lambda), no comma is needed.
+onStart => {
+    echo "Game started!"
+    initializeGame()
+}
+
+// With multiple arguments, use a comma to separate them.
+onMsg "game over", => {
+    echo "Game over!"
+    cleanup()
+}
+```
+
+**Note:** If a function with the lowercase name doesn't exist, XGo will automatically look for the capitalized version (e.g., if `onStart` is not defined, it tries `OnStart`). This allows for more flexible and natural function calling syntax.
+
+### Type Inference
+
+Parameter and return types are automatically inferred from context. XGo lambdas do not support explicit type annotations:
+
+```go
+// Types are inferred from the function signature
 transform([1, 2, 3], x => x * 2)
 
-// Explicit type (optional)
-transform([1, 2, 3], (x int) => x * 2)
+// The lambda parameter type is inferred from transform's function parameter type
+// which expects func(float64) float64
 ```
 
 ### When to Use
