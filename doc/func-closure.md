@@ -467,11 +467,12 @@ func OnStart(onStart func())
 func OnMsg(msg string, onMsg func())
 
 // Register event handlers with lambdas
+// With one argument (the lambda), no comma is needed.
 onStart => {
     echo "Game started!"
     initializeGame()
 }
-
+// With multiple arguments, use a comma to separate them.
 onMsg "game over", => {
     echo "Game over!"
     cleanup()
