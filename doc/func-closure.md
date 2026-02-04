@@ -149,7 +149,7 @@ connect "example.com"             // Connecting to example.com on port 80 secure
 
 ## Variadic Parameters
 
-Use the `...` syntax to define variadic functions that accept variable numbers of arguments:
+Variadic parameters allow functions to accept a variable number of arguments of the same type using the `...` syntax:
 
 ```go
 func sum(a ...int) int {
@@ -160,7 +160,82 @@ func sum(a ...int) int {
     return total
 }
 
-echo sum(2, 3, 5) // 10
+echo sum(2, 3, 5)       // 10
+echo sum(1, 2, 3, 4, 5) // 15
+echo sum()              // 0
+```
+
+Inside the function, the variadic parameter behaves as a slice of the specified type.
+
+### Parameter Positioning Rules
+
+**Important:** The variadic parameter must be the last parameter in the function signature, appearing after all regular parameters and optional parameters:
+
+```go
+// ✓ Correct: variadic parameter is last
+func log(level string, verbose bool?, messages ...string) {
+    // ...
+}
+
+// ✗ Wrong: variadic parameter must be last
+func log(messages ...string, level string) {  // Error!
+    // ...
+}
+
+// ✗ Wrong: variadic parameter must be after optional parameters
+func log(messages ...string, verbose bool?) {  // Error!
+    // ...
+}
+```
+
+### Combining Regular and Variadic Parameters
+
+```go
+func log(level string, messages ...string) {
+    echo "[" + level + "]", strings.Join(messages, " ")
+}
+
+log("INFO", "Server", "started", "successfully")
+// Output: [INFO] Server started successfully
+```
+
+### Passing Slices to Variadic Parameters
+
+Use the `...` suffix to pass an existing slice to a variadic parameter:
+
+```go
+func max(nums ...int) int {
+    if len(nums) == 0 {
+        return 0
+    }
+    maxVal := nums[0]
+    for _, n in nums[1:] {
+        if n > maxVal {
+            maxVal = n
+        }
+    }
+    return maxVal
+}
+
+numbers := []int{3, 7, 2, 9, 1}
+echo max(numbers...)  // 9
+echo max(5, 8, 3)     // 8
+```
+
+### Practical Examples
+
+```go
+// String formatting
+func format(template string, args ...any) string {
+    result := template
+    for i, arg in args {
+        result = strings.Replace(result, "{${i}}", fmt.Sprint(arg), 1)
+    }
+    return result
+}
+
+echo format("Hello {0}, you have {1} messages", "Alice", 5)
+// Output: Hello Alice, you have 5 messages
 ```
 
 ## Keyword Arguments
@@ -300,45 +375,125 @@ echo z // [3 1 5]
 
 ## Lambda Expressions
 
-XGo provides lambda expression syntax for defining anonymous functions, offering a concise and modern approach to closures.
+Lambda expressions provide a concise way to define anonymous functions inline using the `=>` operator.
 
-### Single-Line Lambda
+### Basic Syntax
 
-Use the `=>` syntax for simple, single-expression anonymous functions:
+```go
+// Single parameter (no parentheses needed)
+x => x * x
+
+// Multiple parameters (parentheses required)
+(x, y) => x + y
+
+// No parameters (no parentheses needed, just start with =>)
+=> someValue
+
+// Multi-line body
+x => {
+    result := x * 2
+    return result
+}
+```
+
+### Common Use Cases
+
+**Transformations:**
 
 ```go
 func transform(a []float64, f func(float64) float64) []float64 {
     return [f(x) for x in a]
 }
 
-y := transform([1, 2, 3], x => x*x)
-echo y // [1 4 9]
-```
-
-### Multi-Line Lambda
-
-Use `=> { ... }` syntax for anonymous functions with multiple statements:
-
-```go
+y := transform([1, 2, 3], x => x*x)           // [1 4 9]
 z := transform([-3, 1, -5], x => {
     if x < 0 {
         return -x
     }
     return x
-})
-echo z // [3 1 5]
+})                                            // [3 1 5]
 ```
 
-Lambda expressions provide elegant, readable syntax for creating inline functions, making your code more concise and expressive.
+**Combining values:**
+
+```go
+func combine(a, b []int, f func(int, int) int) (result []int) {
+    for i := 0; i < len(a) && i < len(b); i++ {
+        result = append(result, f(a[i], b[i]))
+    }
+    return result
+}
+
+sums := combine([1, 2, 3], [4, 5, 6], (x, y) => x + y)  // [5 7 9]
+```
+
+**Closures (capturing variables):**
+
+```go
+func multiplier(factor int) func(int) int {
+    return x => x * factor
+}
+
+func counter(start int) func() int {
+    count := start
+    return => {
+        count++
+        return count
+    }
+}
+
+double := multiplier(2)
+echo double(5)  // 10
+
+c := counter(0)
+echo c()  // 1
+echo c()  // 2
+```
+
+**Sorting and filtering:**
+
+```go
+numbers := [1, 2, 3, 4, 5, 6]
+evens := filter(numbers, x => x % 2 == 0)  // [2 4 6]
+
+sort.Slice(products, (i, j) => products[i].Price < products[j].Price)
+```
+
+### Type Inference
+
+Parameter and return types are inferred from context:
+
+```go
+// Type inference (preferred)
+transform([1, 2, 3], x => x * 2)
+
+// Explicit type (optional)
+transform([1, 2, 3], (x int) => x * 2)
+```
+
+### When to Use
+
+**Use lambdas for:**
+- One-off functions used inline
+- Simple transformations and filters
+- Callbacks and event handlers
+- Building processing pipelines
+
+**Use named functions for:**
+- Reusable logic
+- Complex operations needing documentation
+- Public APIs
 
 ## Summary
 
 XGo's function system combines powerful features:
 - Standard function definitions with multiple return values
 - Functions without return values for action-oriented operations
-- Optional and variadic parameters for flexibility
+- Optional parameters for flexible function calls
+- Comprehensive variadic parameters for variable-length argument lists
 - Keyword arguments with maps, tuples, or structs for improved readability
 - Higher-order functions for functional programming patterns
-- Clean lambda expression syntax for closures
+- Elegant and expressive lambda expressions for inline function definitions
+- Closures for capturing and maintaining state
 
-These features work together to create a versatile and expressive function system suitable for modern programming needs.
+These features work together to create a versatile and expressive function system that supports both traditional imperative programming and modern functional programming paradigms.
