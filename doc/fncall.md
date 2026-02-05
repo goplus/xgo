@@ -279,7 +279,7 @@ echo "Today is", time.now.weekday
 
 // Operator + Built-in + Method
 result := 3 + 4
-message := "Result: " + result.toString
+message := "Result: " + result.string
 echo message.toUpper
 ```
 
@@ -336,7 +336,7 @@ echo message.toUpper()
 3. **Built-in functions** like `echo`, `print`, and operators are always available
 4. **Package functions** require imports and use `package.function` syntax
 5. **Methods** are functions that belong to objects, using `object.method` syntax
-6. **Parentheses are optional** for zero-parameter functions and commands when using lowercase names
+6. **Parentheses are optional** for commands, and for zero-parameter functions and methods when using lowercase names
 7. **Lowercase calling convention:** Uppercase-exported functions can be called with lowercase (e.g., `math.sqrt` for `math.Sqrt`), but not vice versa
 
 This unified model means once you understand one form, you understand them all. Whether you write `echo "Hello"` or `echo("Hello")`, whether you use `3 + 4` or call `time.now`, you're invoking functions—just with different syntactic styles suited to different situations.
