@@ -137,12 +137,21 @@ echo math.pow(2, 3)       // Power: 8
 echo math.abs(-5)         // Absolute value: 5
 ```
 
-**Case flexibility:** XGo allows both uppercase and lowercase when calling package functions:
+**Lowercase calling convention:** XGo provides a convenient feature—exported functions (which start with uppercase letters in Go convention) can be called with lowercase names:
 
 ```go
-math.sqrt(16)    // Recommended
-math.Sqrt(16)    // Also works—same function
+// In the math package, the actual function is Sqrt (uppercase)
+math.sqrt(16)    // ✓ Lowercase call (recommended in XGo)
+math.Sqrt(16)    // ✓ Original uppercase name (also works)
+
+// But you cannot call a lowercase function with uppercase
+// somePackage.DoSomething()  // ✗ Won't work if function is actually doSomething
 ```
+
+This feature is specifically designed to make code more readable while maintaining compatibility with Go's export rules. The convention is:
+- Exported functions start with uppercase (Go requirement)
+- You can call them with lowercase for convenience (XGo feature)
+- The reverse is not true—lowercase functions must be called with lowercase
 
 **Omitting parentheses:** For zero-parameter functions, parentheses are optional when using lowercase names:
 
@@ -151,6 +160,7 @@ import "time"
 
 echo time.now        // Current time (no parentheses needed)
 echo time.now()      // Same thing with explicit call
+echo time.Now()      // Also works with uppercase
 ```
 
 #### Common Package Examples
@@ -327,6 +337,6 @@ echo message.toUpper()
 4. **Package functions** require imports and use `package.function` syntax
 5. **Methods** are functions that belong to objects, using `object.method` syntax
 6. **Parentheses are optional** for zero-parameter functions and commands when using lowercase names
-7. **Case doesn't matter** when calling package functions (both `math.sqrt` and `math.Sqrt` work)
+7. **Lowercase calling convention:** Uppercase-exported functions can be called with lowercase (e.g., `math.sqrt` for `math.Sqrt`), but not vice versa
 
 This unified model means once you understand one form, you understand them all. Whether you write `echo "Hello"` or `echo("Hello")`, whether you use `3 + 4` or call `time.now`, you're invoking functions—just with different syntactic styles suited to different situations.
