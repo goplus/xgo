@@ -94,7 +94,7 @@ func Errorln(args ...any)
 func Fatal(args ...any)
 
 // XGo_Enum returns a LineIter that reads lines from the given reader.
-func (r io.Reader) XGo_Enum() iox.LineIter
+func (r io.Reader) XGo_Enum() osx.LineIter
 
 // String is equivalent to strconv.FormatFloat(f, 'g', -1, 64)
 //
