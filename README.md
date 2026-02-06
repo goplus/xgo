@@ -81,7 +81,7 @@ Code style is just the first step. We have made many efforts to make the code mo
 | Go code | XGo code | Note |
 | ---- | ---- | ---- |
 | package main<br><br>import "fmt"<br><br>func main() {<br>&nbsp;&nbsp;&nbsp;&nbsp;fmt.Println("Hi")<br>} | import "fmt"<br><br>fmt.Println("Hi")<br> | Program structure: XGo allows omitting `package main` and `func main` |
-| fmt.Println("Hi") | echo("Hi") | More builtin functions: It simplifies the expression of the most common tasks |
+| fmt.Println("Hi") | echo("Hi") | [More builtin functions](doc/builtin.md): It simplifies the expression of the most common tasks |
 | fmt.Println("Hi") | echo "Hi" | [Command-line](doc/fncall.md) style code: It reduces the number of parentheses in the code as much as possible, making it closer to natural language |
 | name := "Ken"<br>fmt.Printf(<br>&nbsp;&nbsp;"Hi %s\n", name) | name := "Ken"<br>echo "Hi ${name}" | [Goodbye printf](doc/goodbye-printf.md), use `${expr}` in [string](doc/string.md) literals |
 | a := []int{1, 2, 3} | a := [1, 2, 3] | [List/Slice](doc/slice.md) literals |

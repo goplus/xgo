@@ -70,18 +70,12 @@ func Sprintln(a ...any) string
 // Sprintf formats according to a format specifier and returns the resulting string.
 func Sprintf(format string, a ...any) string
 
-// Open opens the named file for reading. If successful, methods on
-// the returned file can be used for reading; the associated file
-// descriptor has mode O_RDONLY.
-// If there is an error, it will be of type *PathError.
+// Open opens the named file in the root for reading.
+// See [Open] for more details.
 func Open(name string) (*os.File, error)
 
-// Create creates or truncates the named file. If the file already exists,
-// it is truncated. If the file does not exist, it is created with mode 0o666
-// (before umask). If successful, methods on the returned File can
-// be used for I/O; the associated file descriptor has mode O_RDWR.
-// The directory containing the file must already exist.
-// If there is an error, it will be of type *PathError.
+// Create creates or truncates the named file in the root.
+// See [Create] for more details.
 func Create(name string) (*os.File, error)
 
 // Lines returns a LineReader that reads lines from the given reader.
@@ -90,11 +84,11 @@ func Lines(r io.Reader) osx.LineReader
 // Errorln formats and prints to standard error.
 func Errorln(args ...any)
 
-// Fatal formats and prints to standard error.
+// Fatal is equivalent to Errorln followed by os.Exit(1).
 func Fatal(args ...any)
 
 // XGo_Enum returns a LineIter that reads lines from the given reader.
-func (r io.Reader) XGo_Enum() iox.LineIter
+func (r io.Reader) XGo_Enum() osx.LineIter
 
 // String is equivalent to strconv.FormatFloat(f, 'g', -1, 64)
 //
@@ -371,9 +365,11 @@ func (s string) SplitN(sep string, n int) []string
 // as described in the documentation for [SplitAfter].
 func (s string) SplitAfterN(sep string, n int) []string
 
-// Replace returns a copy of the string s with the first n non-overlapping instances
-// of old replaced by new. If old is empty, it matches at the beginning of the string
-// and after each UTF-8 sequence, yielding up to k+1 replacements for a k-rune string.
+// Replace returns a copy of the string s with the first n
+// non-overlapping instances of old replaced by new.
+// If old is empty, it matches at the beginning of the string
+// and after each UTF-8 sequence, yielding up to k+1 replacements
+// for a k-rune string.
 // If n < 0, there is no limit on the number of replacements.
 func (s string) Replace(old, new string, n int) string
 

@@ -361,7 +361,7 @@ for line in blines(file) {
 }
 ```
 
-**`(r io.Reader).XGo_Enum() iox.LineIter`**
+**`(r io.Reader).XGo_Enum() osx.LineIter`**
 
 Returns a LineIter for iterating over lines (supports `for in` syntax).
 
