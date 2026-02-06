@@ -306,7 +306,7 @@ file, err := open("data.txt")
 if err != nil {
     errorln(err)
 }
-defer file.Close()
+defer file.close
 ```
 
 **`Create(name string) (*os.File, error)`**
@@ -318,7 +318,7 @@ file, err := create("output.txt")
 if err != nil {
     errorln(err)
 }
-defer file.Close()
+defer file.close
 ```
 
 ## Type Reflection
@@ -329,10 +329,10 @@ Returns the reflection Type representing the dynamic type of i.
 
 ```go
 t := type(42)
-echo t.Name()  // Output: int
+echo t.name  // Output: int
 
 s := "hello"
-echo type(s).Name()  // Output: string
+echo type(s).name  // Output: string
 ```
 
 ## Line Reading
@@ -951,40 +951,6 @@ s := "hello".toUpper
 ```
 
 Both styles work in XGo, giving you flexibility in how you write your code.
-
-### Omitting Parentheses
-
-In XGo, when calling methods or functions that take no arguments, you can omit the parentheses:
-
-```go
-echo "Hello".toUpper    // Without parentheses
-echo "Hello".toUpper()  // With parentheses (also valid)
-```
-
-Both forms are equivalent and valid. This makes the code more concise and readable.
-
-### Error Handling
-
-Functions that parse strings (Int, Int64, Uint64, Float, Unquote) return errors for invalid input. Always check the error return value:
-
-```go
-n, err := "123abc".int
-if err != nil {
-    errorln("Invalid number:", err)
-} else {
-    echo n
-}
-```
-
-### Unicode Support
-
-String operations in XGo are Unicode-aware, properly handling UTF-8 encoded text and runes:
-
-```go
-echo "你好世界".len        // Output: 12 (bytes)
-echo len("你好世界")       // Output: 12 (bytes)
-echo "你好世界".count("好")  // Output: 1
-```
 
 ### Performance Considerations
 
