@@ -601,7 +601,7 @@ func NewPackage(pkgPath string, pkg *ast.Package, conf *Config) (p *gogen.Packag
 		NewBuiltin:      ctx.newBuiltinDefault,
 		DefaultGoFile:   defaultGoFile,
 		NoSkipConstant:  conf.NoSkipConstant,
-		PkgPathIox:      osxPkgPath,
+		PkgPathOsx:      osxPkgPath,
 		DbgPositioner:   interp,
 		CanImplicitCast: implicitCast,
 	}
