@@ -228,7 +228,7 @@ Returns formatted string with spaces between operands and a newline.
 
 ```go
 s := sprintln("Hello", "World")
-echo s  // Output: "Hello World\n"
+echo s  // Output: Hello World
 ```
 
 **`Sprintf(format string, a ...any) string`**
@@ -447,9 +447,9 @@ Replaces all non-overlapping instances of old with new.
 echo "Hello".replaceAll("l", "L")  // Output: HeLLo
 ```
 
-**`(s string).Replace() string`**
+**`(s string).Replace(old, new string, n int) string`**
 
-Returns copy with replacements performed.
+Returns a copy of the string with the first `n` non-overlapping instances of `old` replaced by `new`. If `n < 0`, there is no limit on the number of replacements.
 
 ```go
 s := "hello world"
@@ -713,7 +713,7 @@ Parses string as 64-bit signed integer.
 ```go
 n, err := "9223372036854775807".int64
 if err == nil {
-    echo n
+    echo n  // Output: 9223372036854775807
 }
 ```
 
@@ -724,7 +724,7 @@ Parses string as 64-bit unsigned integer.
 ```go
 n, err := "18446744073709551615".uint64
 if err == nil {
-    echo n
+    echo n  // Output: 18446744073709551615
 }
 ```
 
@@ -748,7 +748,7 @@ XGo provides String() methods for numeric types to easily convert numbers to str
 Converts int to base-10 string.
 
 ```go
-echo 42.string  // Output: 42
+echo (42).string  // Output: 42
 ```
 
 **`(i int64).String() string`**
@@ -766,7 +766,7 @@ Converts uint64 to base-10 string.
 
 ```go
 n := uint64(18446744073709551615)
-echo n.string
+echo n.string  // Output: 18446744073709551615
 ```
 
 **`(f float64).String() string`**
