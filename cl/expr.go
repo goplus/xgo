@@ -1488,7 +1488,7 @@ func compileStructLitInKeyVal(ctx *blockCtx, elts []ast.Expr, t *types.Struct, t
 		name := kv.Key.(*ast.Ident)
 		idx := cb.LookupField(t, name.Name)
 		if idx >= 0 {
-			cb.Val(idx)
+			cb.Val(idx, src)
 		} else {
 			src := ctx.LoadExpr(name)
 			return ctx.newCodeErrorf(name.Pos(), name.End(), "%s undefined (type %v has no field or method %s)", src, typ, name.Name)
