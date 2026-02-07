@@ -774,7 +774,7 @@ echo n.string  // Output: 18446744073709551615
 Converts float64 to string using format 'g' with precision -1.
 
 ```go
-echo 3.14159.string  // Output: 3.14159
+echo (3.14159).string  // Output: 3.14159
 ```
 
 ## String Slice Methods
