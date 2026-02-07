@@ -2563,6 +2563,10 @@ L:
 				x = p.parseSelector(p.checkExprOrType(x))
 			case token.LPAREN:
 				x = p.parseTypeAssertion(p.checkExpr(x))
+			case token.MUL, token.POW: // .* .**
+				sel := &ast.Ident{NamePos: p.pos, Name: p.tok.String()}
+				p.next() // make progress
+				x = &ast.SelectorExpr{X: p.checkExpr(x), Sel: sel}
 			default:
 				pos := p.pos
 				p.errorExpected(pos, "selector or type assertion", 2)
