@@ -245,8 +245,10 @@ var tokens = [...]string{
 	DRARROW:   "=>",
 	SRARROW:   "->",
 	BIDIARROW: "<>",
+	POW:       "**",
 	ENV:       "$",
 	TILDE:     "~",
+	AT:        "@",
 
 	BREAK:    "break",
 	CASE:     "case",
