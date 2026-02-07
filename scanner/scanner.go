@@ -951,8 +951,8 @@ scanAgain:
 					insertSemi = true
 				}
 			}
-		case '*':
-			tok = s.switch2(token.MUL, token.MUL_ASSIGN)
+		case '*': // ** *=
+			tok = s.switch3(token.MUL, token.MUL_ASSIGN, '*', token.POW)
 		case '#':
 			if s.insertSemi {
 				s.ch = '#'
@@ -1029,6 +1029,10 @@ scanAgain:
 			insertSemi = true
 		case '$':
 			tok = token.ENV
+		case '~':
+			tok = token.TILDE
+		case '@':
+			tok = token.AT
 		default:
 			// next reports unexpected BOMs - don't repeat
 			if ch != bom {

@@ -140,15 +140,20 @@ const (
 
 	additional_beg
 	TILDE // additional tokens, handled in an ad-hoc manner
-	additional_end
+	additional_end1
 	additional_end2
 	additional_end3
+	additional_end4
+	additional_end5
+	additional_end = additional_end5
 
 	additional_literal_beg = 96
 	additional_literal_end = 97
 
 	ENV  = additional_end2 // ${name}
 	UNIT = additional_end3 // 1m, 2.3s, 3ms, 4us, 5ns, 6.5m, 7h, 8d, 9w, 10y
+	AT   = additional_end4 // @
+	POW  = additional_end5 // **
 
 	PYSTRING = additional_literal_beg // py"Hello"
 
@@ -348,7 +353,7 @@ func (tok Token) IsLiteral() bool {
 // IsOperator returns true for tokens corresponding to operators and
 // delimiters; it returns false otherwise.
 func (tok Token) IsOperator() bool {
-	return operator_beg <= tok && tok <= operator_end || tok >= additional_beg && tok <= additional_end2
+	return operator_beg <= tok && tok <= operator_end || tok >= additional_beg && tok <= additional_end
 }
 
 // IsKeyword returns true for tokens corresponding to keywords;
