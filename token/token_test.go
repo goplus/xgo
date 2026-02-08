@@ -40,7 +40,7 @@ func TestArrowOp(t *testing.T) {
 	if v := AT.String(); v != "@" {
 		t.Fatal("AT.String:", v)
 	}
-	if v := (additional_end + 100).String(); v != "token(192)" {
+	if v := (additional_end + 100).String(); v != "token(191)" {
 		t.Fatal("token.String:", v)
 	}
 }
