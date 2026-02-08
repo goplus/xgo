@@ -529,9 +529,23 @@ func compileSelectorExpr(ctx *blockCtx, lhs int, v *ast.SelectorExpr, flags int)
 	default:
 		compileExpr(ctx, 0, v.X)
 	}
-	if err := compileMember(ctx, lhs, v, v.Sel.Name, flags); err != nil {
-		panic(err)
+	x := v.Sel
+	name := x.Name
+	switch name {
+	case "*":
+		name = "XGo_Child"
+	case "**":
+		name = "XGo_Any"
+	default:
+		if strings.HasPrefix(name, "$") {
+			ctx.cb.MemberVal("XGo_Attr", 0, v).Val(name[1:]).CallWith(1, lhs, 0, x)
+			return
+		}
+		if err := compileMember(ctx, lhs, v, name, flags); err != nil {
+			panic(err)
+		}
 	}
+	ctx.cb.MemberVal(name, 0, v).CallWith(0, lhs, 0, x)
 }
 
 func compileFuncAlias(ctx *blockCtx, scope *types.Scope, x *ast.Ident, flags int) bool {
@@ -700,7 +714,7 @@ func (p *fnType) initFuncs(base int, funcs []types.Object, typeAsParams bool) {
 func compileCallExpr(ctx *blockCtx, lhs int, v *ast.CallExpr, inFlags int) {
 	// If you need to confirm the callExpr format, you can turn on
 	// if !v.NoParenEnd.IsValid() && !v.Rparen.IsValid() {
-	// 	panic("unexpected invalid Rparen and NoParenEnd in CallExpr")
+	// 	   panic("unexpected invalid Rparen and NoParenEnd in CallExpr")
 	// }
 	var ifn *ast.Ident
 	switch fn := v.Fun.(type) {
