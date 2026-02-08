@@ -2578,13 +2578,15 @@ L:
 						}
 						x = &ast.SelectorExpr{X: p.checkExpr(x), Sel: sel}
 					case token.ENV: // .$name
-						posEnv := p.pos
+						sel := &ast.Ident{NamePos: p.pos}
 						p.next()
-						if posEnv+1 != p.pos || p.tok != token.IDENT {
+						if sel.NamePos+1 != p.pos || p.tok != token.IDENT {
 							p.errorExpected(p.pos, "identifier after $", 2)
+							sel.Name = "$_"
+						} else {
+							sel.Name = "$" + p.lit
+							p.next()
 						}
-						sel := &ast.Ident{NamePos: posEnv, Name: "$" + p.lit}
-						p.next()
 						x = &ast.SelectorExpr{X: p.checkExpr(x), Sel: sel}
 					default:
 						processed = false
@@ -2593,7 +2595,14 @@ L:
 				if !processed {
 					pos := p.pos
 					p.errorExpected(pos, "selector or type assertion", 2)
-					p.next() // make progress
+					// TODO(rFindley) The check for token.RBRACE below is a targeted fix
+					//                to error recovery sufficient to make the x/tools tests to
+					//                pass with the new parsing logic introduced for type
+					//                parameters. Remove this once error recovery has been
+					//                more generally reconsidered.
+					if p.tok != token.RBRACE {
+						p.next() // make progress
+					}
 					sel := &ast.Ident{NamePos: pos, Name: "_"}
 					x = &ast.SelectorExpr{X: x, Sel: sel}
 				}
