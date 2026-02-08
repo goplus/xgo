@@ -529,8 +529,8 @@ func compileSelectorExpr(ctx *blockCtx, lhs int, v *ast.SelectorExpr, flags int)
 	default:
 		compileExpr(ctx, 0, v.X)
 	}
-	x := v.Sel
-	name := x.Name
+	cb := ctx.cb
+	name := v.Sel.Name
 	switch name {
 	case "*":
 		name = "XGo_Child"
@@ -538,14 +538,23 @@ func compileSelectorExpr(ctx *blockCtx, lhs int, v *ast.SelectorExpr, flags int)
 		name = "XGo_Any"
 	default:
 		if strings.HasPrefix(name, "$") {
-			ctx.cb.MemberVal("XGo_Attr", 0, v).Val(name[1:]).CallWith(1, lhs, 0, x)
-			return
+			cb.MemberVal("XGo_Attr", 0, v).Val(name[1:]).CallWith(1, lhs, 0, v)
+		} else if err := compileMember(ctx, lhs, v, name, flags); err != nil {
+			if c := name[0]; c >= '0' && c <= '9' {
+				if _, e := cb.Member("XGo_"+name, 0, 0, v); e != nil {
+					panic(err)
+				}
+				cb.CallWith(0, lhs, 0, v)
+			} else {
+				if _, e := cb.Member("XGo_Node", 0, 0, v); e != nil {
+					panic(err)
+				}
+				cb.Val(name).CallWith(1, lhs, 0, v)
+			}
 		}
-		if err := compileMember(ctx, lhs, v, name, flags); err != nil {
-			panic(err)
-		}
+		return
 	}
-	ctx.cb.MemberVal(name, 0, v).CallWith(0, lhs, 0, x)
+	cb.MemberVal(name, 0, v).CallWith(0, lhs, 0, v)
 }
 
 func compileFuncAlias(ctx *blockCtx, scope *types.Scope, x *ast.Ident, flags int) bool {
