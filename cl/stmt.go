@@ -428,7 +428,6 @@ func compileRangeStmt(ctx *blockCtx, v *ast.RangeStmt) {
 			defineNames = append(defineNames, value)
 		}
 		cb.ForRangeEx(names, v)
-		compileExpr(ctx, 0, v.X)
 	} else {
 		cb.ForRangeEx(nil, v)
 		n := 0
@@ -445,8 +444,8 @@ func compileRangeStmt(ctx *blockCtx, v *ast.RangeStmt) {
 			compileExprLHS(ctx, v.Value)
 			n++
 		}
-		compileExpr(ctx, 0, v.X)
 	}
+	compileExpr(ctx, 0, v.X)
 	pos := v.TokPos
 	if pos == 0 {
 		pos = v.For
