@@ -104,7 +104,7 @@ type printer struct {
 	cachedLine int // line corresponding to cachedPos
 
 	shadowEntry    *ast.FuncDecl                  // ast.File NoEntrypoint
-	commentedStmts map[ast.Stmt]*ast.CommentGroup // statements with leading comments (Go+)
+	commentedStmts map[ast.Stmt]*ast.CommentGroup // statements with leading comments (XGo)
 }
 
 func (p *printer) init(cfg *Config, fset *token.FileSet, nodeSizes map[ast.Node]int) {
