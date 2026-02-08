@@ -1159,6 +1159,11 @@ func (p *printer) expr1(expr ast.Expr, prec1, depth int) {
 			p.print(x.Name)
 		}
 
+	case *ast.CondExpr:
+		p.expr(x.X)
+		p.print(token.AT)
+		p.expr(x.Cond)
+
 	case *ast.ElemEllipsis:
 		p.expr(x.Elt)
 		p.print(token.ELLIPSIS)
