@@ -144,8 +144,7 @@ const (
 	additional_end2
 	additional_end3
 	additional_end4
-	additional_end5
-	additional_end = additional_end5
+	additional_end = additional_end4
 
 	additional_literal_beg = 96
 	additional_literal_end = 97
@@ -153,7 +152,6 @@ const (
 	ENV  = additional_end2 // ${name}
 	UNIT = additional_end3 // 1m, 2.3s, 3ms, 4us, 5ns, 6.5m, 7h, 8d, 9w, 10y
 	AT   = additional_end4 // @
-	POW  = additional_end5 // **
 
 	PYSTRING = additional_literal_beg // py"Hello"
 
@@ -245,7 +243,6 @@ var tokens = [...]string{
 	DRARROW:   "=>",
 	SRARROW:   "->",
 	BIDIARROW: "<>",
-	POW:       "**",
 	ENV:       "$",
 	TILDE:     "~",
 	AT:        "@",

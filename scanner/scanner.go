@@ -951,8 +951,8 @@ scanAgain:
 					insertSemi = true
 				}
 			}
-		case '*': // ** *=
-			tok = s.switch3(token.MUL, token.MUL_ASSIGN, '*', token.POW)
+		case '*':
+			tok = s.switch2(token.MUL, token.MUL_ASSIGN)
 		case '#':
 			if s.insertSemi {
 				s.ch = '#'

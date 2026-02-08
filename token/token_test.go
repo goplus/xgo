@@ -37,13 +37,10 @@ func TestArrowOp(t *testing.T) {
 	if v := SRARROW.String(); v != "->" {
 		t.Fatal("SRARROW.String:", v)
 	}
-	if v := POW.String(); v != "**" {
-		t.Fatal("POW.String:", v)
-	}
 	if v := AT.String(); v != "@" {
 		t.Fatal("AT.String:", v)
 	}
-	if v := (additional_end + 100).String(); v != "token(193)" {
+	if v := (additional_end + 100).String(); v != "token(192)" {
 		t.Fatal("token.String:", v)
 	}
 }

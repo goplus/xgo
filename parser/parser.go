@@ -2492,6 +2492,7 @@ func (p *parser) checkExpr(x ast.Expr) ast.Expr {
 	case *ast.LambdaExpr2:
 	case *ast.TupleLit:
 	case *ast.EnvExpr:
+	case *ast.CondExpr:
 	case *ast.ElemEllipsis:
 	case *ast.NumberUnitLit:
 	case *ast.DomainTextLit:
@@ -2554,6 +2555,7 @@ L:
 	for {
 		switch p.tok {
 		case token.PERIOD: // .
+			posDot := p.pos
 			p.next()
 			if lhs {
 				p.resolve(x)
@@ -2563,17 +2565,59 @@ L:
 				x = p.parseSelector(p.checkExprOrType(x))
 			case token.LPAREN:
 				x = p.parseTypeAssertion(p.checkExpr(x))
-			case token.MUL, token.POW: // .* .**
-				sel := &ast.Ident{NamePos: p.pos, Name: p.tok.String()}
-				p.next() // make progress
-				x = &ast.SelectorExpr{X: p.checkExpr(x), Sel: sel}
+			default:
+				processed := posDot+1 == p.pos
+				if processed {
+					switch p.tok {
+					case token.MUL: // .* .**
+						sel := &ast.Ident{NamePos: p.pos, Name: "*"}
+						p.next()
+						if p.tok == token.MUL && p.pos == posDot+2 {
+							sel.Name = "**"
+							p.next()
+						}
+						x = &ast.SelectorExpr{X: p.checkExpr(x), Sel: sel}
+					case token.ENV: // .$name
+						posEnv := p.pos
+						p.next()
+						if posEnv+1 != p.pos || p.tok != token.IDENT {
+							p.errorExpected(p.pos, "identifier after $", 2)
+						}
+						sel := &ast.Ident{NamePos: posEnv, Name: "$" + p.lit}
+						p.next()
+						x = &ast.SelectorExpr{X: p.checkExpr(x), Sel: sel}
+					default:
+						processed = false
+					}
+				}
+				if !processed {
+					pos := p.pos
+					p.errorExpected(pos, "selector or type assertion", 2)
+					p.next() // make progress
+					sel := &ast.Ident{NamePos: pos, Name: "_"}
+					x = &ast.SelectorExpr{X: x, Sel: sel}
+				}
+			}
+		case token.AT: // @
+			ce := &ast.CondExpr{X: x, OpPos: p.pos}
+			p.next()
+			switch p.tok {
+			case token.IDENT:
+				fun := p.parseIdent()
+				ce.Cond = p.parseCallOrConversion(fun, false) // @fun(...)
+			case token.LPAREN:
+				cond, kind := p.parseOperand(0) // @(cond)
+				if kind != exprNormal {
+					p.error(cond.Pos(), "invalid condition expression")
+				}
+				ce.Cond = p.checkExpr(cond)
 			default:
 				pos := p.pos
-				p.errorExpected(pos, "selector or type assertion", 2)
+				p.errorExpected(pos, "condition expression", 2)
 				p.next() // make progress
-				sel := &ast.Ident{NamePos: pos, Name: "_"}
-				x = &ast.SelectorExpr{X: x, Sel: sel}
+				ce.Cond = &ast.Ident{NamePos: pos, Name: "_"}
 			}
+			x = ce
 		case token.LBRACK: // [
 			if lhs {
 				p.resolve(x)

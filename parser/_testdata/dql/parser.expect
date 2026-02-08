@@ -1,0 +1,99 @@
+package main
+
+file dql.xgo
+noEntrypoint
+ast.FuncDecl:
+  Name:
+    ast.Ident:
+      Name: main
+  Type:
+    ast.FuncType:
+      Params:
+        ast.FieldList:
+  Body:
+    ast.BlockStmt:
+      List:
+        ast.ExprStmt:
+          X:
+            ast.CallExpr:
+              Fun:
+                ast.Ident:
+                  Name: echo
+              Args:
+                ast.SelectorExpr:
+                  X:
+                    ast.SelectorExpr:
+                      X:
+                        ast.CondExpr:
+                          X:
+                            ast.SelectorExpr:
+                              X:
+                                ast.SelectorExpr:
+                                  X:
+                                    ast.Ident:
+                                      Name: doc
+                                  Sel:
+                                    ast.Ident:
+                                      Name: **
+                              Sel:
+                                ast.Ident:
+                                  Name: users
+                          Cond:
+                            ast.ParenExpr:
+                              X:
+                                ast.BinaryExpr:
+                                  X:
+                                    ast.EnvExpr:
+                                      Name:
+                                        ast.Ident:
+                                          Name: name
+                                  Op: ==
+                                  Y:
+                                    ast.BasicLit:
+                                      Kind: STRING
+                                      Value: "ken"
+                      Sel:
+                        ast.Ident:
+                          Name: $age
+                  Sel:
+                    ast.Ident:
+                      Name: 0
+        ast.ExprStmt:
+          X:
+            ast.CallExpr:
+              Fun:
+                ast.Ident:
+                  Name: echo
+              Args:
+                ast.SelectorExpr:
+                  X:
+                    ast.SelectorExpr:
+                      X:
+                        ast.CondExpr:
+                          X:
+                            ast.SelectorExpr:
+                              X:
+                                ast.SelectorExpr:
+                                  X:
+                                    ast.Ident:
+                                      Name: doc
+                                  Sel:
+                                    ast.Ident:
+                                      Name: *
+                              Sel:
+                                ast.Ident:
+                                  Name: table
+                          Cond:
+                            ast.CallExpr:
+                              Fun:
+                                ast.Ident:
+                                  Name: isTotal
+                              Args:
+                                ast.Ident:
+                                  Name: self
+                      Sel:
+                        ast.Ident:
+                          Name: tr
+                  Sel:
+                    ast.Ident:
+                      Name: 0

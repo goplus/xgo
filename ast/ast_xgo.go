@@ -223,6 +223,25 @@ func (*EnvExpr) exprNode() {}
 
 // -----------------------------------------------------------------------------
 
+// A CondExpr node represents a conditional expression: `expr @ cond`.
+type CondExpr struct {
+	X     Expr      // expression
+	OpPos token.Pos // position of "@"
+	Cond  Expr      // condition expression
+}
+
+func (p *CondExpr) Pos() token.Pos {
+	return p.X.Pos()
+}
+
+func (p *CondExpr) End() token.Pos {
+	return p.Cond.End()
+}
+
+func (*CondExpr) exprNode() {}
+
+// -----------------------------------------------------------------------------
+
 // A SliceLit node represents a slice literal.
 type SliceLit struct {
 	Lbrack     token.Pos // position of "["
