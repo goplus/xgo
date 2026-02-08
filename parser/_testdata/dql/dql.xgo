@@ -1,0 +1,2 @@
+echo doc.**.users@($name == "ken").$age.0
+echo doc.*.table@isTotal(self).tr.0

@@ -279,11 +279,27 @@ func TestErrCompositeLiteral(t *testing.T) {
 `, `/foo/bar.xgo:1:10: cannot parenthesize type in composite literal`, ``)
 }
 
+func TestErrCondExpr(t *testing.T) {
+	testErrCode(t, `
+x@*p
+`, `/foo/bar.xgo:2:3: expected condition expression, found '*'`, ``)
+	testErrCode(t, `
+x@(a, b)
+`, `/foo/bar.xgo:2:3: invalid condition expression`, ``)
+}
+
 func TestErrSelectorExpr(t *testing.T) {
 	testErrCode(t, `
 x.
 *p
 `, `/foo/bar.xgo:3:1: expected selector or type assertion, found '*'`, ``)
+	testErrCode(t, `
+x.$
+a = 1
+`, `/foo/bar.xgo:3:1: expected identifier after $, found a`, ``)
+	testErrCode(t, `
+x./
+`, `/foo/bar.xgo:2:3: expected selector or type assertion, found '/'`, ``)
 }
 
 func TestErrStringLitEx(t *testing.T) {

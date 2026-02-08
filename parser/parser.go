@@ -2492,6 +2492,7 @@ func (p *parser) checkExpr(x ast.Expr) ast.Expr {
 	case *ast.LambdaExpr2:
 	case *ast.TupleLit:
 	case *ast.EnvExpr:
+	case *ast.CondExpr:
 	case *ast.ElemEllipsis:
 	case *ast.NumberUnitLit:
 	case *ast.DomainTextLit:
@@ -2554,6 +2555,7 @@ L:
 	for {
 		switch p.tok {
 		case token.PERIOD: // .
+			posDot := p.pos
 			p.next()
 			if lhs {
 				p.resolve(x)
@@ -2564,18 +2566,73 @@ L:
 			case token.LPAREN:
 				x = p.parseTypeAssertion(p.checkExpr(x))
 			default:
-				pos := p.pos
-				p.errorExpected(pos, "selector or type assertion", 2)
-				p.next() // make progress
-				sel := &ast.Ident{NamePos: pos, Name: "_"}
-				x = &ast.SelectorExpr{X: x, Sel: sel}
+				processed := posDot+1 == p.pos
+				if processed {
+					switch p.tok {
+					case token.MUL: // .* .**
+						sel := &ast.Ident{NamePos: p.pos, Name: "*"}
+						p.next()
+						if p.tok == token.MUL && p.pos == posDot+2 {
+							sel.Name = "**"
+							p.next()
+						}
+						x = &ast.SelectorExpr{X: p.checkExpr(x), Sel: sel}
+					case token.ENV: // .$name
+						sel := &ast.Ident{NamePos: p.pos}
+						p.next()
+						if sel.NamePos+1 != p.pos || p.tok != token.IDENT {
+							p.errorExpected(p.pos, "identifier after $", 2)
+							sel.Name = "$_"
+						} else {
+							sel.Name = "$" + p.lit
+							p.next()
+						}
+						x = &ast.SelectorExpr{X: p.checkExpr(x), Sel: sel}
+					default:
+						processed = false
+					}
+				}
+				if !processed {
+					pos := p.pos
+					p.errorExpected(pos, "selector or type assertion", 2)
+					// TODO(rFindley) The check for token.RBRACE below is a targeted fix
+					//                to error recovery sufficient to make the x/tools tests to
+					//                pass with the new parsing logic introduced for type
+					//                parameters. Remove this once error recovery has been
+					//                more generally reconsidered.
+					if p.tok != token.RBRACE {
+						p.next() // make progress
+					}
+					sel := &ast.Ident{NamePos: pos, Name: "_"}
+					x = &ast.SelectorExpr{X: x, Sel: sel}
+				}
 			}
+		case token.AT: // @
+			ce := &ast.CondExpr{X: x, OpPos: p.pos}
+			p.next()
+			switch p.tok {
+			case token.IDENT:
+				fun := p.parseIdent()
+				ce.Cond = p.parseCallOrConversion(fun, false) // @fun(...)
+			case token.LPAREN:
+				cond, kind := p.parseOperand(0) // @(cond)
+				if kind != exprNormal {
+					p.error(cond.Pos(), "invalid condition expression")
+				}
+				ce.Cond = p.checkExpr(cond)
+			default:
+				pos := p.pos
+				p.errorExpected(pos, "condition expression", 2)
+				p.next() // make progress
+				ce.Cond = &ast.Ident{NamePos: pos, Name: "_"}
+			}
+			x = ce
 		case token.LBRACK: // [
 			if lhs {
 				p.resolve(x)
 			}
 			if allowCmd && p.isCmd(x) { // println [...]
-				x = p.parseCallOrConversion(p.checkExprOrType(x), true)
+				x = p.parseCallOrConversion(x, true)
 			} else {
 				x = p.parseIndexOrSlice(p.checkExpr(x))
 			}
@@ -2587,7 +2644,7 @@ L:
 			x = p.parseCallOrConversion(p.checkExprOrType(x), isCmd)
 		case token.LBRACE: // {
 			if allowCmd && p.isCmd(x) { // println {...}
-				x = p.parseCallOrConversion(p.checkExprOrType(x), true)
+				x = p.parseCallOrConversion(x, true)
 			} else {
 				t := unparen(x)
 				// determine if '{' belongs to a composite literal or a block statement
@@ -2615,7 +2672,7 @@ L:
 			}
 		case token.NOT: // !
 			if allowCmd && p.isCmd(x) {
-				x = p.parseCallOrConversion(p.checkExprOrType(x), true)
+				x = p.parseCallOrConversion(x, true)
 			} else {
 				x = &ast.ErrWrapExpr{X: x, Tok: token.NOT, TokPos: p.pos}
 				p.next()
@@ -2637,7 +2694,7 @@ L:
 				if lhs {
 					p.resolve(x)
 				}
-				x = p.parseCallOrConversion(p.checkExprOrType(x), true)
+				x = p.parseCallOrConversion(x, true)
 			} else if p.tok == token.FLOAT && p.lit[0] == '.' && x.End() == p.pos {
 				// tuple field: .0 .1 etc.
 				sel := &ast.Ident{NamePos: p.pos + 1, Name: p.lit[1:]}
