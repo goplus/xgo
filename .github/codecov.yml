@@ -11,6 +11,7 @@ coverage:
     - "cmd"
     - "cl/cltest"
     - "cl/outline"
+    - "cl/internal/dql"
     - "cl/internal/huh"
     - "cl/internal/llgo-hello"
     - "cl/internal/mcp"

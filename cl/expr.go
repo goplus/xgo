@@ -529,6 +529,13 @@ func compileSelectorExpr(ctx *blockCtx, lhs int, v *ast.SelectorExpr, flags int)
 	default:
 		compileExpr(ctx, 0, v.X)
 	}
+
+	// DQL (DOM Query Language) rules:
+	// - selector.name  -> XGo_Node("name")   - children by name (fallback)
+	// - selector.*     -> XGo_Child()        - direct children
+	// - selector.**    -> XGo_Any()          - all descendants
+	// - selector.0     -> XGo_0()            - first element
+	// - selector.$attr -> XGo_Attr("attr")   - attribute access
 	cb := ctx.cb
 	name := v.Sel.Name
 	switch name {
@@ -542,12 +549,12 @@ func compileSelectorExpr(ctx *blockCtx, lhs int, v *ast.SelectorExpr, flags int)
 		} else if err := compileMember(ctx, lhs, v, name, flags); err != nil {
 			if c := name[0]; c >= '0' && c <= '9' {
 				if _, e := cb.Member("XGo_"+name, 0, 0, v); e != nil {
-					panic(err)
+					panic(err) // rethrow original error
 				}
 				cb.CallWith(0, lhs, 0, v)
 			} else {
 				if _, e := cb.Member("XGo_Node", 0, 0, v); e != nil {
-					panic(err)
+					panic(err) // rethrow original error
 				}
 				cb.Val(name).CallWith(1, lhs, 0, v)
 			}
