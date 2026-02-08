@@ -2623,7 +2623,7 @@ L:
 				p.resolve(x)
 			}
 			if allowCmd && p.isCmd(x) { // println [...]
-				x = p.parseCallOrConversion(p.checkExprOrType(x), true)
+				x = p.parseCallOrConversion(x, true)
 			} else {
 				x = p.parseIndexOrSlice(p.checkExpr(x))
 			}
@@ -2635,7 +2635,7 @@ L:
 			x = p.parseCallOrConversion(p.checkExprOrType(x), isCmd)
 		case token.LBRACE: // {
 			if allowCmd && p.isCmd(x) { // println {...}
-				x = p.parseCallOrConversion(p.checkExprOrType(x), true)
+				x = p.parseCallOrConversion(x, true)
 			} else {
 				t := unparen(x)
 				// determine if '{' belongs to a composite literal or a block statement
@@ -2663,7 +2663,7 @@ L:
 			}
 		case token.NOT: // !
 			if allowCmd && p.isCmd(x) {
-				x = p.parseCallOrConversion(p.checkExprOrType(x), true)
+				x = p.parseCallOrConversion(x, true)
 			} else {
 				x = &ast.ErrWrapExpr{X: x, Tok: token.NOT, TokPos: p.pos}
 				p.next()
@@ -2685,7 +2685,7 @@ L:
 				if lhs {
 					p.resolve(x)
 				}
-				x = p.parseCallOrConversion(p.checkExprOrType(x), true)
+				x = p.parseCallOrConversion(x, true)
 			} else if p.tok == token.FLOAT && p.lit[0] == '.' && x.End() == p.pos {
 				// tuple field: .0 .1 etc.
 				sel := &ast.Ident{NamePos: p.pos + 1, Name: p.lit[1:]}
