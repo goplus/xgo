@@ -478,7 +478,7 @@ func (p *ForPhrase) exprNode() {}
 //	`[vexpr for k1, v1 in container1, cond1 ...]` or
 //	`{vexpr for k1, v1 in container1, cond1 ...}` or
 //	`{kexpr: vexpr for k1, v1 in container1, cond1 ...}` or
-//	`{for k1, v1 in container1, cond1 ...}` or
+//	`{for k1, v1 in container1, cond1 ...}`
 type ComprehensionExpr struct {
 	Lpos token.Pos   // position of "[" or "{"
 	Tok  token.Token // token.LBRACK '[' or token.LBRACE '{'
