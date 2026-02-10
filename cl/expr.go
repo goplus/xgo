@@ -376,6 +376,8 @@ func compileExpr(ctx *blockCtx, lhs int, expr ast.Expr, inFlags ...int) {
 			callCmdNoArgs(ctx, expr, true)
 			return
 		}
+	case *ast.AnySelectorExpr:
+		compileAnySelectorExpr(ctx, lhs, v)
 	case *ast.BinaryExpr:
 		compileBinaryExpr(ctx, v)
 	case *ast.UnaryExpr:
@@ -514,6 +516,20 @@ func compileSelectorExprLHS(ctx *blockCtx, v *ast.SelectorExpr) {
 	ctx.cb.MemberRef(v.Sel.Name, v)
 }
 
+func compileAnySelectorExpr(ctx *blockCtx, lhs int, v *ast.AnySelectorExpr) {
+	compileExpr(ctx, 0, v.X)
+	// DQL (DOM Query Language) rules:
+	// - selector.**.name     -> XGo_Any(name)   - descendants by name
+	// - selector.**."name"   -> XGo_Any(name)   - descendants by name
+	cb, sel := ctx.cb, v.Sel
+	name := sel.Name
+	switch name[0] {
+	case '"':
+		name = unquote(name)
+	}
+	cb.MemberVal("XGo_Any", 0, v).Val(name).CallWith(1, lhs, 0, v)
+}
+
 func compileSelectorExpr(ctx *blockCtx, lhs int, v *ast.SelectorExpr, flags int) {
 	switch x := v.X.(type) {
 	case *ast.Ident:
@@ -527,41 +543,44 @@ func compileSelectorExpr(ctx *blockCtx, lhs int, v *ast.SelectorExpr, flags int)
 			panic(ctx.newCodeErrorf(x.Pos(), x.End(), "cannot refer to unexported name %s.%s", x.Name, v.Sel.Name))
 		}
 	default:
-		compileExpr(ctx, 0, v.X)
+		compileExpr(ctx, 0, x)
 	}
 
 	// DQL (DOM Query Language) rules:
-	// - selector.name  -> XGo_Node("name")   - children by name (fallback)
-	// - selector.*     -> XGo_Child()        - direct children
-	// - selector.**    -> XGo_Any()          - all descendants
-	// - selector.0     -> XGo_0()            - first element
-	// - selector.$attr -> XGo_Attr("attr")   - attribute access
-	cb := ctx.cb
-	name := v.Sel.Name
-	switch name {
-	case "*":
-		name = "XGo_Child"
-	case "**":
-		name = "XGo_Any"
-	default:
-		if strings.HasPrefix(name, "$") {
-			cb.MemberVal("XGo_Attr", 0, v).Val(name[1:]).CallWith(1, lhs, 0, v)
-		} else if err := compileMember(ctx, lhs, v, name, flags); err != nil {
-			if c := name[0]; c >= '0' && c <= '9' {
-				if _, e := cb.Member("XGo_"+name, 0, 0, v); e != nil {
-					panic(err) // rethrow original error
-				}
-				cb.CallWith(0, lhs, 0, v)
-			} else {
-				if _, e := cb.Member("XGo_Node", 0, 0, v); e != nil {
-					panic(err) // rethrow original error
-				}
-				cb.Val(name).CallWith(1, lhs, 0, v)
-			}
+	// - selector.name    -> XGo_Elem("name")   - children by name (fallback)
+	// - selector."name"  -> XGo_Elem("name")   - children by name (fallback)
+	// - selector.$attr   -> XGo_Attr("attr")   - attribute access
+	// - selector.$"attr" -> XGo_Attr("attr")   - attribute access
+	// - selector.*       -> XGo_Child()        - direct children
+	cb, sel := ctx.cb, v.Sel
+	name := sel.Name
+	switch name[0] {
+	case '*':
+		cb.MemberVal("XGo_Child", 0, v).CallWith(0, lhs, 0, v)
+	case '$':
+		name = name[1:]
+		if strings.HasPrefix(name, `"`) {
+			name = unquote(name)
 		}
-		return
+		cb.MemberVal("XGo_Attr", 0, v).Val(name).CallWith(1, lhs, 0, v)
+	case '"':
+		name = unquote(name)
+		fallthrough
+	default:
+		if err := compileMember(ctx, lhs, v, name, flags); err != nil {
+			if _, e := cb.Member("XGo_Elem", 0, 0, v); e != nil {
+				panic(err) // rethrow original error
+			}
+			cb.Val(name).CallWith(1, lhs, 0, v)
+		}
 	}
-	cb.MemberVal(name, 0, v).CallWith(0, lhs, 0, v)
+}
+
+func unquote(name string) string {
+	// parser package already checks the syntax of the quoted string,
+	// so we can ignore the error here
+	s, _ := strconv.Unquote(name)
+	return s
 }
 
 func compileFuncAlias(ctx *blockCtx, scope *types.Scope, x *ast.Ident, flags int) bool {

@@ -1,4 +1,5 @@
 import "github.com/goplus/xgo/cl/internal/dql"
 
 doc := dql.new
-echo doc.**.users.*.$age.0
+echo doc.foo.**.users.*.$age
+echo doc."foo-name".**."elem-name".*.$"attr-name"
