@@ -225,7 +225,7 @@ func (*EnvExpr) exprNode() {}
 
 // AnySelectorExpr represents `X.**.Sel` expression, which selects any field
 // named Sel in the nested object X.
-// Sel may not a simple identifier. For example:
+// Sel may not be a simple identifier. For example:
 //   - x.**.field
 //   - x.**."field-name"
 type AnySelectorExpr struct {

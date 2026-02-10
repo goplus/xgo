@@ -203,7 +203,7 @@ type (
 	}
 
 	// A SelectorExpr node represents an expression followed by a selector.
-	// Sel may not a simple identifier. For example:
+	// Sel may not be a simple identifier. For example:
 	//   - x.field
 	//   - x."field-name"
 	//   - x.$attr
