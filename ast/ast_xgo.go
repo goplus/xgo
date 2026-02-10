@@ -223,6 +223,31 @@ func (*EnvExpr) exprNode() {}
 
 // -----------------------------------------------------------------------------
 
+// AnySelectorExpr represents `X.**.Sel` expression, which selects any field
+// named Sel in the nested object X.
+// Sel may not a simple identifier. For example:
+//   - x.**.field
+//   - x.**."field-name"
+type AnySelectorExpr struct {
+	X      Expr      // expression
+	TokPos token.Pos // position of "**"
+	Sel    *Ident    // field selector (it may not be a simple identifier)
+}
+
+// Pos - position of first character belonging to the node.
+func (p *AnySelectorExpr) Pos() token.Pos {
+	return p.X.Pos()
+}
+
+// End - position of first character immediately after the node.
+func (p *AnySelectorExpr) End() token.Pos {
+	return p.Sel.End()
+}
+
+func (*AnySelectorExpr) exprNode() {}
+
+// -----------------------------------------------------------------------------
+
 // A CondExpr node represents a conditional expression: `expr @ cond`.
 type CondExpr struct {
 	X     Expr      // expression
@@ -230,10 +255,12 @@ type CondExpr struct {
 	Cond  Expr      // condition expression
 }
 
+// Pos - position of first character belonging to the node.
 func (p *CondExpr) Pos() token.Pos {
 	return p.X.Pos()
 }
 
+// End - position of first character immediately after the node.
 func (p *CondExpr) End() token.Pos {
 	return p.Cond.End()
 }

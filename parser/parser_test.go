@@ -296,10 +296,13 @@ x.
 	testErrCode(t, `
 x.$
 a = 1
-`, `/foo/bar.xgo:3:1: expected identifier after $, found a`, ``)
+`, "/foo/bar.xgo:3:1: expected identifier after '$', found a", ``)
 	testErrCode(t, `
 x./
 `, `/foo/bar.xgo:2:3: expected selector or type assertion, found '/'`, ``)
+	testErrCode(t, `
+x.**.$
+`, `/foo/bar.xgo:2:6: expected identifier after '**.', found '$'`, ``)
 }
 
 func TestErrStringLitEx(t *testing.T) {

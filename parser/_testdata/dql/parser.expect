@@ -22,42 +22,32 @@ ast.FuncDecl:
               Args:
                 ast.SelectorExpr:
                   X:
-                    ast.SelectorExpr:
+                    ast.CondExpr:
                       X:
-                        ast.CondExpr:
+                        ast.AnySelectorExpr:
                           X:
-                            ast.SelectorExpr:
+                            ast.Ident:
+                              Name: doc
+                          Sel:
+                            ast.Ident:
+                              Name: users
+                      Cond:
+                        ast.ParenExpr:
+                          X:
+                            ast.BinaryExpr:
                               X:
-                                ast.SelectorExpr:
-                                  X:
+                                ast.EnvExpr:
+                                  Name:
                                     ast.Ident:
-                                      Name: doc
-                                  Sel:
-                                    ast.Ident:
-                                      Name: **
-                              Sel:
-                                ast.Ident:
-                                  Name: users
-                          Cond:
-                            ast.ParenExpr:
-                              X:
-                                ast.BinaryExpr:
-                                  X:
-                                    ast.EnvExpr:
-                                      Name:
-                                        ast.Ident:
-                                          Name: name
-                                  Op: ==
-                                  Y:
-                                    ast.BasicLit:
-                                      Kind: STRING
-                                      Value: "ken"
-                      Sel:
-                        ast.Ident:
-                          Name: $age
+                                      Name: name
+                              Op: ==
+                              Y:
+                                ast.BasicLit:
+                                  Kind: STRING
+                                  Value: "ken"
                   Sel:
                     ast.Ident:
-                      Name: 0
+                      Name: $age
         ast.ExprStmt:
           X:
             ast.CallExpr:
@@ -67,7 +57,7 @@ ast.FuncDecl:
               Args:
                 ast.SelectorExpr:
                   X:
-                    ast.SelectorExpr:
+                    ast.AnySelectorExpr:
                       X:
                         ast.CondExpr:
                           X:
@@ -82,7 +72,7 @@ ast.FuncDecl:
                                       Name: *
                               Sel:
                                 ast.Ident:
-                                  Name: table
+                                  Name: "elem-name"
                           Cond:
                             ast.CallExpr:
                               Fun:
@@ -93,7 +83,7 @@ ast.FuncDecl:
                                   Name: self
                       Sel:
                         ast.Ident:
-                          Name: tr
+                          Name: "a"
                   Sel:
                     ast.Ident:
-                      Name: 0
+                      Name: $"attr-name"

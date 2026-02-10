@@ -2467,6 +2467,7 @@ func (p *parser) checkExpr(x ast.Expr) ast.Expr {
 	case *ast.SliceLit:
 	case *ast.ComprehensionExpr:
 	case *ast.SelectorExpr:
+	case *ast.AnySelectorExpr:
 	case *ast.IndexExpr:
 	case *ast.IndexListExpr:
 	case *ast.ArrayType:
@@ -2570,23 +2571,42 @@ L:
 				if processed {
 					switch p.tok {
 					case token.MUL: // .* .**
-						sel := &ast.Ident{NamePos: p.pos, Name: "*"}
+						posTok := p.pos
 						p.next()
-						if p.tok == token.MUL && p.pos == posDot+2 {
-							sel.Name = "**"
+						if p.tok == token.MUL && p.pos == posDot+2 { // .**
 							p.next()
+							p.expect(token.PERIOD)
+							sel := &ast.Ident{NamePos: p.pos}
+							x = &ast.AnySelectorExpr{X: p.checkExpr(x), TokPos: posTok, Sel: sel}
+							switch p.tok {
+							case token.IDENT, token.STRING: // .**.name .**."name"
+								sel.Name = p.lit
+								p.next()
+							default:
+								p.errorExpected(p.pos, "identifier after '**.'", 2)
+								sel.Name = "_"
+								if p.tok != token.RBRACE { // TODO(rFindley)
+									p.next() // make progress
+								}
+							}
+						} else {
+							sel := &ast.Ident{NamePos: posTok, Name: "*"}
+							x = &ast.SelectorExpr{X: p.checkExpr(x), Sel: sel}
 						}
-						x = &ast.SelectorExpr{X: p.checkExpr(x), Sel: sel}
-					case token.ENV: // .$name
+					case token.ENV: // .$attr .$"attr-name"
 						sel := &ast.Ident{NamePos: p.pos}
 						p.next()
-						if sel.NamePos+1 != p.pos || p.tok != token.IDENT {
-							p.errorExpected(p.pos, "identifier after $", 2)
+						if sel.NamePos+1 != p.pos || (p.tok != token.IDENT && p.tok != token.STRING) {
+							p.errorExpected(p.pos, "identifier after '$'", 2)
 							sel.Name = "$_"
 						} else {
 							sel.Name = "$" + p.lit
 							p.next()
 						}
+						x = &ast.SelectorExpr{X: p.checkExpr(x), Sel: sel}
+					case token.STRING: // ."field-name"
+						sel := &ast.Ident{NamePos: p.pos, Name: p.lit}
+						p.next()
 						x = &ast.SelectorExpr{X: p.checkExpr(x), Sel: sel}
 					default:
 						processed = false
