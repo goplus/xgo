@@ -203,9 +203,16 @@ type (
 	}
 
 	// A SelectorExpr node represents an expression followed by a selector.
+	// Sel may not be a simple identifier. For example:
+	//   - x.field
+	//   - x."field-name"
+	//   - x.$attr
+	//   - x.$"attr-name"
+	//   - x.0, x.1, ...
+	//   - x.*
 	SelectorExpr struct {
 		X   Expr   // expression
-		Sel *Ident // field selector
+		Sel *Ident // field selector (it may not be a simple identifier)
 	}
 
 	// An IndexExpr node represents an expression followed by an index.

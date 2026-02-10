@@ -25,9 +25,8 @@ func (p NodeSet) XGo_Enum() iter.Seq[*Node] {
 	return nil
 }
 
-// XGo_Any returns a NodeSet containing all descendant nodes of the nodes in
-// the NodeSet, including the nodes themselves.
-func (p NodeSet) XGo_Any() NodeSet {
+// XGo_Any returns a NodeSet containing all descendant nodes with the specified name.
+func (p NodeSet) XGo_Any(name string) NodeSet {
 	return NodeSet{}
 }
 
@@ -36,8 +35,8 @@ func (p NodeSet) XGo_Child() NodeSet {
 	return NodeSet{}
 }
 
-// XGo_Node returns a NodeSet containing the child nodes with the specified name.
-func (p NodeSet) XGo_Node(name string) NodeSet {
+// XGo_Elem returns a NodeSet containing the child nodes with the specified name.
+func (p NodeSet) XGo_Elem(name string) NodeSet {
 	return NodeSet{}
 }
 

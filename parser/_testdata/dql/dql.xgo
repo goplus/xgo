@@ -1,2 +1,3 @@
-echo doc.**.users@($name == "ken").$age.0
-echo doc.*.table@isTotal(self).tr.0
+echo doc.**.users@($name == "ken").$age
+echo doc.*."elem-name"@isTotal(self).**.
+	"a".$"attr-name"
