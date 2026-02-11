@@ -23,6 +23,7 @@ coverage:
     - "cl/internal/unit"
     - "cl/internal/typesalias"
     - "parser/fsx"
+    - "parser/iox"
     - "parser/parsertest"
     - "x/jsonrpc2"
     - "x/jsonrpc2/jsonrpc2test"
