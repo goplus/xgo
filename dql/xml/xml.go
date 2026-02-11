@@ -280,6 +280,9 @@ func (p NodeSet) XGo_Attr(name string) (val string, err error) {
 
 // Text returns the text content of the first text node found in the NodeSet.
 func (p NodeSet) Text() (val string, err error) {
+	if p.Err != nil {
+		return "", p.Err
+	}
 	err = dql.ErrNotFound
 	p.Data(func(node *Node) bool {
 		for _, c := range node.Children {

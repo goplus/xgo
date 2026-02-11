@@ -3649,7 +3649,7 @@ func (p *parser) parseForPhraseStmtPart(lhs []ast.Expr) *ast.ForPhraseStmt {
 	x := p.parseExpr(flagAllowRangeExpr)
 	var cond ast.Expr
 	var ifPos token.Pos
-	if p.tok == token.IF {
+	if p.tok == token.IF || p.tok == token.COMMA {
 		ifPos = p.pos
 		p.next()
 		cond = p.parseExpr(0)
@@ -3708,7 +3708,7 @@ func (p *parser) parseForPhrase() *ast.ForPhrase { // for k, v in container if c
 	var init ast.Stmt
 	var cond ast.Expr
 	var ifPos token.Pos
-	if p.tok == token.IF { // `if condition` or `if init; condition`
+	if p.tok == token.IF || p.tok == token.COMMA { // `if condition` or `if init; condition`
 		ifPos = p.pos
 		p.next()
 		init, cond = p.parseForPhraseCond()

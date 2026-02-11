@@ -17,7 +17,7 @@
 package http
 
 import (
-	"errors"
+	"fmt"
 	"io"
 	"net/http"
 )
@@ -57,7 +57,7 @@ func Get(url string) (resp *http.Response, err error) {
 	}
 	if resp.StatusCode/100 != 2 {
 		resp.Body.Close()
-		err = errors.New(resp.Status)
+		err = fmt.Errorf("HTTP request to %s failed with status: %s", url, resp.Status)
 	}
 	return
 }
