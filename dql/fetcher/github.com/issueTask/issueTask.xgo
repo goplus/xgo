@@ -1,0 +1,57 @@
+/*
+ * Copyright (c) 2026 The XGo Authors (xgo.dev). All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package issueTask
+
+import (
+	"github.com/goplus/xgo/dql/html"
+	"github.com/goplus/xgo/dql/fetcher"
+)
+
+// Task represents a GitHub issue task item.
+type Task struct {
+	Desc string `json:"desc"`
+	Done bool   `json:"done"`
+}
+
+// Result represents the result of issue task fetcher.
+type Result struct {
+	Issue string `json:"issue"` // goplus/llgo#642
+	Tasks []Task `json:"tasks"`
+}
+
+// New extracts issue tasks from the given document and returns the Result.
+func New(input any, doc html.NodeSet) Result {
+	issue := input.(string)
+	taskList := doc.**.ul@($class == "contains-task-list").one
+	tasks := [Task{li.text!, li.firstElementChild.hasAttr("checked")} for li in taskList.li]
+	return {issue, tasks}
+}
+
+// URL returns the URL from the input.
+// Input can be either a full github issue URL or a shorthand format
+// like "goplus/llgo#642".
+func URL(input any) string {
+	issue := input.(string)
+	if issue.hasPrefix("https://github.com/") {
+		return issue
+	}
+	return "https://github.com/" + issue.replace("#", "/issues/", 1)
+}
+
+func init() {
+	fetcher.register("github.com/issueTask", New, URL)
+}

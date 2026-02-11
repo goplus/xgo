@@ -31,6 +31,12 @@ var (
 	ErrInvalidSource = errors.New("invalid source")
 )
 
+// ReadSource converts src to a []byte if possible; otherwise it returns an error.
+// Supported types for src are:
+//   - string (as content, NOT as filename)
+//   - []byte (as content)
+//   - *bytes.Buffer (as content)
+//   - io.Reader (as content)
 func ReadSource(src any) ([]byte, error) {
 	switch s := src.(type) {
 	case string:
@@ -48,8 +54,8 @@ func ReadSource(src any) ([]byte, error) {
 	return nil, ErrInvalidSource
 }
 
-// If src != nil, readSource converts src to a []byte if possible;
-// otherwise it returns an error. If src == nil, readSource returns
+// If src != nil, ReadSourceLocal converts src to a []byte if possible;
+// otherwise it returns an error. If src == nil, ReadSourceLocal returns
 // the result of reading the file specified by filename.
 func ReadSourceLocal(filename string, src any) ([]byte, error) {
 	if src != nil {

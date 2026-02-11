@@ -354,6 +354,7 @@ func buildGoplusTools(useGoProxy bool) {
 		log.Fatalln(err)
 	}
 
+	/* TODO(xsw): to be confirmed
 	switch ver := goVersion(); ver {
 	case "1.23", "1.24":
 		os.Chdir(gopBinPath)
@@ -367,6 +368,7 @@ func buildGoplusTools(useGoProxy bool) {
 		commandExecuteEnv = append(commandExecuteEnv,
 			"GOWORK="+work)
 	}
+	*/
 
 	println("Building XGo tools...\n")
 	os.Chdir(commandsDir)

@@ -1,0 +1,80 @@
+/*
+ * Copyright (c) 2026 The XGo Authors (xgo.dev). All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package repoList
+
+import (
+	"github.com/goplus/xgo/dql/html"
+	"github.com/goplus/xgo/dql/fetcher"
+)
+
+// Repo is the information of a repository.
+type Repo struct {
+	Repo       string `json:"repo"`
+	ForkedFrom string `json:"forkedFrom"`
+	Title      string `json:"title"`
+	Language   string `json:"language"`
+	UpdateTime string `json:"updateTime"`
+	Forks      int    `json:"forks"`
+}
+
+// Result is the result of fetching a repository list page.
+type Result struct {
+	User  string `json:"user"` // github username
+	Repos []Repo `json:"repos"`
+	Next  string `json:"next"`
+}
+
+func newRepo(node html.NodeSet) Repo {
+	aRepo := node.**.a($itemprop == "name codeRepository").one
+	repo := aRepo.$href!
+	root := aRepo.parentN(3).one
+	forkedFrom := root.**.span.**.textNode@(Data == "Forked from").nextSibling@a.$href?:""
+	title := root.**.p@($itemprop == "description").text?:""
+	language := root.**.span.@($itemprop == "programmingLanguage").text?:""
+	updateTime := root.**."relative-time".$datetime?:""
+	forks := root.**.a@($href == repo+"/network/members").int?:0
+	return {
+		Repo:       repo,
+		ForkedFrom: forkedFrom,
+		Title:      title,
+		Language:   language,
+		UpdateTime: updateTime,
+		Forks:      forks,
+	}
+}
+
+// New extracts the repository information from the given HTML document and
+// returns the Result.
+func New(input any, doc html.NodeSet) Result {
+	user := input.(string)
+	divRepos := doc.**.div@($id == "user-repositories-list").one
+	repos := [newRepo(x) for x in divRepos.ul.li]
+	divPaginate := doc.**.div@($class == "paginate-container").one
+	next := divPaginate.**.a@(text == "Next").$href?:""
+	return {user, repos, next}
+}
+
+// URL returns the URL from the input.
+// Input is expected to be a GitHub username, and the URL will be the user's
+// repository list page.
+func URL(input any) string {
+	return "https://github.com/" + input.(string)
+}
+
+func init() {
+	fetcher.register("github.com/repoList", New, URL)
+}

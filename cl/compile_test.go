@@ -2306,7 +2306,7 @@ func main() {
 func TestForPhrase(t *testing.T) {
 	gopClTest(t, `
 sum := 0
-for x <- [1, 3, 5, 7, 11, 13, 17], x > 3 {
+for x <- [1, 3, 5, 7, 11, 13, 17] if x > 3 {
 	sum = sum + x
 }
 for i, x <- [1, 3, 5, 7, 11, 13, 17] {
@@ -2334,7 +2334,7 @@ func main() {
 
 func TestExistsComprehension(t *testing.T) {
 	gopClTest(t, `
-hasFive := {for x <- ["1", "3", "5", "7", "11"], x == "5"}
+hasFive := {for x <- ["1", "3", "5", "7", "11"] if x == "5"}
 `, `package main
 
 func main() {
@@ -3918,7 +3918,7 @@ func main() {
 }
 `)
 	gopClTest(t, `sum := 0
-for x <- [1, 3, 5, 7, 11, 13, 17], x > 3 {
+for x <- [1, 3, 5, 7, 11, 13, 17] if x > 3 {
 	sum = sum + x
 	println x
 	x := 200
