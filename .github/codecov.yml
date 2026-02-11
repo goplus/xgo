@@ -35,4 +35,5 @@ coverage:
     - "x/gopenv"
     - "tool"
     - "tpl"
+    - "dql"
   
