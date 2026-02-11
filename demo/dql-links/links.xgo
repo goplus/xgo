@@ -3,6 +3,8 @@ import "github.com/goplus/xgo/dql/html"
 
 doc := html.source(os.Args[1])
 
-for a in doc.**.a if url, _ := a.$href; url != "" {
-	echo url
+for a in doc.**.a {
+	if url, _ := a.$href; url != "" {
+		echo url
+	}
 }

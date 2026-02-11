@@ -3353,7 +3353,7 @@ func isForPhraseCondEnd(tok token.Token) bool {
 // parseForPhraseCond is an adjusted version of parseIfHeader
 func (p *parser) parseForPhraseCond() (init ast.Stmt, cond ast.Expr) {
 	if isForPhraseCondEnd(p.tok) {
-		p.error(p.pos, "missing condition in for <- statement")
+		p.error(p.pos, "missing condition in for..in statement")
 		cond = &ast.BadExpr{From: p.pos, To: p.pos}
 		return
 	}
@@ -3371,14 +3371,10 @@ func (p *parser) parseForPhraseCond() (init ast.Stmt, cond ast.Expr) {
 	}
 
 	var condStmt ast.Stmt
-	var semi struct {
-		pos token.Pos
-		//lit string // ";" or "\n"; valid if pos.IsValid()
-	}
+	var semiPos token.Pos
 	if !isForPhraseCondEnd(p.tok) {
 		if p.tok == token.SEMICOLON {
-			semi.pos = p.pos
-			//semi.lit = p.lit
+			semiPos = p.pos
 			p.next()
 		} else {
 			p.expect(token.SEMICOLON)
@@ -3393,8 +3389,8 @@ func (p *parser) parseForPhraseCond() (init ast.Stmt, cond ast.Expr) {
 
 	if condStmt != nil {
 		cond = p.makeExpr(condStmt, "boolean expression")
-	} else if semi.pos.IsValid() {
-		p.error(semi.pos, "missing condition in for <- statement")
+	} else if semiPos.IsValid() {
+		p.error(semiPos, "missing condition in for..in statement")
 	}
 
 	// make sure we have a valid AST
@@ -3653,20 +3649,26 @@ func (p *parser) parseForPhraseStmtPart(lhs []ast.Expr) *ast.ForPhraseStmt {
 	x := p.parseExpr(flagAllowRangeExpr)
 	var cond ast.Expr
 	var ifPos token.Pos
-	if p.tok == token.IF || p.tok == token.COMMA {
+	if p.tok == token.IF {
 		ifPos = p.pos
 		p.next()
 		cond = p.parseExpr(0)
+		// NOTE(xsw): why not parseForPhraseCond?
+		// init statements are not supported in for-phrase-if (can't use ';' in for loop)
 	}
 
-	stmt := &ast.ForPhraseStmt{ForPhrase: &ast.ForPhrase{TokPos: tokPos, X: x, IfPos: ifPos, Cond: cond}}
+	stmt := &ast.ForPhraseStmt{
+		ForPhrase: &ast.ForPhrase{
+			TokPos: tokPos, X: x, IfPos: ifPos, Cond: cond,
+		},
+	}
 	switch len(lhs) {
 	case 1:
 		stmt.Value = p.toIdent(lhs[0])
 	case 2:
 		stmt.Key, stmt.Value = p.toIdent(lhs[0]), p.toIdent(lhs[1])
 	default:
-		log.Panicln("TODO: parseForPhraseStmt - too many variables, 1 or 2 is required")
+		p.errorExpected(lhs[0].Pos(), "expect 1 or 2 identifiers", 2)
 	}
 	return stmt
 }
@@ -3706,7 +3708,7 @@ func (p *parser) parseForPhrase() *ast.ForPhrase { // for k, v in container if c
 	var init ast.Stmt
 	var cond ast.Expr
 	var ifPos token.Pos
-	if p.tok == token.IF || p.tok == token.COMMA { // `condition` or `init; condition`
+	if p.tok == token.IF { // `if condition` or `if init; condition`
 		ifPos = p.pos
 		p.next()
 		init, cond = p.parseForPhraseCond()

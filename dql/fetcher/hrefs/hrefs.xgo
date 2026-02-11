@@ -17,8 +17,8 @@
 package hrefs
 
 import (
-	"github.com/goplus/hdq"
-	"github.com/goplus/hdq/fetcher"
+	"github.com/goplus/xgo/dql/html"
+	"github.com/goplus/xgo/dql/fetcher"
 )
 
 // Result represents the result of hrefs fetcher.
@@ -28,7 +28,7 @@ type Result struct {
 }
 
 // New extracts hrefs from the given document and returns the Result.
-func New(input any, doc hdq.NodeSet) Result {
+func New(input any, doc html.NodeSet) Result {
 	hrefs := [url for a in doc.**.a if url, _ := a.$href; url != ""]
 	return {input.(string), hrefs}
 }
