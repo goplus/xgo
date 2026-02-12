@@ -281,7 +281,7 @@ func (p NodeSet) XGo_one() NodeSet {
 
 // _single returns a NodeSet containing the single node.
 // If there are zero or more than one nodes, it returns an error.
-// ErrNotFound or ErrMultipleResults is returned accordingly.
+// ErrNotFound or ErrMultiEntities is returned accordingly.
 func (p NodeSet) XGo_single() NodeSet {
 	if p.Err != nil {
 		return NodeSet{Err: p.Err}
@@ -329,7 +329,7 @@ func (p NodeSet) XGo_Attr(name string) (val string, err error) {
 				return attr.Value, nil
 			}
 		}
-		err = dql.ErrNotFound
+		err = dql.ErrNotFound // attribute not found on first node
 	}
 	return
 }
@@ -344,7 +344,7 @@ func (p NodeSet) XGo_text() (val string, err error) {
 				return unsafe.String(unsafe.SliceData(data), len(data)), nil
 			}
 		}
-		err = dql.ErrNotFound
+		err = dql.ErrNotFound // text not found on first node
 	}
 	return
 }

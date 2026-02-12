@@ -248,7 +248,7 @@ func (p NodeSet) One() NodeSet {
 
 // Single returns a NodeSet containing the single node.
 // If there are zero or more than one nodes, it returns an error.
-// ErrNotFound or ErrMultipleResults is returned accordingly.
+// ErrNotFound or ErrMultiEntities is returned accordingly.
 func (p NodeSet) Single() NodeSet {
 	if p.Err != nil {
 		return NodeSet{Err: p.Err}
@@ -439,7 +439,7 @@ func (p NodeSet) XGo_Attr(name string) (val string, err error) {
 				return attr.Val, nil
 			}
 		}
-		err = dql.ErrNotFound
+		err = dql.ErrNotFound // attribute not found on first node
 	}
 	return
 }
@@ -460,7 +460,7 @@ func (p NodeSet) valByNodeType(typ html.NodeType) (val string, err error) {
 				return c.Data, nil
 			}
 		}
-		err = dql.ErrNotFound
+		err = dql.ErrNotFound // nodeType not found on first node
 	}
 	return
 }
