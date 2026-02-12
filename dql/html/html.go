@@ -439,6 +439,7 @@ func (p NodeSet) XGo_Attr(name string) (val string, err error) {
 				return attr.Val, nil
 			}
 		}
+		err = dql.ErrNotFound
 	}
 	return
 }
