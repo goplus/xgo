@@ -96,6 +96,15 @@ func Source(r any) (ret NodeSet) {
 	}
 }
 
+// XGo_Node returns the first node in the NodeSet.
+func (p NodeSet) XGo_Node() (ret Node, err error) {
+	if p.Err != nil {
+		err = p.Err
+		return
+	}
+	return dql.First(p.Data)
+}
+
 // XGo_Enum returns an iterator over the nodes in the NodeSet.
 func (p NodeSet) XGo_Enum() iter.Seq[NodeSet] {
 	if p.Err != nil {
@@ -259,21 +268,66 @@ func (p NodeSet) XGo_Any(name string) NodeSet {
 	}
 }
 
-// XGo_Attr returns the value of the first specified attribute found in the NodeSet.
+// -----------------------------------------------------------------------------
+
+// _one returns a NodeSet containing the first node.
+func (p NodeSet) XGo_one() NodeSet {
+	if p.Err != nil {
+		return NodeSet{Err: p.Err}
+	}
+	n, err := dql.First(p.Data)
+	if err != nil {
+		return NodeSet{Err: err}
+	}
+	return Root(n)
+}
+
+// _single returns a NodeSet containing the single node.
+// If there are zero or more than one nodes, it returns an error.
+// ErrNotFound or ErrMultipleResults is returned accordingly.
+func (p NodeSet) XGo_single() NodeSet {
+	if p.Err != nil {
+		return NodeSet{Err: p.Err}
+	}
+	n, err := dql.Single(p.Data)
+	if err != nil {
+		return NodeSet{Err: err}
+	}
+	return Root(n)
+}
+
+// -----------------------------------------------------------------------------
+
+// _first returns the first node in the NodeSet.
+func (p NodeSet) XGo_first() (Node, error) {
+	if p.Err != nil {
+		return Node{}, p.Err
+	}
+	return dql.First(p.Data)
+}
+
+// _hasAttr returns true if the first node in the NodeSet has the specified attribute.
+// It returns false otherwise.
+func (p NodeSet) XGo_hasAttr(name string) bool {
+	node, err := p.XGo_first()
+	if err == nil {
+		return lookup(node.Children, name).IsValid()
+	}
+	return false
+}
+
+// XGo_Attr returns the value of the specified attribute from the first node in the
+// NodeSet. It only retrieves the attribute from the first node.
 //   - $name
 //   - $“attr-name”
 func (p NodeSet) XGo_Attr(name string) (val any, err error) {
-	if p.Err != nil {
-		return "", p.Err
-	}
-	err = dql.ErrNotFound
-	p.Data(func(node Node) bool {
+	node, err := p.XGo_first()
+	if err == nil {
 		if v := lookup(node.Children, name); v.IsValid() {
-			val, err = v.Interface(), nil
-			return false
+			return v.Interface(), nil
 		}
-		return true
-	})
+		err = dql.ErrNotFound
+	}
 	return
 }
 
