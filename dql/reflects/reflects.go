@@ -96,6 +96,15 @@ func Source(r any) (ret NodeSet) {
 	}
 }
 
+// XGo_Node returns the first node in the NodeSet.
+func (p NodeSet) XGo_Node() (ret Node, err error) {
+	if p.Err != nil {
+		err = p.Err
+		return
+	}
+	return dql.First(p.Data)
+}
+
 // XGo_Enum returns an iterator over the nodes in the NodeSet.
 func (p NodeSet) XGo_Enum() iter.Seq[NodeSet] {
 	if p.Err != nil {

@@ -38,6 +38,47 @@ func NopIter[T any](yield func(T) bool) {}
 
 // -----------------------------------------------------------------------------
 
+// First retrieves the first item from the provided sequence. If the sequence is
+// empty, it returns ErrNotFound.
+func First[T any, Seq ~func(func(T) bool)](seq Seq) (ret T, err error) {
+	err = ErrNotFound
+	seq(func(item T) bool {
+		ret, err = item, nil
+		return false
+	})
+	return
+}
+
+// Single retrieves a single item from the provided sequence. If the sequence is
+// empty, it returns ErrNotFound. If the sequence contains more than one item, it
+// returns ErrMultiEntities.
+func Single[T any, Seq ~func(func(T) bool)](seq Seq) (ret T, err error) {
+	err = ErrNotFound
+	first := true
+	seq(func(item T) bool {
+		if first {
+			ret, err = item, nil
+			first = false
+			return true
+		}
+		err = ErrMultiEntities
+		return false
+	})
+	return
+}
+
+// Collect retrieves all items from the provided sequence.
+func Collect[T any, Seq ~func(func(T) bool)](seq Seq) []T {
+	ret := make([]T, 0, 8)
+	seq(func(item T) bool {
+		ret = append(ret, item)
+		return true
+	})
+	return ret
+}
+
+// -----------------------------------------------------------------------------
+
 // Int parses the given string as an integer, removing any commas and trimming
 // whitespace.
 func Int__0(text string) (int, error) {

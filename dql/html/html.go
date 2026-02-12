@@ -92,6 +92,15 @@ func Source(r any) (ret NodeSet) {
 
 // -----------------------------------------------------------------------------
 
+// XGo_Node returns the first node in the NodeSet.
+func (p NodeSet) XGo_Node() (ret *Node, err error) {
+	if p.Err != nil {
+		err = p.Err
+		return
+	}
+	return dql.First(p.Data)
+}
+
 // XGo_Enum returns an iterator over the nodes in the NodeSet.
 func (p NodeSet) XGo_Enum() iter.Seq[NodeSet] {
 	if p.Err != nil {
@@ -225,68 +234,238 @@ func rangeAnyNodes(n *Node, name string, yield func(*Node) bool) bool {
 
 // -----------------------------------------------------------------------------
 
+// One returns a NodeSet containing the first node.
 func (p NodeSet) One() NodeSet {
-	panic("todo")
+	if p.Err != nil {
+		return NodeSet{Err: p.Err}
+	}
+	n, err := dql.First(p.Data)
+	if err != nil {
+		return NodeSet{Err: err}
+	}
+	return Root(n)
 }
 
+// Single returns a NodeSet containing the single node.
+// If there are zero or more than one nodes, it returns an error.
+// ErrNotFound or ErrMultipleResults is returned accordingly.
+func (p NodeSet) Single() NodeSet {
+	if p.Err != nil {
+		return NodeSet{Err: p.Err}
+	}
+	n, err := dql.Single(p.Data)
+	if err != nil {
+		return NodeSet{Err: err}
+	}
+	return Root(n)
+}
+
+// ParentN returns a NodeSet containing the N-th parent nodes.
 func (p NodeSet) ParentN(n int) NodeSet {
-	panic("todo")
+	if p.Err != nil {
+		return p
+	}
+	return NodeSet{
+		Data: func(yield func(*Node) bool) {
+			p.Data(func(node *Node) bool {
+				return yieldParentN(node, n, yield)
+			})
+		},
+	}
 }
 
+func yieldParentN(node *Node, n int, yield func(*Node) bool) bool {
+	if n > 0 {
+		for {
+			node = node.Parent
+			if node == nil {
+				break
+			}
+			n--
+			if n == 0 {
+				return yield(node)
+			}
+		}
+	}
+	return true
+}
+
+// Parent returns a NodeSet containing the parent nodes.
+func (p NodeSet) Parent() NodeSet {
+	if p.Err != nil {
+		return p
+	}
+	return NodeSet{
+		Data: func(yield func(*Node) bool) {
+			p.Data(func(node *Node) bool {
+				if next := node.Parent; next != nil {
+					return yield(next)
+				}
+				return true
+			})
+		},
+	}
+}
+
+// PrevSibling returns a NodeSet containing the previous sibling nodes.
+func (p NodeSet) PrevSibling() NodeSet {
+	if p.Err != nil {
+		return p
+	}
+	return NodeSet{
+		Data: func(yield func(*Node) bool) {
+			p.Data(func(node *Node) bool {
+				if next := node.PrevSibling; next != nil {
+					return yield(next)
+				}
+				return true
+			})
+		},
+	}
+}
+
+// NextSibling returns a NodeSet containing the next sibling nodes.
 func (p NodeSet) NextSibling() NodeSet {
-	panic("todo")
+	if p.Err != nil {
+		return p
+	}
+	return NodeSet{
+		Data: func(yield func(*Node) bool) {
+			p.Data(func(node *Node) bool {
+				if next := node.NextSibling; next != nil {
+					return yield(next)
+				}
+				return true
+			})
+		},
+	}
 }
 
+// FirstElementChild returns a NodeSet containing the first element
+// child of each node.
 func (p NodeSet) FirstElementChild() NodeSet {
-	panic("todo")
+	if p.Err != nil {
+		return p
+	}
+	return NodeSet{
+		Data: func(yield func(*Node) bool) {
+			p.Data(func(node *Node) bool {
+				for c := node.FirstChild; c != nil; c = c.NextSibling {
+					if c.Type == html.ElementNode {
+						return yield(c)
+					}
+				}
+				return true
+			})
+		},
+	}
 }
 
+// TextNode returns a NodeSet containing all text nodes.
 func (p NodeSet) TextNode() NodeSet {
-	panic("todo")
+	if p.Err != nil {
+		return p
+	}
+	return NodeSet{
+		Data: func(yield func(*Node) bool) {
+			p.Data(func(node *Node) bool {
+				return yieldNodeType(node, html.TextNode, yield)
+			})
+		},
+	}
+}
+
+func yieldNodeType(node *Node, typ html.NodeType, yield func(*Node) bool) bool {
+	for c := node.FirstChild; c != nil; c = c.NextSibling {
+		if c.Type == typ {
+			if !yield(c) {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 // -----------------------------------------------------------------------------
 
-// XGo_Attr returns the value of the first specified attribute found in the NodeSet.
-//   - $name
-//   - $“attr-name”
-func (p NodeSet) XGo_Attr(name string) (val string, err error) {
+// Collect retrieves all nodes from the NodeSet.
+func (p NodeSet) Collect() ([]*Node, error) {
 	if p.Err != nil {
-		return "", p.Err
+		return nil, p.Err
 	}
-	err = dql.ErrNotFound
-	p.Data(func(node *Node) bool {
-		for _, attr := range node.Attr {
-			if attr.Key == name {
-				val, err = attr.Val, nil
-				return false
-			}
-		}
-		return true
-	})
+	return dql.Collect(p.Data), nil
+}
+
+// First returns the first node in the NodeSet.
+func (p NodeSet) First() (*Node, error) {
+	if p.Err != nil {
+		return nil, p.Err
+	}
+	return dql.First(p.Data)
+}
+
+// Value returns the data content of the first node in the NodeSet.
+func (p NodeSet) Value() (val string, err error) {
+	node, err := p.First()
+	if err == nil {
+		return node.Data, nil
+	}
 	return
 }
 
-// Text returns the text content of the first text node found in the NodeSet.
+// HasAttr returns true if the first node in the NodeSet has the specified attribute.
+// It returns false otherwise.
+func (p NodeSet) HasAttr(name string) bool {
+	node, err := p.First()
+	if err == nil {
+		for _, attr := range node.Attr {
+			if attr.Key == name {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// XGo_Attr returns the value of the specified attribute from the first node in the
+// NodeSet. It only retrieves the attribute from the first node.
+//   - $name
+//   - $“attr-name”
+func (p NodeSet) XGo_Attr(name string) (val string, err error) {
+	node, err := p.First()
+	if err == nil {
+		for _, attr := range node.Attr {
+			if attr.Key == name {
+				return attr.Val, nil
+			}
+		}
+	}
+	return
+}
+
+// Text retrieves the text content of the first child text node.
+// It only retrieves from the first node in the NodeSet.
 func (p NodeSet) Text() (val string, err error) {
 	return p.valByNodeType(html.TextNode)
 }
 
+// valByNodeType retrieves the data content of the first child node of the specified
+// type. It only retrieves from the first node in the NodeSet.
 func (p NodeSet) valByNodeType(typ html.NodeType) (val string, err error) {
-	err = dql.ErrNotFound
-	p.Data(func(node *Node) bool {
+	node, err := p.First()
+	if err == nil {
 		for c := node.FirstChild; c != nil; c = c.NextSibling {
 			if c.Type == typ {
-				val, err = c.Data, nil
-				return false
+				return c.Data, nil
 			}
 		}
-		return true
-	})
+		err = dql.ErrNotFound
+	}
 	return
 }
 
-// Int parses the text content of the first text node found in the NodeSet as an integer.
+// Int retrieves the integer value from the text content of the first child
+// text node. It only retrieves from the first node in the NodeSet.
 func (p NodeSet) Int() (int, error) {
 	text, err := p.Text()
 	if err != nil {

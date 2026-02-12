@@ -129,6 +129,15 @@ func Source(r any) (ret NodeSet) {
 	}
 }
 
+// XGo_Node returns the first node in the NodeSet.
+func (p NodeSet) XGo_Node() (ret *Node, err error) {
+	if p.Err != nil {
+		err = p.Err
+		return
+	}
+	return dql.First(p.Data)
+}
+
 // XGo_Enum returns an iterator over the nodes in the NodeSet.
 func (p NodeSet) XGo_Enum() iter.Seq[NodeSet] {
 	if p.Err != nil {
@@ -278,8 +287,9 @@ func (p NodeSet) XGo_Attr(name string) (val string, err error) {
 	return
 }
 
-// Text returns the text content of the first text node found in the NodeSet.
-func (p NodeSet) Text() (val string, err error) {
+// XGo_Text returns the text content of the first text node found in the NodeSet.
+//   - ._text
+func (p NodeSet) XGo_text() (val string, err error) {
 	if p.Err != nil {
 		return "", p.Err
 	}
@@ -296,9 +306,11 @@ func (p NodeSet) Text() (val string, err error) {
 	return
 }
 
-// Int parses the text content of the first text node found in the NodeSet as an integer.
-func (p NodeSet) Int() (int, error) {
-	text, err := p.Text()
+// XGo_Int parses the text content of the first text node found in the NodeSet
+// as an integer.
+//   - ._int
+func (p NodeSet) XGo_int() (int, error) {
+	text, err := p.XGo_text()
 	if err != nil {
 		return 0, err
 	}
