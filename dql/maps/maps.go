@@ -45,6 +45,19 @@ func Root(doc Node) NodeSet {
 	}
 }
 
+// Nodes creates a NodeSet containing the provided nodes.
+func Nodes(nodes ...Node) NodeSet {
+	return NodeSet{
+		Data: func(yield func(Node) bool) {
+			for _, node := range nodes {
+				if !yield(node) {
+					break
+				}
+			}
+		},
+	}
+}
+
 // New creates a NodeSet containing a single node from the provided map.
 func New(doc map[string]any) NodeSet {
 	return NodeSet{
@@ -204,7 +217,19 @@ func rangeAnyNodes(name string, node Node, yield func(Node) bool) bool {
 
 // -----------------------------------------------------------------------------
 
+// _all returns a NodeSet containing all nodes.
+// It's a cache operation for performance optimization when you need to traverse
+// the nodes multiple times.
+func (p NodeSet) XGo_all() NodeSet {
+	if p.Err != nil {
+		return NodeSet{Err: p.Err}
+	}
+	nodes := dql.Collect(p.Data)
+	return Nodes(nodes...)
+}
+
 // _one returns a NodeSet containing the first node.
+// It's a performance optimization when you only need the first node (stop early).
 func (p NodeSet) XGo_one() NodeSet {
 	if p.Err != nil {
 		return NodeSet{Err: p.Err}

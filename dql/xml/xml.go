@@ -80,6 +80,19 @@ func Root(doc *Node) NodeSet {
 	}
 }
 
+// Nodes creates a NodeSet containing the provided nodes.
+func Nodes(nodes ...*Node) NodeSet {
+	return NodeSet{
+		Data: func(yield func(*Node) bool) {
+			for _, node := range nodes {
+				if !yield(node) {
+					break
+				}
+			}
+		},
+	}
+}
+
 // New parses the XML document from the provided reader and returns a NodeSet
 // containing the root node. If there is an error during parsing, the NodeSet's
 // Err field is set.
@@ -266,6 +279,17 @@ func rangeAnyNodes(n *Node, name string, yield func(*Node) bool) bool {
 }
 
 // -----------------------------------------------------------------------------
+
+// _all returns a NodeSet containing all nodes.
+// It's a cache operation for performance optimization when you need to traverse
+// the nodes multiple times.
+func (p NodeSet) XGo_all() NodeSet {
+	if p.Err != nil {
+		return NodeSet{Err: p.Err}
+	}
+	nodes := dql.Collect(p.Data)
+	return Nodes(nodes...)
+}
 
 // _one returns a NodeSet containing the first node.
 func (p NodeSet) XGo_one() NodeSet {
