@@ -42,10 +42,10 @@ func newRepo(node html.NodeSet) Repo {
 	aRepo := node.**.a($itemprop == "name codeRepository").one
 	repo := aRepo.$href!
 	root := aRepo.parentN(3).one
-	forkedFrom := root.**.span.**.textNode@(value == "Forked from").nextSibling@a.$href?:""
-	title := root.**.p@($itemprop == "description").text?:""
-	language := root.**.span.@($itemprop == "programmingLanguage").text?:""
-	updateTime := root.**."relative-time".$datetime?:""
+	forkedFrom := root.**.span.**.textNode@(value == "Forked from").nextSibling@a.$href
+	title := root.**.p@($itemprop == "description").text
+	language := root.**.span.@($itemprop == "programmingLanguage").text
+	updateTime := root.**."relative-time".$datetime
 	forks := root.**.a@($href == repo+"/network/members").int?:0
 	return {
 		Repo:       repo,
@@ -64,7 +64,7 @@ func New(input any, doc html.NodeSet) Result {
 	divRepos := doc.**.div@($id == "user-repositories-list").one
 	repos := [newRepo(x) for x in divRepos.ul.li]
 	divPaginate := doc.**.div@($class == "paginate-container").one
-	next := divPaginate.**.a@(text == "Next").$href?:""
+	next := divPaginate.**.a@(text == "Next").$href
 	return {user, repos, next}
 }
 
