@@ -12,12 +12,12 @@ require (
 	github.com/goplus/lib v0.3.1
 	github.com/goplus/mod v0.19.1
 	github.com/qiniu/x v1.16.0
-	golang.org/x/net v0.49.0
+	golang.org/x/net v0.50.0
 )
 
 require (
 	golang.org/x/mod v0.20.0 // indirect
-	golang.org/x/sys v0.40.0 // indirect
+	golang.org/x/sys v0.41.0 // indirect
 )
 
 retract v1.1.12
