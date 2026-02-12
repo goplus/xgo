@@ -292,6 +292,7 @@ func (p NodeSet) XGo_all() NodeSet {
 }
 
 // _one returns a NodeSet containing the first node.
+// It's a performance optimization when you only need the first node (stop early).
 func (p NodeSet) XGo_one() NodeSet {
 	if p.Err != nil {
 		return NodeSet{Err: p.Err}
