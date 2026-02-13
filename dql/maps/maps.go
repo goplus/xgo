@@ -182,8 +182,10 @@ func rangeChildNodes(node Node, yield func(Node) bool) bool {
 
 // XGo_Any returns a NodeSet containing all descendant nodes (including the
 // nodes themselves) with the specified name.
+// If name is "*", it returns all nodes.
 //   - .**.name
 //   - .**.“element-name”
+//   - .**.*
 func (p NodeSet) XGo_Any(name string) NodeSet {
 	if p.Err != nil {
 		return p
@@ -198,9 +200,9 @@ func (p NodeSet) XGo_Any(name string) NodeSet {
 }
 
 // rangeAnyNodes yields all descendant nodes of the given node that match the
-// specified name.
+// specified name. If name is "*", it yields all nodes.
 func rangeAnyNodes(name string, node Node, yield func(Node) bool) bool {
-	if node.Name == name {
+	if name == "*" || node.Name == name {
 		if !yield(node) {
 			return false
 		}

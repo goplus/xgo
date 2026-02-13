@@ -205,8 +205,10 @@ func rangeChildNodes(n *Node, yield func(*Node) bool) bool {
 // XGo_Any returns a NodeSet containing all descendant nodes (including the
 // nodes themselves) with the specified name.
 // If name is "textNode", it returns all text nodes.
+// If name is "*", it returns all nodes.
 //   - .**.name
 //   - .**.“element-name”
+//   - .**.*
 func (p NodeSet) XGo_Any(name string) NodeSet {
 	if p.Err != nil {
 		return p
@@ -221,7 +223,8 @@ func (p NodeSet) XGo_Any(name string) NodeSet {
 }
 
 // rangeAnyNodes yields all descendant nodes of the given node that match the
-// specified name. If name is "textNode", it yields text nodes.
+// specified name. If name is "textNode", it yields text nodes. If name is "*",
+// it yields all nodes.
 func rangeAnyNodes(n *Node, name string, yield func(*Node) bool) bool {
 	switch name {
 	case "textNode":
@@ -229,6 +232,10 @@ func rangeAnyNodes(n *Node, name string, yield func(*Node) bool) bool {
 			if !yield(n) {
 				return false
 			}
+		}
+	case "*":
+		if !yield(n) {
+			return false
 		}
 	default:
 		if n.Type == html.ElementNode && n.Data == name {
