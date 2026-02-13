@@ -24,7 +24,7 @@ import (
 
 // -----------------------------------------------------------------------------
 
-// Node represents a map[string]any node.
+// Node represents a map[string]any or []any node.
 type Node struct {
 	Name     string
 	Children any // map[string]any or []any
@@ -250,6 +250,8 @@ func rangeAnyNodes(name string, node Node, yield func(Node) bool) bool {
 	return true
 }
 
+// yieldAnyNode recursively traverses into v if it is a map[string]any or []any,
+// looking for descendant nodes matching name.
 func yieldAnyNode(name, k string, v any, yield func(Node) bool) bool {
 	switch v.(type) {
 	case map[string]any, []any:
