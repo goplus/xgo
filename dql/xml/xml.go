@@ -142,15 +142,6 @@ func Source(r any) (ret NodeSet) {
 	}
 }
 
-// XGo_Node returns the first node in the NodeSet.
-func (p NodeSet) XGo_Node() (ret *Node, err error) {
-	if p.Err != nil {
-		err = p.Err
-		return
-	}
-	return dql.First(p.Data)
-}
-
 // XGo_Enum returns an iterator over the nodes in the NodeSet.
 func (p NodeSet) XGo_Enum() iter.Seq[NodeSet] {
 	if p.Err != nil {
@@ -245,7 +236,7 @@ func rangeChildNodes(n *Node, yield func(*Node) bool) bool {
 
 // XGo_Any returns a NodeSet containing all descendant nodes (including the
 // nodes themselves) with the specified name.
-// If name is "*", it returns all nodes.
+// If name is "", it returns all nodes.
 //   - .**.name
 //   - .**.“element-name”
 //   - .**.*
@@ -263,9 +254,9 @@ func (p NodeSet) XGo_Any(name string) NodeSet {
 }
 
 // rangeAnyNodes yields all descendant nodes of the given node that match the
-// specified name. If name is "*", it yields all nodes.
+// specified name. If name is "", it yields all nodes.
 func rangeAnyNodes(n *Node, name string, yield func(*Node) bool) bool {
-	if name == "*" || n.Name.Local == name {
+	if name == "" || n.Name.Local == name {
 		if !yield(n) {
 			return false
 		}

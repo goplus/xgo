@@ -105,15 +105,6 @@ func Source(r any) (ret NodeSet) {
 
 // -----------------------------------------------------------------------------
 
-// XGo_Node returns the first node in the NodeSet.
-func (p NodeSet) XGo_Node() (ret *Node, err error) {
-	if p.Err != nil {
-		err = p.Err
-		return
-	}
-	return dql.First(p.Data)
-}
-
 // XGo_Enum returns an iterator over the nodes in the NodeSet.
 func (p NodeSet) XGo_Enum() iter.Seq[NodeSet] {
 	if p.Err != nil {
@@ -205,7 +196,7 @@ func rangeChildNodes(n *Node, yield func(*Node) bool) bool {
 // XGo_Any returns a NodeSet containing all descendant nodes (including the
 // nodes themselves) with the specified name.
 // If name is "textNode", it returns all text nodes.
-// If name is "*", it returns all nodes.
+// If name is "", it returns all nodes.
 //   - .**.name
 //   - .**.“element-name”
 //   - .**.*
@@ -223,7 +214,7 @@ func (p NodeSet) XGo_Any(name string) NodeSet {
 }
 
 // rangeAnyNodes yields all descendant nodes of the given node that match the
-// specified name. If name is "textNode", it yields text nodes. If name is "*",
+// specified name. If name is "textNode", it yields text nodes. If name is "",
 // it yields all nodes.
 func rangeAnyNodes(n *Node, name string, yield func(*Node) bool) bool {
 	switch name {
@@ -233,7 +224,7 @@ func rangeAnyNodes(n *Node, name string, yield func(*Node) bool) bool {
 				return false
 			}
 		}
-	case "*":
+	case "": // .**.*
 		if !yield(n) {
 			return false
 		}
@@ -420,12 +411,14 @@ func yieldNodeType(node *Node, typ html.NodeType, yield func(*Node) bool) bool {
 
 // -----------------------------------------------------------------------------
 
-// Collect retrieves all nodes from the NodeSet.
-func (p NodeSet) Collect() ([]*Node, error) {
+// _first returns the first node in the NodeSet.
+// It's required by XGo compiler.
+func (p NodeSet) XGo_first() (ret *Node, err error) {
 	if p.Err != nil {
-		return nil, p.Err
+		err = p.Err
+		return
 	}
-	return dql.Collect(p.Data), nil
+	return dql.First(p.Data)
 }
 
 // First returns the first node in the NodeSet.
@@ -434,6 +427,14 @@ func (p NodeSet) First() (*Node, error) {
 		return nil, p.Err
 	}
 	return dql.First(p.Data)
+}
+
+// Collect retrieves all nodes from the NodeSet.
+func (p NodeSet) Collect() ([]*Node, error) {
+	if p.Err != nil {
+		return nil, p.Err
+	}
+	return dql.Collect(p.Data), nil
 }
 
 // Value returns the data content of the first node in the NodeSet.
