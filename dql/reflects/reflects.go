@@ -159,14 +159,14 @@ func (p NodeSet) XGo_Elem(name string) NodeSet {
 	return NodeSet{
 		Data: func(yield func(Node) bool) {
 			p.Data(func(node Node) bool {
-				return yieldNode(node, name, yield)
+				return yieldElem(node, name, yield)
 			})
 		},
 	}
 }
 
-// yieldNode yields the child node with the specified name if it exists.
-func yieldNode(node Node, name string, yield func(Node) bool) bool {
+// yieldElem yields the child node with the specified name if it exists.
+func yieldElem(node Node, name string, yield func(Node) bool) bool {
 	if v := lookup(node.Children, name); isNode(v) {
 		return yield(Node{Name: name, Children: v})
 	}

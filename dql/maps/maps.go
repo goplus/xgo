@@ -27,7 +27,7 @@ import (
 // Node represents a map[string]any node.
 type Node struct {
 	Name     string
-	Children map[string]any
+	Children any // map[string]any or []any
 }
 
 // NodeSet represents a set of map[string]any nodes.
@@ -58,8 +58,15 @@ func Nodes(nodes ...Node) NodeSet {
 	}
 }
 
-// New creates a NodeSet containing a single node from the provided map.
-func New(doc map[string]any) NodeSet {
+// New creates a NodeSet containing a single node from the provided document.
+// The document should be of type map[string]any or []any.
+// If the document type is invalid, it panics.
+func New(doc any) NodeSet {
+	switch doc.(type) {
+	case map[string]any, []any:
+	default:
+		panic("dql/maps.New: invalid document type, should be map[string]any or []any")
+	}
 	return NodeSet{
 		Data: func(yield func(Node) bool) {
 			yield(Node{Name: "", Children: doc})
@@ -69,13 +76,14 @@ func New(doc map[string]any) NodeSet {
 
 // Source creates a NodeSet from various types of sources:
 // - map[string]any: creates a NodeSet containing the single provided node.
+// - []any: creates a NodeSet containing the single provided node.
 // - Node: creates a NodeSet containing the single provided node.
 // - iter.Seq[Node]: directly uses the provided sequence of nodes.
 // - NodeSet: returns the provided NodeSet as is.
 // If the source type is unsupported, it panics.
 func Source(r any) (ret NodeSet) {
 	switch v := r.(type) {
-	case map[string]any:
+	case map[string]any, []any:
 		return New(v)
 	case Node:
 		return Root(v)
@@ -140,15 +148,26 @@ func (p NodeSet) XGo_Elem(name string) NodeSet {
 	return NodeSet{
 		Data: func(yield func(Node) bool) {
 			p.Data(func(node Node) bool {
-				return yieldNode(node, name, yield)
+				return yieldElem(node, name, yield)
 			})
 		},
 	}
 }
 
-// yieldNode yields the child node with the specified name if it exists.
-func yieldNode(node Node, name string, yield func(Node) bool) bool {
-	if v, ok := node.Children[name].(map[string]any); ok {
+// yieldElem yields the child node with the specified name if it exists.
+func yieldElem(node Node, name string, yield func(Node) bool) bool {
+	if children, ok := node.Children.(map[string]any); ok {
+		if v, ok := children[name]; ok {
+			return yieldNode(name, v, yield)
+		}
+	}
+	return true
+}
+
+// yieldNode yields a node if the value is a map[string]any or []any.
+func yieldNode(name string, v any, yield func(Node) bool) bool {
+	switch v.(type) {
+	case map[string]any, []any:
 		return yield(Node{Name: name, Children: v})
 	}
 	return true
@@ -170,9 +189,16 @@ func (p NodeSet) XGo_Child() NodeSet {
 
 // rangeChildNodes yields all child nodes of the given node.
 func rangeChildNodes(node Node, yield func(Node) bool) bool {
-	for k, v := range node.Children {
-		if child, ok := v.(map[string]any); ok {
-			if !yield(Node{Name: k, Children: child}) {
+	switch children := node.Children.(type) {
+	case map[string]any:
+		for k, v := range children {
+			if !yieldNode(k, v, yield) {
+				return false
+			}
+		}
+	case []any:
+		for _, v := range children {
+			if !yieldNode("", v, yield) {
 				return false
 			}
 		}
@@ -207,12 +233,27 @@ func rangeAnyNodes(name string, node Node, yield func(Node) bool) bool {
 			return false
 		}
 	}
-	for k, v := range node.Children {
-		if child, ok := v.(map[string]any); ok {
-			if !rangeAnyNodes(name, Node{Name: k, Children: child}, yield) {
+	switch children := node.Children.(type) {
+	case map[string]any:
+		for k, v := range children {
+			if !yieldAnyNode(name, k, v, yield) {
 				return false
 			}
 		}
+	case []any:
+		for _, v := range children {
+			if !yieldAnyNode(name, "", v, yield) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+func yieldAnyNode(name, k string, v any, yield func(Node) bool) bool {
+	switch v.(type) {
+	case map[string]any, []any:
+		return rangeAnyNodes(name, Node{Name: k, Children: v}, yield)
 	}
 	return true
 }
@@ -272,8 +313,11 @@ func (p NodeSet) XGo_first() (Node, error) {
 func (p NodeSet) XGo_hasAttr(name string) bool {
 	node, err := p.XGo_first()
 	if err == nil {
-		_, ok := node.Children[name]
-		return ok
+		switch children := node.Children.(type) {
+		case map[string]any:
+			_, ok := children[name]
+			return ok
+		}
 	}
 	return false
 }
@@ -285,8 +329,11 @@ func (p NodeSet) XGo_hasAttr(name string) bool {
 func (p NodeSet) XGo_Attr(name string) (val any, err error) {
 	node, err := p.XGo_first()
 	if err == nil {
-		if v, ok := node.Children[name]; ok {
-			return v, nil
+		switch children := node.Children.(type) {
+		case map[string]any:
+			if v, ok := children[name]; ok {
+				return v, nil
+			}
 		}
 		err = dql.ErrNotFound
 	}
