@@ -527,6 +527,8 @@ func compileAnySelectorExpr(ctx *blockCtx, lhs int, v *ast.AnySelectorExpr) {
 	switch name[0] {
 	case '"':
 		name = unquote(name)
+	case '*':
+		name = ""
 	}
 	cb.MemberVal("XGo_Any", 0, v).Val(name).CallWith(1, lhs, 0, v)
 }
