@@ -228,6 +228,7 @@ func (*EnvExpr) exprNode() {}
 // Sel may not be a simple identifier. For example:
 //   - x.**.field
 //   - x.**."field-name"
+//   - x.**.*
 type AnySelectorExpr struct {
 	X      Expr      // expression
 	TokPos token.Pos // position of "**"

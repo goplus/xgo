@@ -521,6 +521,7 @@ func compileAnySelectorExpr(ctx *blockCtx, lhs int, v *ast.AnySelectorExpr) {
 	// DQL (DOM Query Language) rules:
 	// - selector.**.name     -> XGo_Any(name)   - descendants by name
 	// - selector.**."name"   -> XGo_Any(name)   - descendants by name
+	// - selector.**.*        -> XGo_Any("*")    - all descendants
 	cb, sel := ctx.cb, v.Sel
 	name := sel.Name
 	switch name[0] {

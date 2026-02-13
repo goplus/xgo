@@ -2582,6 +2582,9 @@ L:
 							case token.IDENT, token.STRING: // .**.name .**."name"
 								sel.Name = p.lit
 								p.next()
+							case token.MUL: // .**.*
+								sel.Name = "*"
+								p.next()
 							default:
 								p.errorExpected(p.pos, "identifier after '**.'", 2)
 								sel.Name = "_"

@@ -20,6 +20,36 @@ ast.FuncDecl:
                 ast.Ident:
                   Name: echo
               Args:
+                ast.CondExpr:
+                  X:
+                    ast.AnySelectorExpr:
+                      X:
+                        ast.Ident:
+                          Name: doc
+                      Sel:
+                        ast.Ident:
+                          Name: *
+                  Cond:
+                    ast.ParenExpr:
+                      X:
+                        ast.BinaryExpr:
+                          X:
+                            ast.EnvExpr:
+                              Name:
+                                ast.Ident:
+                                  Name: class
+                          Op: ==
+                          Y:
+                            ast.BasicLit:
+                              Kind: STRING
+                              Value: "red"
+        ast.ExprStmt:
+          X:
+            ast.CallExpr:
+              Fun:
+                ast.Ident:
+                  Name: echo
+              Args:
                 ast.SelectorExpr:
                   X:
                     ast.CondExpr:
