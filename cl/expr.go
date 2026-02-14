@@ -210,25 +210,6 @@ func compileMatrixLit(ctx *blockCtx, v *ast.MatrixLit) {
 		}
 	}
 }
-
-// remove tryFileLine for XGo_Env
-func tryFileLine(cb *gogen.CodeBuilder, ctx *blockCtx, name *ast.Ident) int {
-	if sig, ok := cb.Get(-1).Type.(*types.Signature); ok {
-		params := sig.Params()
-		if params.Len() == 2 {
-			pos := ctx.fset.Position(name.NamePos)
-			fileName := relFile(ctx.relBaseDir, pos.Filename)
-			tyPos := params.At(0).Type() // token.Position
-			cb.
-				Val(0).Val(fileName).   // Field index 0: Filename
-				Val(2).Val(pos.Line).   // Field index 2: Line
-				Val(3).Val(pos.Column). // Field index 3: Column
-				StructLit(tyPos, 6, true, name)
-			return 2
-		}
-	}
-	return 1
-}
 */
 
 func compileEnvExpr(ctx *blockCtx, v *ast.EnvExpr) {
@@ -237,8 +218,6 @@ func compileEnvExpr(ctx *blockCtx, v *ast.EnvExpr) {
 		if recv := classRecv(cb); recv != nil {
 			if xgoOp(cb, recv, "XGo_Env", "Gop_Env", v) == nil {
 				name := v.Name
-				// n := tryFileLine(cb, ctx, name)
-				// remove tryFileLine for XGo_Env
 				cb.Val(name.Name, name).CallWith(1, 0, 0, v)
 				return
 			}
@@ -343,12 +322,7 @@ func compileExpr(ctx *blockCtx, lhs int, expr ast.Expr, inFlags ...int) {
 		_, kind := compileIdent(ctx, v, flags)
 		if cmdNoArgs || kind == objXGoExecOrEnv {
 			cb := ctx.cb
-			// n := 1
 			if kind == objXGoExecOrEnv {
-				/* remove tryFileLine for XGo_Env
-				if (clIdentInStringLitEx & flags) != 0 { // XGo_Env
-					n = tryFileLine(cb, ctx, v)
-				} */
 				cb.Val(v.Name, v)
 			} else {
 				err := callCmdNoArgs(ctx, expr, false)
@@ -376,8 +350,6 @@ func compileExpr(ctx *blockCtx, lhs int, expr ast.Expr, inFlags ...int) {
 			callCmdNoArgs(ctx, expr, true)
 			return
 		}
-	case *ast.AnySelectorExpr:
-		compileAnySelectorExpr(ctx, lhs, v)
 	case *ast.BinaryExpr:
 		compileBinaryExpr(ctx, v)
 	case *ast.UnaryExpr:
@@ -417,7 +389,7 @@ func compileExpr(ctx *blockCtx, lhs int, expr ast.Expr, inFlags ...int) {
 	case *ast.ParenExpr:
 		compileExpr(ctx, lhs, v.X, inFlags...)
 	case *ast.ErrWrapExpr:
-		compileErrWrapExpr(ctx, v, 0)
+		compileErrWrapExpr(ctx, lhs, v, 0)
 	case *ast.FuncType:
 		ctx.cb.Typ(toFuncType(ctx, v, nil, nil), v)
 	case *ast.EnvExpr:
@@ -426,6 +398,10 @@ func compileExpr(ctx *blockCtx, lhs int, expr ast.Expr, inFlags ...int) {
 	compileMatrixLit(ctx, v) */
 	case *ast.DomainTextLit:
 		compileDomainTextLit(ctx, v)
+	case *ast.AnySelectorExpr:
+		compileAnySelectorExpr(ctx, lhs, v)
+	/* case *ast.CondExpr:
+	compileCondExpr(ctx, lhs, v) */
 	default:
 		panic(ctx.newCodeErrorf(v.Pos(), v.End(), "compileExpr failed: unknown - %T", v))
 	}
@@ -516,12 +492,18 @@ func compileSelectorExprLHS(ctx *blockCtx, v *ast.SelectorExpr) {
 	ctx.cb.MemberRef(v.Sel.Name, v)
 }
 
+/* TODO(xsw):
+func compileCondExpr(ctx *blockCtx, lhs int, v *ast.CondExpr) {
+	compileExpr(ctx, 0, v.X)
+}
+*/
+
 func compileAnySelectorExpr(ctx *blockCtx, lhs int, v *ast.AnySelectorExpr) {
 	compileExpr(ctx, 0, v.X)
 	// DQL (DOM Query Language) rules:
 	// - selector.**.name     -> XGo_Any(name)   - descendants by name
 	// - selector.**."name"   -> XGo_Any(name)   - descendants by name
-	// - selector.**.*        -> XGo_Any("*")    - all descendants
+	// - selector.**.*        -> XGo_Any("")     - all descendants
 	cb, sel := ctx.cb, v.Sel
 	name := sel.Name
 	switch name[0] {
@@ -776,10 +758,10 @@ func compileCallExpr(ctx *blockCtx, lhs int, v *ast.CallExpr, inFlags int) {
 			callExpr.Fun = fn.X
 			ewExpr := *fn
 			ewExpr.X = &callExpr
-			compileErrWrapExpr(ctx, &ewExpr, inFlags)
+			compileErrWrapExpr(ctx, 0, &ewExpr, inFlags)
 			return
 		}
-		compileErrWrapExpr(ctx, fn, 0)
+		compileErrWrapExpr(ctx, lhs, fn, 0)
 	default:
 		compileExpr(ctx, 0, fn, clInCallExpr)
 	}
@@ -1060,7 +1042,7 @@ func compileCallArgs(ctx *blockCtx, lhs int, pfn *gogen.Element, fn *fnType, v *
 		case *ast.NumberUnitLit:
 			compileNumberUnitLit(ctx, expr, t)
 		default:
-			compileExpr(ctx, 0, arg)
+			compileExpr(ctx, 1, arg)
 			if sigParamLen(t) == 0 {
 				if nonClosure(cb.Get(-1).Type) {
 					cb.ConvertToClosure()
@@ -1877,7 +1859,7 @@ var (
 	tyError = types.Universe.Lookup("error").Type()
 )
 
-func compileErrWrapExpr(ctx *blockCtx, v *ast.ErrWrapExpr, inFlags int) {
+func compileErrWrapExpr(ctx *blockCtx, lhs int, v *ast.ErrWrapExpr, inFlags int) {
 	const (
 		nameErr = "_xgo_err"
 		nameRet = "_xgo_ret"
@@ -1892,7 +1874,7 @@ func compileErrWrapExpr(ctx *blockCtx, v *ast.ErrWrapExpr, inFlags int) {
 	case *ast.Ident, *ast.SelectorExpr:
 		expr = &ast.CallExpr{Fun: expr, NoParenEnd: expr.End()}
 	}
-	compileExpr(ctx, 0, expr, inFlags)
+	compileExpr(ctx, lhs+1, expr, inFlags)
 	x := cb.InternalStack().Pop()
 	n := 0
 	results, ok := x.Type.(*types.Tuple)

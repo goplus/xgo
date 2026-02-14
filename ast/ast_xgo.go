@@ -356,7 +356,7 @@ func (*ElemEllipsis) exprNode() {}
 
 // -----------------------------------------------------------------------------
 
-// ErrWrapExpr represents `expr!`, `expr?` or `expr?: defaultValue`.
+// ErrWrapExpr represents `expr!`, `expr?` or `expr?:defaultValue`.
 type ErrWrapExpr struct {
 	X       Expr
 	Tok     token.Token // ! or ?
