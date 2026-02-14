@@ -267,7 +267,7 @@ func compileSendStmt(ctx *blockCtx, expr *ast.SendStmt) {
 	ch, vals := expr.Chan, expr.Values
 	stk := cb.InternalStack()
 	if isAppendable(ch) { // a <- v1, v2, v3 (issue #2107)
-		compileExpr(ctx, 0, ch)
+		compileExpr(ctx, 1, ch)
 		a := stk.Get(-1)
 		t := a.Type.Underlying()
 		if _, ok := t.(*types.Slice); ok { // a = append(a, v1, v2, v3)
@@ -276,7 +276,7 @@ func compileSendStmt(ctx *blockCtx, expr *ast.SendStmt) {
 			cb.Val(ctx.pkg.Builtin().Ref("append"))
 			stk.Push(a)
 			for _, v := range vals {
-				compileExpr(ctx, 0, v)
+				compileExpr(ctx, 1, v)
 			}
 			flags := gogen.InstrFlags(0)
 			if expr.Ellipsis != 0 { // a = append(a, b...)
@@ -287,13 +287,13 @@ func compileSendStmt(ctx *blockCtx, expr *ast.SendStmt) {
 		}
 		goto normal
 	}
-	compileExpr(ctx, 0, ch)
+	compileExpr(ctx, 1, ch)
 
 normal:
 	if len(vals) != 1 || expr.Ellipsis != 0 {
 		panic(ctx.newCodeError(vals[0].Pos(), vals[0].End(), "can't send multiple values to a channel"))
 	}
-	compileExpr(ctx, 0, vals[0])
+	compileExpr(ctx, 1, vals[0])
 	ctx.cb.Send()
 }
 
@@ -445,7 +445,7 @@ func compileRangeStmt(ctx *blockCtx, v *ast.RangeStmt) {
 			n++
 		}
 	}
-	compileExpr(ctx, 0, v.X)
+	compileExpr(ctx, 1, v.X)
 	pos := v.TokPos
 	if pos == 0 {
 		pos = v.For
@@ -495,7 +495,7 @@ func compileForPhraseStmt(ctx *blockCtx, v *ast.ForPhraseStmt) {
 		defineNames = append(defineNames, v.Value)
 	}
 	cb.ForRange(names...)
-	compileExpr(ctx, 0, v.X)
+	compileExpr(ctx, 1, v.X)
 	cb.RangeAssignThen(v.TokPos)
 	if len(defineNames) > 0 {
 		defNames(ctx, defineNames, cb.Scope())
@@ -505,7 +505,7 @@ func compileForPhraseStmt(ctx *blockCtx, v *ast.ForPhraseStmt) {
 	}
 	if v.Cond != nil {
 		cb.If()
-		compileExpr(ctx, 0, v.Cond)
+		compileExpr(ctx, 1, v.Cond)
 		cb.Then()
 		compileStmts(ctx, v.Body.List)
 		cb.SetComments(comments, once)
@@ -643,7 +643,7 @@ func compileForStmt(ctx *blockCtx, v *ast.ForStmt) {
 		compileStmt(ctx, v.Init)
 	}
 	if v.Cond != nil {
-		compileExpr(ctx, 0, v.Cond)
+		compileExpr(ctx, 1, v.Cond)
 	} else {
 		cb.None()
 	}
@@ -680,7 +680,7 @@ func compileIfStmt(ctx *blockCtx, v *ast.IfStmt) {
 	if v.Init != nil {
 		compileStmt(ctx, v.Init)
 	}
-	compileExpr(ctx, 0, v.Cond)
+	compileExpr(ctx, 1, v.Cond)
 	if rec := ctx.recorder(); rec != nil {
 		rec.Scope(v, cb.Scope())
 	}
@@ -745,7 +745,7 @@ func compileTypeSwitchStmt(ctx *blockCtx, v *ast.TypeSwitchStmt) {
 	if v.Init != nil {
 		compileStmt(ctx, v.Init)
 	}
-	compileExpr(ctx, 0, ta.X)
+	compileExpr(ctx, 1, ta.X)
 	cb.TypeAssertThen()
 	seen := make(map[types.Type]ast.Expr)
 	var firstDefault ast.Stmt
@@ -756,7 +756,7 @@ func compileTypeSwitchStmt(ctx *blockCtx, v *ast.TypeSwitchStmt) {
 		}
 		cb.TypeCase(c)
 		for _, citem := range c.List {
-			compileExpr(ctx, 0, citem)
+			compileExpr(ctx, 1, citem)
 			T := cb.Get(-1).Type
 			if tt, ok := T.(*gogen.TypeType); ok {
 				T = tt.Type()
@@ -829,7 +829,7 @@ func compileSwitchStmt(ctx *blockCtx, v *ast.SwitchStmt) {
 		compileStmt(ctx, v.Init)
 	}
 	if v.Tag != nil { // switch tag {....}
-		compileExpr(ctx, 0, v.Tag)
+		compileExpr(ctx, 1, v.Tag)
 	} else {
 		cb.None() // switch {...}
 	}
@@ -846,7 +846,7 @@ func compileSwitchStmt(ctx *blockCtx, v *ast.SwitchStmt) {
 		}
 		cb.Case(c)
 		for _, citem := range c.List {
-			compileExpr(ctx, 0, citem)
+			compileExpr(ctx, 1, citem)
 			v := cb.Get(-1)
 			if val := goVal(v.CVal); val != nil {
 				// look for duplicate types for a given value
