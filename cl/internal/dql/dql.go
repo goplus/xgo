@@ -31,6 +31,10 @@ func (p NodeSet) XGo_Any(name string) NodeSet {
 	return NodeSet{}
 }
 
+func (p NodeSet) XGo_Select(name string) NodeSet {
+	return NodeSet{}
+}
+
 // XGo_Child returns a NodeSet containing all child nodes of the nodes in the NodeSet.
 func (p NodeSet) XGo_Child() NodeSet {
 	return NodeSet{}

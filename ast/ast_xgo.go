@@ -250,10 +250,14 @@ func (*AnySelectorExpr) exprNode() {}
 // -----------------------------------------------------------------------------
 
 // A CondExpr node represents a conditional expression: `expr @ cond`.
+//   - ns@(condExpr)
+//   - ns@fn(args)
+//   - ns@"elem-name" (Cond will be a *Ident with name "elem-name", not a *BasicLit)
+//   - ns@name
 type CondExpr struct {
 	X     Expr      // expression
 	OpPos token.Pos // position of "@"
-	Cond  Expr      // condition expression
+	Cond  Expr      // condition expression (can be *CallExpr, *ParensExpr or *Ident)
 }
 
 // Pos - position of first character belonging to the node.

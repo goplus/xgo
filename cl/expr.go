@@ -508,8 +508,18 @@ func compileCondExpr(ctx *blockCtx, v *ast.CondExpr) {
 		nameErr = "_xgo_err"
 	)
 	xExpr := v.X
+	condExpr := v.Cond
+	cb := ctx.cb
 	compileExpr(ctx, 1, xExpr)
-	cb, pkg := ctx.cb, ctx.pkg
+	if id, ok := condExpr.(*ast.Ident); ok {
+		name := id.Name
+		if strings.HasPrefix(name, `"`) { // @"elem-name"
+			name = unquote(name)
+		}
+		cb.MemberVal("XGo_Select", 0, v).Val(name, id).CallWith(1, 1, 0, v)
+		return
+	}
+	pkg := ctx.pkg
 	x := cb.Get(-1) // x.Type is NodeSet
 	nsType := x.Type
 	pkgTypes := pkg.Types
@@ -518,7 +528,6 @@ func compileCondExpr(ctx *blockCtx, v *ast.CondExpr) {
 	yieldParams := types.NewTuple(varSelf)
 	yieldRets := types.NewTuple(types.NewParam(0, nil, "", types.Typ[types.Bool]))
 	sigYield := types.NewSignatureType(nil, nil, nil, yieldParams, yieldRets, false)
-	condExpr := v.Cond
 	cb.NewClosureWith(sigYield).BodyStart(pkg, condExpr).
 		If(condExpr)
 	compileExpr(ctx, 1, condExpr)
