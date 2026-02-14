@@ -1,4 +1,4 @@
 import "github.com/goplus/xgo/cl/internal/dql"
 
 doc := dql.new
-echo doc.*@users@"users".$name
+echo doc.*@users@`users`.$name

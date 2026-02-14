@@ -257,7 +257,7 @@ func (*AnySelectorExpr) exprNode() {}
 type CondExpr struct {
 	X     Expr      // expression
 	OpPos token.Pos // position of "@"
-	Cond  Expr      // condition expression (can be *CallExpr, *ParensExpr or *Ident)
+	Cond  Expr      // condition expression (can be *CallExpr, *ParenExpr or *Ident)
 }
 
 // Pos - position of first character belonging to the node.
