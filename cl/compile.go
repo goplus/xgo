@@ -1665,7 +1665,7 @@ func loadConsts(ctx *blockCtx, cdecl *gogen.ConstDefs, v *ast.ValueSpec, iotav i
 	}
 	fn := func(cb *gogen.CodeBuilder) int {
 		for _, val := range v.Values {
-			compileExpr(ctx, 0, val)
+			compileExpr(ctx, 1, val)
 		}
 		return len(v.Values)
 	}
@@ -1720,7 +1720,7 @@ func makeInitExpr(ctx *blockCtx, v *ast.ValueSpec, typ types.Type, names []strin
 				case *ast.CompositeLit:
 					compileCompositeLit(ctx, e, typ, false)
 				default:
-					compileExpr(ctx, 0, val)
+					compileExpr(ctx, 1, val)
 				}
 			}
 		}
