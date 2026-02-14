@@ -105,7 +105,7 @@ func compileIdent(ctx *blockCtx, ident *ast.Ident, flags int) (pkg gogen.PkgRef,
 		if recv = classRecv(cb); recv != nil {
 			cb.Val(recv)
 			chkFlag := flags
-			if chkFlag&clIdentSelectorExpr != 0 { // TODO: remove this condition
+			if chkFlag&clIdentSelectorExpr != 0 { // TODO(xsw): remove this condition
 				chkFlag = clIdentCanAutoCall
 			}
 			if compileMember(ctx, 0, ident, name, chkFlag) == nil { // class member object

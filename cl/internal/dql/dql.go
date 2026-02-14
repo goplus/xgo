@@ -16,7 +16,7 @@ func New() NodeSet {
 	return NodeSet{}
 }
 
-// NodeSet(seq func(func(Node) bool))
+// NodeSet(seq func(func(*Node) bool))
 func NodeSet_Cast(func(yield func(*Node) bool)) NodeSet {
 	return NodeSet{}
 }

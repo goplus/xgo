@@ -722,6 +722,12 @@ func main() {
 `, "Game.tgmx", "Kai.tspx")
 }
 
+func TestSpxErrorEnv(t *testing.T) {
+	gopSpxErrorTestEx(t, `Game.t2gmx:2:9: undefined: PATH`, `
+echo "${PATH}"
+`, ``, "Game.t2gmx", "Kai.t2spx")
+}
+
 func TestSpxErrorSel(t *testing.T) {
 	gopSpxErrorTestEx(t, `Kai.tspx:2:9: this.pos undefined (type *Kai has no field or method pos)`, `
 println "hi"
