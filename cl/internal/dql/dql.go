@@ -53,3 +53,30 @@ func (p NodeSet) XGo_Attr__0(name string) int {
 func (p NodeSet) XGo_Attr__1(name string) (int, error) {
 	return 0, nil
 }
+
+type NodeSet2 struct {
+}
+
+func New2() NodeSet2 {
+	return NodeSet2{}
+}
+
+func NodeSet2_Cast(func(yield func(*Node) bool)) NodeSet2 {
+	return NodeSet2{}
+}
+
+func (p NodeSet2) XGo_first() *Node {
+	return nil
+}
+
+func (p NodeSet2) XGo_Enum() iter.Seq[NodeSet2] {
+	return nil
+}
+
+func (p NodeSet2) XGo_Elem(name string) NodeSet2 {
+	return NodeSet2{}
+}
+
+func (p NodeSet2) XGo_Attr(name string) int {
+	return 0
+}

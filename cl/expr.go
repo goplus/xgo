@@ -524,7 +524,7 @@ func compileCondExpr(ctx *blockCtx, v *ast.CondExpr) {
 	compileExpr(ctx, 1, condExpr)
 	cb.Then(condExpr).
 		If().DefineVarStart(0, nameVal, nameErr).
-		Val(varSelf).MemberVal("XGo_first", 0).CallWith(0, 2, 0)
+		Val(varSelf).MemberVal("XGo_first", 0, v).CallWith(0, 2, 0, v)
 	firstRet := cb.Get(-1)
 	nodeType := firstRet.Type.(*types.Tuple).At(0).Type()
 	varYield := newNodeSeqParam(pkgTypes, nodeType)
