@@ -681,6 +681,12 @@ b := *a
 
 func TestErrMember(t *testing.T) {
 	codeErrorTest(t,
+		`bar.xgo:3:6: a.$x undefined (type string has no field or method XGo_Attr)`,
+		`
+a := "Hello"
+b := a.$x
+`)
+	codeErrorTest(t,
 		`bar.xgo:3:6: a.x undefined (type string has no field or method x)`,
 		`
 a := "Hello"

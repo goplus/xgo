@@ -2,13 +2,9 @@ package dql
 
 import "iter"
 
-type ValueSet struct {
-}
-
-// XGo_0 returns the first value in the ValueSet, or ErrNotFound if the set is empty.
-func (p ValueSet) XGo_0() (val string, err error) {
-	return
-}
+const (
+	XGoPackage = true
+)
 
 type Node struct {
 }
@@ -20,8 +16,13 @@ func New() NodeSet {
 	return NodeSet{}
 }
 
+// NodeSet(seq func(func(*Node) bool))
+func NodeSet_Cast(func(yield func(*Node) bool)) NodeSet {
+	return NodeSet{}
+}
+
 // XGo_Enum returns an iterator over the nodes in the NodeSet.
-func (p NodeSet) XGo_Enum() iter.Seq[*Node] {
+func (p NodeSet) XGo_Enum() iter.Seq[NodeSet] {
 	return nil
 }
 
@@ -35,14 +36,20 @@ func (p NodeSet) XGo_Child() NodeSet {
 	return NodeSet{}
 }
 
+// XGo_first returns the first node in the NodeSet, or an error if the NodeSet is empty.
+func (p NodeSet) XGo_first() (*Node, error) {
+	return nil, nil
+}
+
 // XGo_Elem returns a NodeSet containing the child nodes with the specified name.
 func (p NodeSet) XGo_Elem(name string) NodeSet {
 	return NodeSet{}
 }
 
-// XGo_Attr returns a ValueSet containing the values of the specified attribute
-// for each node in the NodeSet. If a node does not have the specified attribute,
-// the Value will contain ErrNotFound.
-func (p NodeSet) XGo_Attr(name string) ValueSet {
-	return ValueSet{}
+func (p NodeSet) XGo_Attr__0(name string) int {
+	return 0
+}
+
+func (p NodeSet) XGo_Attr__1(name string) (int, error) {
+	return 0, nil
 }
