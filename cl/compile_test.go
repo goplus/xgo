@@ -31,9 +31,7 @@ const (
 )
 
 var (
-	gblConfLine  *cl.Config
-	gotypesalias bool
-	go1point     int
+	gblConfLine *cl.Config
 )
 
 func init() {
@@ -47,8 +45,6 @@ func init() {
 		NoFileLine:    false,
 		NoAutoGenMain: true,
 	}
-	gotypesalias = cltest.EnableTypesalias()
-	go1point = cltest.Go1Point()
 }
 
 func gopClNamedTest(t *testing.T, name string, gopcode, expected string) {
@@ -1959,42 +1955,6 @@ func main() {
 }
 
 func TestStructType(t *testing.T) {
-	var expect string
-	if gotypesalias {
-		expect = `package main
-
-type bar = foo
-type foo struct {
-	p *bar
-	A int
-	B string ` + "`tag1:123`" + `
-}
-
-func main() {
-	type a struct {
-		p *a
-	}
-	type b = a
-}
-`
-	} else {
-		expect = `package main
-
-type bar = foo
-type foo struct {
-	p *foo
-	A int
-	B string ` + "`tag1:123`" + `
-}
-
-func main() {
-	type a struct {
-		p *a
-	}
-	type b = a
-}
-`
-	}
 	gopClTest(t, `
 type bar = foo
 
@@ -2010,7 +1970,22 @@ func main() {
 	}
 	type b = a
 }
-`, expect)
+`, `package main
+
+type bar = foo
+type foo struct {
+	p *bar
+	A int
+	B string `+"`tag1:123`"+`
+}
+
+func main() {
+	type a struct {
+		p *a
+	}
+	type b = a
+}
+`)
 }
 
 func TestDeferGo(t *testing.T) {

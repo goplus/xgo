@@ -32,7 +32,6 @@ import (
 	"github.com/goplus/mod/modfile"
 	"github.com/goplus/xgo/ast"
 	"github.com/goplus/xgo/ast/fromgo"
-	"github.com/goplus/xgo/cl/internal/typesalias"
 	"github.com/goplus/xgo/token"
 	"github.com/qiniu/x/errors"
 )
@@ -361,8 +360,6 @@ type pkgCtx struct {
 
 	goxMainClass string
 	goxMain      int32 // normal gox files with main func
-
-	featTypesAlias bool // support types alias
 }
 
 type pkgImp struct {
@@ -390,10 +387,9 @@ type blockCtx struct {
 	fileScope *types.Scope // available when isXGoFile
 	rec       *goxRecorder
 
-	fileLine   bool
-	isClass    bool
-	isXgoFile  bool // is XGo file or not
-	typesAlias bool // support types alias
+	fileLine  bool
+	isClass   bool
+	isXgoFile bool // is XGo file or not
 }
 
 func (p *blockCtx) cstr() gogen.Ref {
@@ -592,18 +588,19 @@ func NewPackage(pkgPath string, pkg *ast.Package, conf *Config) (p *gogen.Packag
 		generics:   make(map[string]bool),
 	}
 	confGox := &gogen.Config{
-		Types:           conf.Types,
-		Fset:            fset,
-		Importer:        conf.Importer,
-		LoadNamed:       ctx.loadNamed,
-		HandleErr:       ctx.handleErr,
-		NodeInterpreter: interp,
-		NewBuiltin:      ctx.newBuiltinDefault,
-		DefaultGoFile:   defaultGoFile,
-		NoSkipConstant:  conf.NoSkipConstant,
-		PkgPathOsx:      osxPkgPath,
-		DbgPositioner:   interp,
-		CanImplicitCast: implicitCast,
+		Types:            conf.Types,
+		Fset:             fset,
+		Importer:         conf.Importer,
+		LoadNamed:        ctx.loadNamed,
+		HandleErr:        ctx.handleErr,
+		NodeInterpreter:  interp,
+		NewBuiltin:       ctx.newBuiltinDefault,
+		DefaultGoFile:    defaultGoFile,
+		NoSkipConstant:   conf.NoSkipConstant,
+		PkgPathOsx:       osxPkgPath,
+		DbgPositioner:    interp,
+		CanImplicitCast:  implicitCast,
+		EnableTypesalias: true,
 	}
 	var rec *goxRecorder
 	if conf.Recorder != nil {
@@ -656,7 +653,7 @@ func NewPackage(pkgPath string, pkg *ast.Package, conf *Config) (p *gogen.Packag
 		ctx := &blockCtx{
 			pkg: p, pkgCtx: ctx, cb: p.CB(), relBaseDir: relBaseDir, fileScope: fileScope,
 			fileLine: fileLine, isClass: f.IsClass, rec: rec, imports: make(map[string]pkgImp),
-			isXgoFile: true, typesAlias: ctx.featTypesAlias,
+			isXgoFile: true,
 		}
 		if rec := ctx.rec; rec != nil {
 			rec.Scope(f.File, fileScope)
@@ -677,7 +674,7 @@ func NewPackage(pkgPath string, pkg *ast.Package, conf *Config) (p *gogen.Packag
 		gofiles = append(gofiles, f)
 		ctx := &blockCtx{
 			pkg: p, pkgCtx: ctx, cb: p.CB(), relBaseDir: relBaseDir,
-			imports: make(map[string]pkgImp), typesAlias: ctx.featTypesAlias,
+			imports: make(map[string]pkgImp),
 		}
 		preloadFile(p, ctx, f, skippingGoFile, false)
 	}
@@ -1404,29 +1401,24 @@ func newType(pkg *types.Package, pos token.Pos, name string) *types.Named {
 }
 
 func aliasType(ctx *blockCtx, pkg *types.Package, pos token.Pos, name string, t *ast.TypeSpec) {
-	if ctx.typesAlias {
-		var typeParams []*types.TypeParam
-		if t.TypeParams != nil {
-			typeParams = toTypeParams(ctx, t.TypeParams)
-			ctx.tlookup = &typeParamLookup{typeParams}
-			defer func() {
-				ctx.tlookup = nil
-			}()
-			org := ctx.inInst
-			ctx.inInst = 0
-			defer func() {
-				ctx.inInst = org
-			}()
-		}
-		o := typesalias.NewAlias(types.NewTypeName(pos, pkg, name, nil), toType(ctx, t.Type))
-		if typeParams != nil {
-			typesalias.SetTypeParams(o, typeParams)
-		}
-		pkg.Scope().Insert(o.Obj())
-	} else {
-		o := types.NewTypeName(pos, pkg, name, toType(ctx, t.Type))
-		pkg.Scope().Insert(o)
+	var typeParams []*types.TypeParam
+	if t.TypeParams != nil {
+		typeParams = toTypeParams(ctx, t.TypeParams)
+		ctx.tlookup = &typeParamLookup{typeParams}
+		defer func() {
+			ctx.tlookup = nil
+		}()
+		org := ctx.inInst
+		ctx.inInst = 0
+		defer func() {
+			ctx.inInst = org
+		}()
 	}
+	o := types.NewAlias(types.NewTypeName(pos, pkg, name, nil), toType(ctx, t.Type))
+	if typeParams != nil {
+		o.SetTypeParams(typeParams)
+	}
+	pkg.Scope().Insert(o.Obj())
 }
 
 func loadFunc(ctx *blockCtx, recv *types.Var, name string, d *ast.FuncDecl, genBody bool) {
