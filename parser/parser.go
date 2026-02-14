@@ -2634,15 +2634,22 @@ L:
 			ce := &ast.CondExpr{X: x, OpPos: p.pos}
 			p.next()
 			switch p.tok {
-			case token.IDENT:
-				fun := p.parseIdent()
-				ce.Cond = p.parseCallOrConversion(fun, false) // @fun(...)
 			case token.LPAREN:
 				cond, kind := p.parseOperand(0) // @(cond)
 				if kind != exprNormal {
 					p.error(cond.Pos(), "invalid condition expression")
 				}
 				ce.Cond = p.checkExpr(cond)
+			case token.IDENT:
+				fun := p.parseIdent()
+				if p.tok == token.LPAREN {
+					ce.Cond = p.parseCallOrConversion(fun, false) // @fun(...)
+				} else {
+					ce.Cond = fun // @name
+				}
+			case token.STRING: // @"elem-name"
+				ce.Cond = &ast.Ident{NamePos: p.pos, Name: p.lit}
+				p.next()
 			default:
 				pos := p.pos
 				p.errorExpected(pos, "condition expression", 2)

@@ -508,8 +508,19 @@ func compileCondExpr(ctx *blockCtx, v *ast.CondExpr) {
 		nameErr = "_xgo_err"
 	)
 	xExpr := v.X
+	condExpr := v.Cond
+	cb := ctx.cb
 	compileExpr(ctx, 1, xExpr)
-	cb, pkg := ctx.cb, ctx.pkg
+	if id, ok := condExpr.(*ast.Ident); ok {
+		name := id.Name
+		switch name[0] {
+		case '"', '`': // @"elem-name"
+			name = unquote(name)
+		}
+		cb.MemberVal("XGo_Select", 0, v).Val(name, id).CallWith(1, 1, 0, v)
+		return
+	}
+	pkg := ctx.pkg
 	x := cb.Get(-1) // x.Type is NodeSet
 	nsType := x.Type
 	pkgTypes := pkg.Types
@@ -518,13 +529,12 @@ func compileCondExpr(ctx *blockCtx, v *ast.CondExpr) {
 	yieldParams := types.NewTuple(varSelf)
 	yieldRets := types.NewTuple(types.NewParam(0, nil, "", types.Typ[types.Bool]))
 	sigYield := types.NewSignatureType(nil, nil, nil, yieldParams, yieldRets, false)
-	condExpr := v.Cond
 	cb.NewClosureWith(sigYield).BodyStart(pkg, condExpr).
 		If(condExpr)
 	compileExpr(ctx, 1, condExpr)
 	cb.Then(condExpr).
 		If().DefineVarStart(0, nameVal, nameErr).
-		Val(varSelf).MemberVal("XGo_first", 0).CallWith(0, 2, 0)
+		Val(varSelf).MemberVal("XGo_first", 0, v).CallWith(0, 2, 0, v)
 	firstRet := cb.Get(-1)
 	nodeType := firstRet.Type.(*types.Tuple).At(0).Type()
 	varYield := newNodeSeqParam(pkgTypes, nodeType)
@@ -556,13 +566,13 @@ func newNodeSeqParam(pkgTypes *types.Package, nodeType types.Type) *types.Var {
 func compileAnySelectorExpr(ctx *blockCtx, lhs int, v *ast.AnySelectorExpr) {
 	compileExpr(ctx, 0, v.X)
 	// DQL (DOM Query Language) rules:
-	// - selector.**.name     -> XGo_Any(name)   - descendants by name
-	// - selector.**."name"   -> XGo_Any(name)   - descendants by name
-	// - selector.**.*        -> XGo_Any("")     - all descendants
+	// - selector.**.name         -> XGo_Any("name")      - descendants by name
+	// - selector.**."elem-name"  -> XGo_Any("elem-name") - descendants by name
+	// - selector.**.*            -> XGo_Any("")          - all descendants
 	cb, sel := ctx.cb, v.Sel
 	name := sel.Name
 	switch name[0] {
-	case '"':
+	case '"', '`': // ."elem-name"
 		name = unquote(name)
 	case '*':
 		name = ""
@@ -601,7 +611,7 @@ func compileSelectorExpr(ctx *blockCtx, lhs int, v *ast.SelectorExpr, flags int)
 		if err := compileAttr(cb, lhs, name[1:], v); err != nil {
 			panic(err) // throw error
 		}
-	case '"':
+	case '"', '`':
 		name = unquote(name)
 		fallthrough
 	default:
@@ -617,7 +627,8 @@ func compileSelectorExpr(ctx *blockCtx, lhs int, v *ast.SelectorExpr, flags int)
 func compileAttr(cb *gogen.CodeBuilder, lhs int, name string, v ast.Node) error {
 	_, e := cb.Member("XGo_Attr", 1, gogen.MemberFlagVal, v)
 	if e == nil {
-		if strings.HasPrefix(name, `"`) {
+		switch name[0] {
+		case '"', '`': // @"attr-name"
 			name = unquote(name)
 		}
 		cb.Val(name).CallWith(1, lhs, 0, v)

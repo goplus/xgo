@@ -679,6 +679,17 @@ b := *a
 `)
 }
 
+func TestErrCondExpr(t *testing.T) {
+	codeErrorTest(t,
+		`bar.xgo:5:6: assignment mismatch: 2 variables but self.XGo_first returns 1 values
+don't call End(), please use EndInit() instead`, `
+import "github.com/goplus/xgo/cl/internal/dql"
+
+doc := dql.new2
+echo doc.users@($age < 18).$name
+`)
+}
+
 func TestErrMember(t *testing.T) {
 	codeErrorTest(t,
 		`bar.xgo:3:6: a.$x undefined (type string has no field or method XGo_Attr)`,
