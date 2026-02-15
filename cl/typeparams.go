@@ -20,7 +20,6 @@ import (
 	"go/types"
 
 	"github.com/goplus/xgo/ast"
-	"github.com/goplus/xgo/cl/internal/typesalias"
 	"github.com/goplus/xgo/token"
 )
 
@@ -160,8 +159,8 @@ retry:
 	switch t := typ.(type) {
 	case *types.Named:
 		typ = getUnderlying(ctx, t)
-	case *typesalias.Alias:
-		typ = typesalias.Unalias(t)
+	case *types.Alias:
+		typ = types.Unalias(t)
 		goto retry
 	}
 	named.SetUnderlying(typ)
