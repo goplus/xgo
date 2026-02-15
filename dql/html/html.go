@@ -22,7 +22,7 @@ import (
 	"iter"
 
 	"github.com/goplus/xgo/dql"
-	"github.com/goplus/xgo/dql/stream"
+	"github.com/qiniu/x/stream"
 	"golang.org/x/net/html"
 )
 
@@ -438,7 +438,13 @@ func (p NodeSet) Collect() ([]*Node, error) {
 }
 
 // Value returns the data content of the first node in the NodeSet.
-func (p NodeSet) Value() (val string, err error) {
+func (p NodeSet) Value__0() string {
+	val, _ := p.Value__1()
+	return val
+}
+
+// Value returns the data content of the first node in the NodeSet.
+func (p NodeSet) Value__1() (val string, err error) {
 	node, err := p.First()
 	if err == nil {
 		return node.Data, nil
@@ -464,7 +470,16 @@ func (p NodeSet) HasAttr(name string) bool {
 // NodeSet. It only retrieves the attribute from the first node.
 //   - $name
 //   - $“attr-name”
-func (p NodeSet) XGo_Attr(name string) (val string, err error) {
+func (p NodeSet) XGo_Attr__0(name string) string {
+	val, _ := p.XGo_Attr__1(name)
+	return val
+}
+
+// XGo_Attr returns the value of the specified attribute from the first node in the
+// NodeSet. It only retrieves the attribute from the first node.
+//   - $name
+//   - $“attr-name”
+func (p NodeSet) XGo_Attr__1(name string) (val string, err error) {
 	node, err := p.First()
 	if err == nil {
 		for _, attr := range node.Attr {
@@ -479,7 +494,14 @@ func (p NodeSet) XGo_Attr(name string) (val string, err error) {
 
 // Text retrieves the text content of the first child text node.
 // It only retrieves from the first node in the NodeSet.
-func (p NodeSet) Text() (val string, err error) {
+func (p NodeSet) Text__0() string {
+	val, _ := p.valByNodeType(html.TextNode)
+	return val
+}
+
+// Text retrieves the text content of the first child text node.
+// It only retrieves from the first node in the NodeSet.
+func (p NodeSet) Text__1() (val string, err error) {
 	return p.valByNodeType(html.TextNode)
 }
 
@@ -501,7 +523,7 @@ func (p NodeSet) valByNodeType(typ html.NodeType) (val string, err error) {
 // Int retrieves the integer value from the text content of the first child
 // text node. It only retrieves from the first node in the NodeSet.
 func (p NodeSet) Int() (int, error) {
-	text, err := p.Text()
+	text, err := p.Text__1()
 	if err != nil {
 		return 0, err
 	}

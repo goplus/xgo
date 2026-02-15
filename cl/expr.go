@@ -1406,7 +1406,8 @@ func compileStringLitEx(ctx *blockCtx, cb *gogen.CodeBuilder, lit *ast.BasicLit)
 }
 
 const (
-	tplPkgPath = "github.com/goplus/xgo/tpl"
+	tplPkgPath        = "github.com/goplus/xgo/tpl"
+	encodingPkgPrefix = "github.com/goplus/xgo/encoding/"
 )
 
 // A DomainTextLit node represents a domain-specific text literal.
@@ -1437,7 +1438,7 @@ func compileDomainTextLit(ctx *blockCtx, v *ast.DomainTextLit) {
 		if name == "tpl" {
 			path = tplPkgPath
 		} else {
-			path = tplPkgPath + "/encoding/" + name
+			path = encodingPkgPrefix + name
 		}
 		imp = ctx.pkg.Import(path)
 		/* TODO(xsw):

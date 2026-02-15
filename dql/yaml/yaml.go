@@ -23,7 +23,7 @@ import (
 
 	"github.com/goccy/go-yaml"
 	"github.com/goplus/xgo/dql/maps"
-	"github.com/goplus/xgo/dql/stream"
+	"github.com/qiniu/x/stream"
 )
 
 // -----------------------------------------------------------------------------
