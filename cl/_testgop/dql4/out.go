@@ -2,15 +2,15 @@ package main
 
 import (
 	"fmt"
-	"github.com/goplus/xgo/dql/xml"
-	xml1 "github.com/goplus/xgo/encoding/xml"
+	xml1 "github.com/goplus/xgo/dql/xml"
+	"github.com/goplus/xgo/encoding/xml"
 	"github.com/qiniu/x/errors"
 )
 
 func main() {
-	doc := func() (_xgo_ret *xml.Node) {
+	doc := func() (_xgo_ret *xml.Object) {
 		var _xgo_err error
-		_xgo_ret, _xgo_err = xml1.New(`<doc><animals>
+		_xgo_ret, _xgo_err = xml.New(`<doc><animals>
   <animal class="gopher">Line 1</animal>
   <animal class="armadillo">Line 2</animal>
   <animal class="zebra">Line 3</animal>
@@ -27,8 +27,8 @@ func main() {
 		}
 		return
 	}()
-	fmt.Println(xml.NodeSet_Cast(func(_xgo_yield func(*xml.Node) bool) {
-		doc.XGo_Elem("animals").XGo_Child().XGo_Enum()(func(self xml.NodeSet) bool {
+	fmt.Println(xml1.NodeSet_Cast(func(_xgo_yield func(*xml1.Node) bool) {
+		doc.XGo_Elem("animals").XGo_Child().XGo_Enum()(func(self xml1.NodeSet) bool {
 			if self.XGo_Attr__0("class") == "zebra" {
 				if _xgo_val, _xgo_err := self.XGo_first(); _xgo_err == nil {
 					if !_xgo_yield(_xgo_val) {
