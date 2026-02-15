@@ -1,4 +1,4 @@
-doc := xml`<animals>
+doc := xml`<doc><animals>
   <animal class="gopher">Line 1</animal>
   <animal class="armadillo">Line 2</animal>
   <animal class="zebra">Line 3</animal>
@@ -7,7 +7,7 @@ doc := xml`<animals>
   <animal class="bee">Line 6</animal>
   <animal class="gopher">Line 7</animal>
   <animal class="zebra">Line 8</animal>
-</animals>
+</animals></doc>
 `!
 
 echo doc.animals.*@($class == "zebra")._text

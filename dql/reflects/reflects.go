@@ -61,6 +61,11 @@ type NodeSet struct {
 	Err  error
 }
 
+// NodeSet(seq) casts a NodeSet from a sequence of nodes.
+func NodeSet_Cast(seq func(yield func(Node) bool)) NodeSet {
+	return NodeSet{Data: seq}
+}
+
 // Root creates a NodeSet containing the provided root node.
 func Root(doc Node) NodeSet {
 	return NodeSet{
