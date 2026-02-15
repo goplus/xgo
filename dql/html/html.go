@@ -563,7 +563,7 @@ func (p NodeSet) Int() (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	return dql.Int__0(text)
+	return dql.Int(text)
 }
 
 // -----------------------------------------------------------------------------
