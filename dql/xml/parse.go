@@ -55,7 +55,12 @@ func Parse(r io.Reader) (doc *Node, err error) {
 // UnmarshalXML implements the xml.Unmarshaler interface for the Node struct.
 func (n *Node) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	n.Name = start.Name
-	n.Attr = start.Attr
+	// The start.Attr slice is owned by the xml.Decoder and is only valid
+	// until the next call to d.Token().
+	// It must be copied to be stored in the Node struct, otherwise it can
+	// lead to data corruption.
+	n.Attr = make([]xml.Attr, len(start.Attr))
+	copy(n.Attr, start.Attr)
 	for {
 		token, err := d.Token()
 		if err != nil {
@@ -71,7 +76,10 @@ func (n *Node) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 			n.Children = append(n.Children, child)
 
 		case xml.CharData:
-			n.Children = append(n.Children, t)
+			// CharData tokens must be copied before storage
+			text := make(xml.CharData, len(t))
+			copy(text, t)
+			n.Children = append(n.Children, text)
 
 		case xml.EndElement:
 			return nil
