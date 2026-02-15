@@ -32,7 +32,7 @@ const (
 
 // -----------------------------------------------------------------------------
 
-// Node represents a map[string]any node.
+// Node represents a map[string]any or []any node.
 type Node = maps.Node
 
 // NodeSet represents a set of YAML nodes.

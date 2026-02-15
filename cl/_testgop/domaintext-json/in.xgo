@@ -1,1 +1,5 @@
 echo json`{"a":1, "b":2}`
+echo yaml`
+a: 1
+b: c
+`
