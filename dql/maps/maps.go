@@ -41,7 +41,7 @@ type NodeSet struct {
 }
 
 // NodeSet(seq) casts a NodeSet from a sequence of nodes.
-func NodeSet_Cast(seq func(yield func(Node) bool)) NodeSet {
+func NodeSet_Cast(seq iter.Seq[Node]) NodeSet {
 	return NodeSet{Data: seq}
 }
 

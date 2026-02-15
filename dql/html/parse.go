@@ -65,4 +65,9 @@ func (f *File) XGo_Any(name string) NodeSet {
 	return Root(&f.Node).XGo_Any(name)
 }
 
+// Dump prints the node for debugging purposes.
+func (f *File) Dump() NodeSet {
+	return Root(&f.Node).Dump()
+}
+
 // -----------------------------------------------------------------------------

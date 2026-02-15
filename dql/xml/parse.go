@@ -59,8 +59,7 @@ func (n *Node) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	// until the next call to d.Token().
 	// It must be copied to be stored in the Node struct, otherwise it can
 	// lead to data corruption.
-	n.Attr = make([]xml.Attr, len(start.Attr))
-	copy(n.Attr, start.Attr)
+	n.Attr = append([]xml.Attr(nil), start.Attr...)
 	for {
 		token, err := d.Token()
 		if err != nil {
@@ -77,8 +76,7 @@ func (n *Node) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 
 		case xml.CharData:
 			// CharData tokens must be copied before storage
-			text := make(xml.CharData, len(t))
-			copy(text, t)
+			text := append(xml.CharData(nil), t...)
 			n.Children = append(n.Children, text)
 
 		case xml.EndElement:
@@ -110,6 +108,11 @@ func (n *Node) XGo_Child() NodeSet {
 //   - .**.*
 func (n *Node) XGo_Any(name string) NodeSet {
 	return Root(n).XGo_Any(name)
+}
+
+// _dump prints the node for debugging purposes.
+func (n *Node) XGo_dump() NodeSet {
+	return Root(n).XGo_dump()
 }
 
 // -----------------------------------------------------------------------------

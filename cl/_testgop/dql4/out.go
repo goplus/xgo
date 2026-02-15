@@ -38,5 +38,5 @@ func main() {
 			}
 			return true
 		})
-	}).XGo_text__0())
+	}).XGo_dump().XGo_text__0())
 }
