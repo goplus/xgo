@@ -80,7 +80,7 @@ func Source(r any) (ret NodeSet) {
 	case NodeSet:
 		return v
 	default:
-		panic("dql/json.Source: unsupport source type")
+		panic("dql/json.Source: unsupported source type")
 	}
 }
 

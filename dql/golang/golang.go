@@ -138,7 +138,7 @@ func Source(r any, conf ...Config) (ret NodeSet) {
 	case NodeSet:
 		return v
 	default:
-		panic("dql/golang.Source: unsupport source type")
+		panic("dql/golang.Source: unsupported source type")
 	}
 }
 

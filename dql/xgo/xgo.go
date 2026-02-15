@@ -138,7 +138,7 @@ func Source(r any, conf ...Config) (ret NodeSet) {
 	case NodeSet:
 		return v
 	default:
-		panic("dql/xgo.Source: unsupport source type")
+		panic("dql/xgo.Source: unsupported source type")
 	}
 }
 

@@ -80,7 +80,7 @@ func Source(r any, opts ...yaml.DecodeOption) (ret NodeSet) {
 	case NodeSet:
 		return v
 	default:
-		panic("dql/yaml.Source: unsupport source type")
+		panic("dql/yaml.Source: unsupported source type")
 	}
 }
 
