@@ -34,6 +34,7 @@ coverage:
     - "x/gocmd"
     - "x/gopenv"
     - "tool"
+    - "encoding"
     - "tpl"
     - "dql"
   
