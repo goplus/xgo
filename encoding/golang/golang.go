@@ -27,9 +27,12 @@ const (
 	XGoPackage = "github.com/goplus/xgo/dql/golang"
 )
 
-// New parses Go source code from the given source, returning a File object.
+// Object represents a Go File.
+type Object = golang.File
+
+// New parses Go source code from the given text, returning a Go File object.
 // An optional parser Mode can be provided to customize the parsing behavior.
-func New(text string, mode ...parser.Mode) (f *golang.File, err error) {
+func New(text string, mode ...parser.Mode) (f *Object, err error) {
 	var conf []golang.Config
 	if len(mode) > 0 {
 		conf = []golang.Config{{Mode: mode[0]}}

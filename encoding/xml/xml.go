@@ -26,7 +26,10 @@ const (
 	XGoPackage = "github.com/goplus/xgo/dql/xml"
 )
 
-// New creates a new XML object from a string
-func New(text string) (ret *xml.Node, err error) {
+// Object represents an XML object.
+type Object = xml.Node
+
+// New creates a new XML object from a string.
+func New(text string) (ret *Object, err error) {
 	return xml.Parse(strings.NewReader(text))
 }

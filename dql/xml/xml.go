@@ -112,7 +112,7 @@ func Source(r any) (ret NodeSet) {
 	case NodeSet:
 		return v
 	default:
-		panic("dql/xml.Source: unsupport source type")
+		panic("dql/xml.Source: unsupported source type")
 	}
 }
 

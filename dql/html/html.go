@@ -115,7 +115,7 @@ func Source(r any) (ret NodeSet) {
 	case NodeSet:
 		return v
 	default:
-		panic("dql/html.Source: unsupport source type")
+		panic("dql/html.Source: unsupported source type")
 	}
 }
 

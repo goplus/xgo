@@ -2,15 +2,14 @@ package main
 
 import (
 	"fmt"
-	"github.com/goplus/xgo/dql/html"
-	html1 "github.com/goplus/xgo/encoding/html"
+	"github.com/goplus/xgo/encoding/html"
 	"github.com/qiniu/x/errors"
 )
 
 func main() {
-	doc := func() (_xgo_ret *html.File) {
+	doc := func() (_xgo_ret *html.Object) {
 		var _xgo_err error
-		_xgo_ret, _xgo_err = html1.New(`<html><body>
+		_xgo_ret, _xgo_err = html.New(`<html><body>
 <p>Links:</p>
 <ul>
   <li><a href="foo">Foo</a>

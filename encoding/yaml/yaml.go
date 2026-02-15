@@ -22,8 +22,12 @@ import (
 	"github.com/goccy/go-yaml"
 )
 
-// New creates a new YAML object from a string
-func New(text string, opts ...yaml.DecodeOption) (ret any, err error) {
+// Object is a type alias for any YAML value, which can be a map, slice, string,
+// number, boolean, or null.
+type Object = any
+
+// New creates a new YAML object from a string.
+func New(text string, opts ...yaml.DecodeOption) (ret Object, err error) {
 	err = yaml.NewDecoder(strings.NewReader(text), opts...).Decode(&ret)
 	return
 }

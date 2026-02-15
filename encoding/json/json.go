@@ -21,8 +21,12 @@ import (
 	"strings"
 )
 
-// New creates a new json object from a string
-func New(text string) (ret any, err error) {
+// Object is a type alias for any JSON value, which can be a map, slice, string,
+// number, boolean, or null.
+type Object = any
+
+// New creates a new JSON object from a string.
+func New(text string) (ret Object, err error) {
 	err = json.NewDecoder(strings.NewReader(text)).Decode(&ret)
 	return
 }

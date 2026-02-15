@@ -101,7 +101,7 @@ func Source(r any) (ret NodeSet) {
 	case NodeSet:
 		return v
 	default:
-		panic("dql/maps.Source: unsupport source type")
+		panic("dql/maps.Source: unsupported source type")
 	}
 }
 

@@ -14,19 +14,19 @@
  * limitations under the License.
  */
 
-package golang
+package xgo
 
 import (
 	"bytes"
-	"go/ast"
-	"go/parser"
-	"go/token"
 	"io"
 	"iter"
 	"reflect"
 
+	"github.com/goplus/xgo/ast"
 	"github.com/goplus/xgo/dql"
 	"github.com/goplus/xgo/dql/reflects"
+	"github.com/goplus/xgo/parser"
+	"github.com/goplus/xgo/token"
 )
 
 const (
@@ -35,10 +35,10 @@ const (
 
 // -----------------------------------------------------------------------------
 
-// Node represents a Go AST node.
+// Node represents a XGo AST node.
 type Node = reflects.Node
 
-// NodeSet represents a set of Go AST nodes.
+// NodeSet represents a set of XGo AST nodes.
 type NodeSet struct {
 	reflects.NodeSet
 }
@@ -71,7 +71,7 @@ func New(f *ast.File) NodeSet {
 	}
 }
 
-// Config represents the configuration for parsing Go source code.
+// Config represents the configuration for parsing XGo source code.
 type Config struct {
 	Mode parser.Mode
 	Fset *token.FileSet
@@ -81,7 +81,7 @@ const (
 	defaultMode = parser.ParseComments
 )
 
-// parse parses Go source code from the given filename or source.
+// parse parses XGo source code from the given filename or source.
 func parse(filename string, src any, conf ...Config) (f *ast.File, err error) {
 	var c Config
 	if len(conf) > 0 {
@@ -138,7 +138,7 @@ func Source(r any, conf ...Config) (ret NodeSet) {
 	case NodeSet:
 		return v
 	default:
-		panic("dql/golang.Source: unsupported source type")
+		panic("dql/xgo.Source: unsupported source type")
 	}
 }
 

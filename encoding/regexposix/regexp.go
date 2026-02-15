@@ -20,7 +20,10 @@ import (
 	"regexp"
 )
 
-// New creates a new POSIX regexp object from a string
-func New(text string) (*regexp.Regexp, error) {
+// Object is a type alias for a compiled POSIX regular expression.
+type Object = regexp.Regexp
+
+// New creates a new POSIX regexp object from a string.
+func New(text string) (*Object, error) {
 	return regexp.CompilePOSIX(text)
 }
