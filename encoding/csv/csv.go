@@ -21,7 +21,11 @@ import (
 	"strings"
 )
 
-// New creates a new csv object from a string
-func New(text string) (records [][]string, err error) {
+// Object is a type alias for a 2D slice of strings, representing the rows and
+// columns of a CSV file.
+type Object = [][]string
+
+// New creates a new CSV object from a string.
+func New(text string) (records Object, err error) {
 	return csv.NewReader(strings.NewReader(text)).ReadAll()
 }

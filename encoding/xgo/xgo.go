@@ -14,22 +14,28 @@
  * limitations under the License.
  */
 
-package html
+package xgo
 
 import (
 	"strings"
 
-	"github.com/goplus/xgo/dql/html"
+	"github.com/goplus/xgo/dql/xgo"
+	"github.com/goplus/xgo/parser"
 )
 
 const (
-	XGoPackage = "github.com/goplus/xgo/dql/html"
+	XGoPackage = "github.com/goplus/xgo/dql/xgo"
 )
 
-// Object represents an HTML object.
-type Object = html.File
+// Object represents a XGo File.
+type Object = xgo.File
 
-// New creates a new HTML object from a string.
-func New(text string) (ret *Object, err error) {
-	return html.Parse(strings.NewReader(text))
+// New parses XGo source code from the given text, returning a XGo File object.
+// An optional parser Mode can be provided to customize the parsing behavior.
+func New(text string, mode ...parser.Mode) (f *Object, err error) {
+	var conf []xgo.Config
+	if len(mode) > 0 {
+		conf = []xgo.Config{{Mode: mode[0]}}
+	}
+	return xgo.ParseFile("", strings.NewReader(text), conf...)
 }
