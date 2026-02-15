@@ -23,7 +23,7 @@ import (
 
 // -----------------------------------------------------------------------------
 
-// File represents an HTML file.
+// File represents a Go file.
 type File struct {
 	ast.File
 	// File must contain only the embedded ast.File field.

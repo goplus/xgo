@@ -386,7 +386,10 @@ func (p NodeSet) XGo_class() (class string) {
 		return
 	}
 	_, v := deref(node.Children)
-	return v.Type().Name()
+	if v.IsValid() {
+		return v.Type().Name()
+	}
+	return ""
 }
 
 // -----------------------------------------------------------------------------

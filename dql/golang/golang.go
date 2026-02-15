@@ -241,9 +241,15 @@ func (p NodeSet) XGo_Attr__1(name string) (val any, err error) {
 	if err == nil {
 		switch v := val.(type) {
 		case *ast.Ident:
-			return v.Name, nil
+			if v != nil {
+				return v.Name, nil
+			}
+			return "", nil
 		case *ast.BasicLit:
-			return v.Value, nil
+			if v != nil {
+				return v.Value, nil
+			}
+			return "", nil
 		}
 	}
 	return
