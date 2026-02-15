@@ -34,7 +34,7 @@ type Node struct {
 	Children any // map[string]any or []any
 }
 
-// NodeSet represents a set of map[string]any nodes.
+// NodeSet represents a set of nodes.
 type NodeSet struct {
 	Data iter.Seq[Node]
 	Err  error
@@ -328,7 +328,16 @@ func (p NodeSet) XGo_hasAttr(name string) bool {
 // NodeSet. It only retrieves the attribute from the first node.
 //   - $name
 //   - $“attr-name”
-func (p NodeSet) XGo_Attr(name string) (val any, err error) {
+func (p NodeSet) XGo_Attr__0(name string) any {
+	val, _ := p.XGo_Attr__1(name)
+	return val
+}
+
+// XGo_Attr returns the value of the specified attribute from the first node in the
+// NodeSet. It only retrieves the attribute from the first node.
+//   - $name
+//   - $“attr-name”
+func (p NodeSet) XGo_Attr__1(name string) (val any, err error) {
 	node, err := p.XGo_first()
 	if err == nil {
 		switch children := node.Children.(type) {

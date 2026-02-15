@@ -174,12 +174,7 @@ func yieldElem(node Node, name string, yield func(Node) bool) bool {
 }
 
 func lookup(node reflect.Value, name string) (ret reflect.Value) {
-	kind := node.Kind()
-	switch kind {
-	case reflect.Pointer, reflect.Interface:
-		node = node.Elem()
-		kind = node.Kind()
-	}
+	kind, node := deref(node)
 	switch kind {
 	case reflect.Struct:
 		ret = node.FieldByName(capitalize(name))
@@ -189,25 +184,33 @@ func lookup(node reflect.Value, name string) (ret reflect.Value) {
 	return
 }
 
-func isNode(v reflect.Value) bool {
+func deref(v reflect.Value) (reflect.Kind, reflect.Value) {
 	kind := v.Kind()
-	switch kind {
-	case reflect.Invalid:
-		return false
-	case reflect.Pointer, reflect.Interface:
+	if kind == reflect.Interface {
 		v = v.Elem()
 		kind = v.Kind()
 	}
-	return kind == reflect.Struct || kind == reflect.Map
+	if kind == reflect.Pointer {
+		v = v.Elem()
+		kind = v.Kind()
+	}
+	return kind, v
+}
+
+func isNode(v reflect.Value) bool {
+	kind, v := deref(v)
+	switch kind {
+	case reflect.Struct, reflect.Map:
+		return true
+	case reflect.Slice:
+		ekind := v.Type().Elem().Kind()
+		return ekind > reflect.Complex128 && ekind != reflect.String
+	}
+	return false
 }
 
 func rangeChildNodes(node reflect.Value, yield func(Node) bool) bool {
-	kind := node.Kind()
-	switch kind {
-	case reflect.Pointer, reflect.Interface:
-		node = node.Elem()
-		kind = node.Kind()
-	}
+	kind, node := deref(node)
 	switch kind {
 	case reflect.Struct:
 		typ := node.Type()
@@ -229,6 +232,15 @@ func rangeChildNodes(node reflect.Value, yield func(Node) bool) bool {
 			v := it.Value()
 			if isNode(v) {
 				if !yield(Node{Name: it.Key().String(), Children: v}) {
+					return false
+				}
+			}
+		}
+	case reflect.Slice:
+		for i := 0; i < node.Len(); i++ {
+			v := node.Index(i)
+			if isNode(v) {
+				if !yield(Node{Name: "", Children: v}) {
 					return false
 				}
 			}
@@ -347,7 +359,16 @@ func (p NodeSet) XGo_hasAttr(name string) bool {
 // NodeSet. It only retrieves the attribute from the first node.
 //   - $name
 //   - $“attr-name”
-func (p NodeSet) XGo_Attr(name string) (val any, err error) {
+func (p NodeSet) XGo_Attr__0(name string) any {
+	val, _ := p.XGo_Attr__1(name)
+	return val
+}
+
+// XGo_Attr returns the value of the specified attribute from the first node in the
+// NodeSet. It only retrieves the attribute from the first node.
+//   - $name
+//   - $“attr-name”
+func (p NodeSet) XGo_Attr__1(name string) (val any, err error) {
 	node, err := p.XGo_first()
 	if err == nil {
 		if v := lookup(node.Children, name); v.IsValid() {
@@ -356,6 +377,16 @@ func (p NodeSet) XGo_Attr(name string) (val any, err error) {
 		err = dql.ErrNotFound
 	}
 	return
+}
+
+// XGo_class returns the class name of the first node in the NodeSet.
+func (p NodeSet) XGo_class() (class string) {
+	node, err := p.XGo_first()
+	if err != nil {
+		return
+	}
+	_, v := deref(node.Children)
+	return v.Type().Name()
 }
 
 // -----------------------------------------------------------------------------
