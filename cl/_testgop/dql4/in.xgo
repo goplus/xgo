@@ -10,4 +10,4 @@ doc := xml`<doc><animals>
 </animals></doc>
 `!
 
-echo doc.animals.*@($class == "zebra")._text
+echo doc.animals.*@($class == "zebra")._dump._text

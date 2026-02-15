@@ -19,8 +19,10 @@ package xml
 import (
 	"bytes"
 	"encoding/xml"
+	"fmt"
 	"io"
 	"iter"
+	"os"
 	"unsafe"
 
 	"github.com/goplus/xgo/dql"
@@ -40,7 +42,7 @@ type NodeSet struct {
 }
 
 // NodeSet(seq) casts a NodeSet from a sequence of nodes.
-func NodeSet_Cast(seq func(yield func(*Node) bool)) NodeSet {
+func NodeSet_Cast(seq iter.Seq[*Node]) NodeSet {
 	return NodeSet{Data: seq}
 }
 
@@ -281,6 +283,19 @@ func (p NodeSet) XGo_single() NodeSet {
 		return NodeSet{Err: err}
 	}
 	return Root(n)
+}
+
+// -----------------------------------------------------------------------------
+
+// _dump prints the nodes in the NodeSet for debugging purposes.
+func (p NodeSet) XGo_dump() NodeSet {
+	if p.Err == nil {
+		p.Data(func(node *Node) bool {
+			fmt.Fprintln(os.Stderr, "node:", node.Name.Local, node.Attr)
+			return true
+		})
+	}
+	return p
 }
 
 // -----------------------------------------------------------------------------

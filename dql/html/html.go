@@ -18,8 +18,10 @@ package html
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"iter"
+	"os"
 
 	"github.com/goplus/xgo/dql"
 	"github.com/qiniu/x/stream"
@@ -42,12 +44,17 @@ type NodeSet struct {
 }
 
 // NodeSet(seq) casts a NodeSet from a sequence of nodes.
-func NodeSet_Cast(seq func(yield func(*Node) bool)) NodeSet {
+func NodeSet_Cast(seq iter.Seq[*Node]) NodeSet {
 	return NodeSet{Data: seq}
 }
 
 // Root creates a NodeSet containing the provided root node.
 func Root(doc *Node) NodeSet {
+	if doc.Type == html.DocumentNode {
+		if n := doc.FirstChild; n.NextSibling == nil {
+			doc = n // skip document node
+		}
+	}
 	return NodeSet{
 		Data: func(yield func(*Node) bool) {
 			yield(doc)
@@ -416,6 +423,26 @@ func yieldNodeType(node *Node, typ html.NodeType, yield func(*Node) bool) bool {
 		}
 	}
 	return true
+}
+
+// -----------------------------------------------------------------------------
+
+// Dump prints the nodes in the NodeSet for debugging purposes.
+func (p NodeSet) Dump() NodeSet {
+	if p.Err == nil {
+		p.Data(func(node *Node) bool {
+			switch node.Type {
+			case html.ElementNode:
+				fmt.Fprintln(os.Stderr, "==> element:", node.Data, node.Attr)
+			case html.TextNode:
+				fmt.Fprintln(os.Stderr, "==> text:", node.Data)
+			case html.DocumentNode:
+				fmt.Fprintln(os.Stderr, "==> document")
+			}
+			return true
+		})
+	}
+	return p
 }
 
 // -----------------------------------------------------------------------------
