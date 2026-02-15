@@ -24,44 +24,12 @@ import (
 	"unsafe"
 
 	"github.com/goplus/xgo/dql"
-	"github.com/goplus/xgo/dql/stream"
+	"github.com/qiniu/x/stream"
 )
 
-// -----------------------------------------------------------------------------
-
-// Node represents a generic XML node with its name, attributes, and children.
-type Node struct {
-	Name     xml.Name
-	Attr     []xml.Attr
-	Children []any // can be *Node or xml.CharData
-}
-
-// UnmarshalXML implements the xml.Unmarshaler interface for the Node struct.
-func (n *Node) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
-	n.Name = start.Name
-	n.Attr = start.Attr
-	for {
-		token, err := d.Token()
-		if err != nil {
-			return err
-		}
-
-		switch t := token.(type) {
-		case xml.StartElement:
-			child := &Node{}
-			if err := d.DecodeElement(child, &t); err != nil {
-				return err
-			}
-			n.Children = append(n.Children, child)
-
-		case xml.CharData:
-			n.Children = append(n.Children, t)
-
-		case xml.EndElement:
-			return nil
-		}
-	}
-}
+const (
+	XGoPackage = true
+)
 
 // -----------------------------------------------------------------------------
 
@@ -97,14 +65,13 @@ func Nodes(nodes ...*Node) NodeSet {
 // containing the root node. If there is an error during parsing, the NodeSet's
 // Err field is set.
 func New(r io.Reader) NodeSet {
-	var doc Node
-	err := xml.NewDecoder(r).Decode(&doc)
+	doc, err := Parse(r)
 	if err != nil {
 		return NodeSet{Err: err}
 	}
 	return NodeSet{
 		Data: func(yield func(*Node) bool) {
-			yield(&doc)
+			yield(doc)
 		},
 	}
 }
@@ -339,7 +306,16 @@ func (p NodeSet) XGo_hasAttr(name string) bool {
 // NodeSet. It only retrieves the attribute from the first node.
 //   - $name
 //   - $“attr-name”
-func (p NodeSet) XGo_Attr(name string) (val string, err error) {
+func (p NodeSet) XGo_Attr__0(name string) string {
+	val, _ := p.XGo_Attr__1(name)
+	return val
+}
+
+// XGo_Attr returns the value of the specified attribute from the first node in the
+// NodeSet. It only retrieves the attribute from the first node.
+//   - $name
+//   - $“attr-name”
+func (p NodeSet) XGo_Attr__1(name string) (val string, err error) {
 	node, err := p.XGo_first()
 	if err == nil {
 		for _, attr := range node.Attr {
@@ -354,7 +330,14 @@ func (p NodeSet) XGo_Attr(name string) (val string, err error) {
 
 // _text retrieves the text content of the first child text node.
 // It only retrieves from the first node in the NodeSet.
-func (p NodeSet) XGo_text() (val string, err error) {
+func (p NodeSet) XGo_text__0() string {
+	val, _ := p.XGo_text__1()
+	return val
+}
+
+// _text retrieves the text content of the first child text node.
+// It only retrieves from the first node in the NodeSet.
+func (p NodeSet) XGo_text__1() (val string, err error) {
 	node, err := p.XGo_first()
 	if err == nil {
 		for _, c := range node.Children {
@@ -370,7 +353,7 @@ func (p NodeSet) XGo_text() (val string, err error) {
 // _int retrieves the integer value from the text content of the first child
 // text node. It only retrieves from the first node in the NodeSet.
 func (p NodeSet) XGo_int() (int, error) {
-	text, err := p.XGo_text()
+	text, err := p.XGo_text__1()
 	if err != nil {
 		return 0, err
 	}

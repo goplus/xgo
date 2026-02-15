@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2026 The XGo Authors (xgo.dev). All rights reserved.
+ * Copyright (c) 2025 The XGo Authors (xgo.dev). All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,14 +14,15 @@
  * limitations under the License.
  */
 
-package nocache
+package xml
 
 import (
-	"github.com/goplus/xgo/dql/stream"
-	"github.com/goplus/xgo/dql/stream/http"
+	"strings"
+
+	"github.com/goplus/xgo/dql/xml"
 )
 
-func init() {
-	stream.Register("http", http.Open)
-	stream.Register("https", http.Open)
+// New creates a new xml object from a string
+func New(text string) (ret *xml.Node, err error) {
+	return xml.Parse(strings.NewReader(text))
 }

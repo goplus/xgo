@@ -28,6 +28,10 @@ import (
 	"github.com/goplus/xgo/dql/reflects"
 )
 
+const (
+	XGoPackage = "github.com/goplus/xgo/dql/reflects"
+)
+
 // -----------------------------------------------------------------------------
 
 type Node = reflects.Node

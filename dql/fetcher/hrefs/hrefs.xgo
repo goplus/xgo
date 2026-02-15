@@ -29,7 +29,7 @@ type Result struct {
 
 // New extracts hrefs from the given document and returns the Result.
 func New(input any, doc html.NodeSet) Result {
-	hrefs := [url for a in doc.**.a if url, _ := a.$href; url != ""]
+	hrefs := [url for a in doc.**.a if url := a.$href; url != ""]
 	return {input.(string), hrefs}
 }
 

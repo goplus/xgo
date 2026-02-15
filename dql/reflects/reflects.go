@@ -23,6 +23,10 @@ import (
 	"github.com/goplus/xgo/dql"
 )
 
+const (
+	XGoPackage = true
+)
+
 // capitalize capitalizes the first letter of the given name.
 func capitalize(name string) string {
 	if name != "" {

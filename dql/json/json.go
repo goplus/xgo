@@ -23,7 +23,11 @@ import (
 	"iter"
 
 	"github.com/goplus/xgo/dql/maps"
-	"github.com/goplus/xgo/dql/stream"
+	"github.com/qiniu/x/stream"
+)
+
+const (
+	XGoPackage = "github.com/goplus/xgo/dql/maps"
 )
 
 // -----------------------------------------------------------------------------
