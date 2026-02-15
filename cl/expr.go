@@ -1425,15 +1425,6 @@ func compileDomainTextLit(ctx *blockCtx, v *ast.DomainTextLit) {
 	if pi, ok := ctx.findImport(name); ok {
 		imp = pi.PkgRef
 		path = pi.Path()
-		if path == "golang.org/x/net/html" {
-			// html`...` => html.Parse(strings.NewReader(`...`))
-			cb.Val(imp.Ref("Parse")).
-				Val(ctx.pkg.Import("strings").Ref("NewReader")).
-				Val(&goast.BasicLit{Kind: gotoken.STRING, Value: v.Value}, v).
-				CallWith(1, 0, 0, v).
-				CallWith(1, 0, 0, v)
-			return
-		}
 	} else {
 		if name == "tpl" {
 			path = tplPkgPath

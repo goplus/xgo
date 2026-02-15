@@ -32,7 +32,7 @@ const (
 
 // -----------------------------------------------------------------------------
 
-// Node represents an HTML node.
+// Node represents a HTML node.
 type Node = html.Node
 
 // NodeSet represents a set of HTML nodes.

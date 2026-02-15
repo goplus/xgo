@@ -14,19 +14,19 @@
  * limitations under the License.
  */
 
-package xml
+package html
 
 import (
 	"strings"
 
-	"github.com/goplus/xgo/dql/xml"
+	"github.com/goplus/xgo/dql/html"
 )
 
 const (
-	XGoPackage = "github.com/goplus/xgo/dql/xml"
+	XGoPackage = "github.com/goplus/xgo/dql/html"
 )
 
-// New creates a new XML object from a string
-func New(text string) (ret *xml.Node, err error) {
-	return xml.Parse(strings.NewReader(text))
+// New creates a new HTML object from a string
+func New(text string) (ret *html.File, err error) {
+	return html.Parse(strings.NewReader(text))
 }
