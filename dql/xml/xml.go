@@ -27,6 +27,10 @@ import (
 	"github.com/qiniu/x/stream"
 )
 
+const (
+	XGoPackage = true
+)
+
 // -----------------------------------------------------------------------------
 
 // NodeSet represents a set of XML nodes.

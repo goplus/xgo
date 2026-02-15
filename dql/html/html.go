@@ -26,6 +26,10 @@ import (
 	"golang.org/x/net/html"
 )
 
+const (
+	XGoPackage = true
+)
+
 // -----------------------------------------------------------------------------
 
 // Node represents an HTML node.

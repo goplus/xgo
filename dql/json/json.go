@@ -26,6 +26,10 @@ import (
 	"github.com/qiniu/x/stream"
 )
 
+const (
+	XGoPackage = "github.com/goplus/xgo/dql/maps"
+)
+
 // -----------------------------------------------------------------------------
 
 // Node represents a map[string]any node.

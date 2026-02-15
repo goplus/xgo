@@ -22,6 +22,10 @@ import (
 	"github.com/goplus/xgo/dql"
 )
 
+const (
+	XGoPackage = true
+)
+
 // -----------------------------------------------------------------------------
 
 // Node represents a map[string]any or []any node.
