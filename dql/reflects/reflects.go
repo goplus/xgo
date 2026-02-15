@@ -197,6 +197,22 @@ func deref(v reflect.Value) (reflect.Kind, reflect.Value) {
 	return kind, v
 }
 
+func isNodeType(v reflect.Type) bool {
+	kind := v.Kind()
+	if kind == reflect.Pointer {
+		v = v.Elem()
+		kind = v.Kind()
+	}
+	switch kind {
+	case reflect.Struct, reflect.Map, reflect.Interface:
+		return true
+	case reflect.Slice:
+		ekind := v.Elem().Kind()
+		return ekind > reflect.Complex128 && ekind != reflect.String
+	}
+	return false
+}
+
 func isNode(v reflect.Value) bool {
 	kind, v := deref(v)
 	switch kind {
@@ -214,7 +230,7 @@ func rangeChildNodes(node reflect.Value, yield func(Node) bool) bool {
 	switch kind {
 	case reflect.Struct:
 		typ := node.Type()
-		for i := 0; i < typ.NumField(); i++ {
+		for i, n := 0, typ.NumField(); i < n; i++ {
 			v := node.Field(i)
 			if isNode(v) {
 				if !yield(Node{Name: uncapitalize(typ.Field(i).Name), Children: v}) {
@@ -224,25 +240,23 @@ func rangeChildNodes(node reflect.Value, yield func(Node) bool) bool {
 		}
 	case reflect.Map:
 		typ := node.Type()
-		if typ.Key().Kind() != reflect.String {
-			return true // only string keys are supported
+		if typ.Key().Kind() != reflect.String || !isNodeType(typ.Elem()) {
+			break
 		}
 		it := node.MapRange()
 		for it.Next() {
-			v := it.Value()
-			if isNode(v) {
-				if !yield(Node{Name: it.Key().String(), Children: v}) {
-					return false
-				}
+			if !yield(Node{Name: it.Key().String(), Children: it.Value()}) {
+				return false
 			}
 		}
 	case reflect.Slice:
+		elemType := node.Type().Elem()
+		if !isNodeType(elemType) {
+			break
+		}
 		for i := 0; i < node.Len(); i++ {
-			v := node.Index(i)
-			if isNode(v) {
-				if !yield(Node{Name: "", Children: v}) {
-					return false
-				}
+			if !yield(Node{Name: "", Children: node.Index(i)}) {
+				return false
 			}
 		}
 	}
