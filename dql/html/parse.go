@@ -25,9 +25,10 @@ import (
 
 // -----------------------------------------------------------------------------
 
-// File represents a HTML file.
+// File represents an HTML file.
 type File struct {
 	html.Node
+	// File must contain only the embedded html.Node field.
 }
 
 // Parse returns the parse tree for the HTML from the given Reader.
