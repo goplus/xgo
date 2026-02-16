@@ -28,6 +28,7 @@ func main() {
 		}
 		return
 	}()
+	_autoGo_1, _ := doc.(map[string]any)
 	for animal := range maps.NodeSet_Cast(func(_xgo_yield func(maps.Node) bool) {
 		maps.New(_autoGo_1["animals"]).XGo_Child().XGo_Enum()(func(self maps.NodeSet) bool {
 			if self.XGo_Attr__0("class") == "zebra" {
@@ -40,7 +41,6 @@ func main() {
 			return true
 		})
 	}).XGo_Enum() {
-		_autoGo_1, _ := doc.(map[string]any)
 		animal.XGo_Attr__0("at")
 	}
 }
