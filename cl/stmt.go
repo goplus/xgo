@@ -413,9 +413,6 @@ func compileRangeStmt(ctx *blockCtx, v *ast.RangeStmt) {
 	}()
 	comments, once := cb.BackupComments()
 	defineNames := make([]*ast.Ident, 0, 2)
-	stk := cb.InternalStack()
-	compileExpr(ctx, 1, v.X)
-	x := stk.Pop()
 	if v.Tok == token.DEFINE {
 		names := make([]string, 1, 2)
 		if v.Key == nil {
@@ -448,7 +445,7 @@ func compileRangeStmt(ctx *blockCtx, v *ast.RangeStmt) {
 			n++
 		}
 	}
-	stk.Push(x)
+	compileExpr(ctx, 1, v.X)
 	pos := v.TokPos
 	if pos == 0 {
 		pos = v.For
@@ -497,11 +494,8 @@ func compileForPhraseStmt(ctx *blockCtx, v *ast.ForPhraseStmt) {
 		names = append(names, v.Value.Name)
 		defineNames = append(defineNames, v.Value)
 	}
-	stk := cb.InternalStack()
-	compileExpr(ctx, 1, v.X)
-	x := stk.Pop()
 	cb.ForRange(names...)
-	stk.Push(x)
+	compileExpr(ctx, 1, v.X)
 	cb.RangeAssignThen(v.TokPos)
 	if len(defineNames) > 0 {
 		defNames(ctx, defineNames, cb.Scope())
