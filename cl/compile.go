@@ -32,7 +32,6 @@ import (
 	"github.com/goplus/mod/modfile"
 	"github.com/goplus/xgo/ast"
 	"github.com/goplus/xgo/ast/fromgo"
-	"github.com/goplus/xgo/cl/internal/typesalias"
 	"github.com/goplus/xgo/token"
 	"github.com/qiniu/x/errors"
 )
@@ -361,8 +360,6 @@ type pkgCtx struct {
 
 	goxMainClass string
 	goxMain      int32 // normal gox files with main func
-
-	featTypesAlias bool // support types alias
 }
 
 type pkgImp struct {
@@ -390,10 +387,9 @@ type blockCtx struct {
 	fileScope *types.Scope // available when isXGoFile
 	rec       *goxRecorder
 
-	fileLine   bool
-	isClass    bool
-	isXgoFile  bool // is XGo file or not
-	typesAlias bool // support types alias
+	fileLine  bool
+	isClass   bool
+	isXgoFile bool // is XGo file or not
 }
 
 func (p *blockCtx) cstr() gogen.Ref {
@@ -601,7 +597,7 @@ func NewPackage(pkgPath string, pkg *ast.Package, conf *Config) (p *gogen.Packag
 		NewBuiltin:      ctx.newBuiltinDefault,
 		DefaultGoFile:   defaultGoFile,
 		NoSkipConstant:  conf.NoSkipConstant,
-		PkgPathIox:      osxPkgPath,
+		PkgPathOsx:      osxPkgPath,
 		DbgPositioner:   interp,
 		CanImplicitCast: implicitCast,
 	}
@@ -656,7 +652,7 @@ func NewPackage(pkgPath string, pkg *ast.Package, conf *Config) (p *gogen.Packag
 		ctx := &blockCtx{
 			pkg: p, pkgCtx: ctx, cb: p.CB(), relBaseDir: relBaseDir, fileScope: fileScope,
 			fileLine: fileLine, isClass: f.IsClass, rec: rec, imports: make(map[string]pkgImp),
-			isXgoFile: true, typesAlias: ctx.featTypesAlias,
+			isXgoFile: true,
 		}
 		if rec := ctx.rec; rec != nil {
 			rec.Scope(f.File, fileScope)
@@ -677,7 +673,7 @@ func NewPackage(pkgPath string, pkg *ast.Package, conf *Config) (p *gogen.Packag
 		gofiles = append(gofiles, f)
 		ctx := &blockCtx{
 			pkg: p, pkgCtx: ctx, cb: p.CB(), relBaseDir: relBaseDir,
-			imports: make(map[string]pkgImp), typesAlias: ctx.featTypesAlias,
+			imports: make(map[string]pkgImp),
 		}
 		preloadFile(p, ctx, f, skippingGoFile, false)
 	}
@@ -1404,29 +1400,24 @@ func newType(pkg *types.Package, pos token.Pos, name string) *types.Named {
 }
 
 func aliasType(ctx *blockCtx, pkg *types.Package, pos token.Pos, name string, t *ast.TypeSpec) {
-	if ctx.typesAlias {
-		var typeParams []*types.TypeParam
-		if t.TypeParams != nil {
-			typeParams = toTypeParams(ctx, t.TypeParams)
-			ctx.tlookup = &typeParamLookup{typeParams}
-			defer func() {
-				ctx.tlookup = nil
-			}()
-			org := ctx.inInst
-			ctx.inInst = 0
-			defer func() {
-				ctx.inInst = org
-			}()
-		}
-		o := typesalias.NewAlias(types.NewTypeName(pos, pkg, name, nil), toType(ctx, t.Type))
-		if typeParams != nil {
-			typesalias.SetTypeParams(o, typeParams)
-		}
-		pkg.Scope().Insert(o.Obj())
-	} else {
-		o := types.NewTypeName(pos, pkg, name, toType(ctx, t.Type))
-		pkg.Scope().Insert(o)
+	var typeParams []*types.TypeParam
+	if t.TypeParams != nil {
+		typeParams = toTypeParams(ctx, t.TypeParams)
+		ctx.tlookup = &typeParamLookup{typeParams}
+		defer func() {
+			ctx.tlookup = nil
+		}()
+		org := ctx.inInst
+		ctx.inInst = 0
+		defer func() {
+			ctx.inInst = org
+		}()
 	}
+	o := types.NewAlias(types.NewTypeName(pos, pkg, name, nil), toType(ctx, t.Type))
+	if typeParams != nil {
+		o.SetTypeParams(typeParams)
+	}
+	pkg.Scope().Insert(o.Obj())
 }
 
 func loadFunc(ctx *blockCtx, recv *types.Var, name string, d *ast.FuncDecl, genBody bool) {
@@ -1552,21 +1543,28 @@ var unaryXGoNames = map[string]string{
 	"<-": "XGo_Recv",
 }
 
+// shouldCallXGoInit checks if XGo_Init is directly defined on the receiver
+// type (not through embedding).
+func shouldCallXGoInit(recv *types.Var) bool {
+	typ := recv.Type()
+	if pt, ok := typ.(*types.Pointer); ok {
+		typ = pt.Elem()
+	}
+	return findMethodByType(typ, "XGo_Init") != nil
+}
+
 func loadFuncBody(ctx *blockCtx, fn *gogen.Func, body *ast.BlockStmt, sigBase *types.Signature, src ast.Node, initClass bool) {
 	cb := fn.BodyStart(ctx.pkg, body)
 	cb.SetComments(nil, false)
 	if initClass {
-		// this.XGo_Init()
-		if _, err := cb.VarVal("this").Member("XGo_Init", gogen.MemberFlagVal); err == nil {
-			cb.Call(0).EndStmt()
-		} else {
-			// clean up the partial expression pushed by VarVal("this") when
-			// the XGo_Init member lookup fails
-			cb.ResetStmt()
+		recv := fn.Type().(*types.Signature).Recv()
+		if shouldCallXGoInit(recv) {
+			// this.XGo_Init()
+			cb.Val(recv).MemberVal("XGo_Init", 0).Call(0).EndStmt()
 		}
 		if sigBase != nil {
 			// this.Sprite.Main(...) or this.Game.MainEntry(...)
-			cb.VarVal("this").MemberVal(ctx.baseClass.Name()).MemberVal(fn.Name())
+			cb.Val(recv).MemberVal(ctx.baseClass.Name(), 0).MemberVal(fn.Name(), 0)
 			params := sigBase.Params()
 			n := params.Len()
 			for i := 0; i < n; i++ {
@@ -1658,7 +1656,7 @@ func loadConsts(ctx *blockCtx, cdecl *gogen.ConstDefs, v *ast.ValueSpec, iotav i
 	}
 	fn := func(cb *gogen.CodeBuilder) int {
 		for _, val := range v.Values {
-			compileExpr(ctx, 0, val)
+			compileExpr(ctx, 1, val)
 		}
 		return len(v.Values)
 	}
@@ -1713,7 +1711,7 @@ func makeInitExpr(ctx *blockCtx, v *ast.ValueSpec, typ types.Type, names []strin
 				case *ast.CompositeLit:
 					compileCompositeLit(ctx, e, typ, false)
 				default:
-					compileExpr(ctx, 0, val)
+					compileExpr(ctx, 1, val)
 				}
 			}
 		}

@@ -1,0 +1,1 @@
+z := {t: k for k, v <- {"Hello": 1, "Hi": 3, "xsw": 5, "XGo": 7}, t := v; t > 3}

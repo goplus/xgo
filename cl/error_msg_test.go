@@ -679,12 +679,43 @@ b := *a
 `)
 }
 
+func TestErrCondExpr(t *testing.T) {
+	codeErrorTest(t,
+		`bar.xgo:5:6: assignment mismatch: 2 variables but self.XGo_first returns 1 values
+don't call End(), please use EndInit() instead`, `
+import "github.com/goplus/xgo/cl/internal/dql"
+
+doc := dql.new2
+echo doc.users@($age < 18).$name
+`)
+}
+
 func TestErrMember(t *testing.T) {
+	codeErrorTest(t,
+		`bar.xgo:5:6: a.* undefined (type interface{Read(p []byte) (n int, err error)} has no field or method XGo_Child)`,
+		`
+var a interface {
+	Read(p []byte) (n int, err error)
+}
+b := a.*.$x
+`)
+	codeErrorTest(t,
+		`bar.xgo:3:6: a.$x undefined (type string has no field or method XGo_Attr)`,
+		`
+a := "Hello"
+b := a.$x
+`)
 	codeErrorTest(t,
 		`bar.xgo:3:6: a.x undefined (type string has no field or method x)`,
 		`
 a := "Hello"
 b := a.x
+`)
+	codeErrorTest(t,
+		`bar.xgo:3:6: a.1 undefined (type string has no field or method 1)`,
+		`
+a := "Hello"
+b := a.1
 `)
 }
 

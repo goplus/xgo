@@ -1,0 +1,10 @@
+doc := xgo`
+x, y := "Hi", 123
+echo x
+print y
+`!
+
+stmts := doc.shadowEntry.body.list.*@(self.class == "ExprStmt")
+for fn in stmts.x@(self.class == "CallExpr").fun@(self.class == "Ident") {
+	echo fn.$name
+}

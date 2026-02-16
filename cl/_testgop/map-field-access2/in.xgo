@@ -1,0 +1,7 @@
+var v any
+
+c, ok := v["b"]["c"].(int)
+echo c, ok
+
+d, ok := v.b.c
+echo d, ok

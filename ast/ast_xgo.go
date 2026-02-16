@@ -223,6 +223,57 @@ func (*EnvExpr) exprNode() {}
 
 // -----------------------------------------------------------------------------
 
+// AnySelectorExpr represents `X.**.Sel` expression, which selects any field
+// named Sel in the nested object X.
+// Sel may not be a simple identifier. For example:
+//   - x.**.field
+//   - x.**."field-name"
+//   - x.**.*
+type AnySelectorExpr struct {
+	X      Expr      // expression
+	TokPos token.Pos // position of "**"
+	Sel    *Ident    // field selector (it may not be a simple identifier)
+}
+
+// Pos - position of first character belonging to the node.
+func (p *AnySelectorExpr) Pos() token.Pos {
+	return p.X.Pos()
+}
+
+// End - position of first character immediately after the node.
+func (p *AnySelectorExpr) End() token.Pos {
+	return p.Sel.End()
+}
+
+func (*AnySelectorExpr) exprNode() {}
+
+// -----------------------------------------------------------------------------
+
+// A CondExpr node represents a conditional expression: `expr @ cond`.
+//   - ns@(condExpr)
+//   - ns@fn(args)
+//   - ns@"elem-name" (Cond will be a *Ident with name "elem-name", not a *BasicLit)
+//   - ns@name
+type CondExpr struct {
+	X     Expr      // expression
+	OpPos token.Pos // position of "@"
+	Cond  Expr      // condition expression (can be *CallExpr, *ParenExpr or *Ident)
+}
+
+// Pos - position of first character belonging to the node.
+func (p *CondExpr) Pos() token.Pos {
+	return p.X.Pos()
+}
+
+// End - position of first character immediately after the node.
+func (p *CondExpr) End() token.Pos {
+	return p.Cond.End()
+}
+
+func (*CondExpr) exprNode() {}
+
+// -----------------------------------------------------------------------------
+
 // A SliceLit node represents a slice literal.
 type SliceLit struct {
 	Lbrack     token.Pos // position of "["
@@ -309,7 +360,7 @@ func (*ElemEllipsis) exprNode() {}
 
 // -----------------------------------------------------------------------------
 
-// ErrWrapExpr represents `expr!`, `expr?` or `expr?: defaultValue`.
+// ErrWrapExpr represents `expr!`, `expr?` or `expr?:defaultValue`.
 type ErrWrapExpr struct {
 	X       Expr
 	Tok     token.Token // ! or ?
@@ -459,7 +510,7 @@ func (p *ForPhrase) exprNode() {}
 //	`[vexpr for k1, v1 in container1, cond1 ...]` or
 //	`{vexpr for k1, v1 in container1, cond1 ...}` or
 //	`{kexpr: vexpr for k1, v1 in container1, cond1 ...}` or
-//	`{for k1, v1 in container1, cond1 ...}` or
+//	`{for k1, v1 in container1, cond1 ...}`
 type ComprehensionExpr struct {
 	Lpos token.Pos   // position of "[" or "{"
 	Tok  token.Token // token.LBRACK '[' or token.LBRACE '{'

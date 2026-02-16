@@ -1,0 +1,3 @@
+func foo() (int, bool) {
+	return {i for i, x <- ["1", "3", "5", "7", "11"], x == "5"}
+}

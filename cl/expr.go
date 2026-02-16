@@ -105,10 +105,10 @@ func compileIdent(ctx *blockCtx, ident *ast.Ident, flags int) (pkg gogen.PkgRef,
 		if recv = classRecv(cb); recv != nil {
 			cb.Val(recv)
 			chkFlag := flags
-			if chkFlag&clIdentSelectorExpr != 0 { // TODO: remove this condition
+			if chkFlag&clIdentSelectorExpr != 0 { // TODO(xsw): remove this condition
 				chkFlag = clIdentCanAutoCall
 			}
-			if compileMember(ctx, ident, name, chkFlag) == nil { // class member object
+			if compileMember(ctx, 0, ident, name, chkFlag) == nil { // class member object
 				return
 			}
 			cb.InternalStack().PopN(1)
@@ -212,13 +212,21 @@ func compileMatrixLit(ctx *blockCtx, v *ast.MatrixLit) {
 }
 */
 
-func compileEnvExpr(ctx *blockCtx, v *ast.EnvExpr) {
+func compileEnvExpr(ctx *blockCtx, lhs int, v *ast.EnvExpr) {
 	cb := ctx.cb
+	if _, self := cb.Scope().LookupParent("self", 0); self != nil { // self.$attr
+		name := v.Name
+		cb.Val(self, v) // push self
+		if compileAttr(cb, lhs, name.Name, name) == nil {
+			return
+		}
+		cb.InternalStack().PopN(1) // pop self if failed
+	}
 	if ctx.isClass { // in an XGo class file
 		if recv := classRecv(cb); recv != nil {
 			if xgoOp(cb, recv, "XGo_Env", "Gop_Env", v) == nil {
 				name := v.Name
-				cb.Val(name.Name, name).CallWith(1, 0, 0, v)
+				cb.Val(name.Name, name).CallWith(1, lhs, 0, v)
 				return
 			}
 		}
@@ -237,9 +245,11 @@ func classRecv(cb *gogen.CodeBuilder) *types.Var {
 
 func xgoOp(cb *gogen.CodeBuilder, recv *types.Var, op1, op2 string, src ...ast.Node) error {
 	cb.Val(recv)
-	kind, e := cb.Member(op1, gogen.MemberFlagVal, src...)
+	kind, e := cb.Member(op1, 0, gogen.MemberFlagVal, src...)
 	if kind == gogen.MemberInvalid {
-		_, e = cb.Member(op2, gogen.MemberFlagVal, src...)
+		if _, e = cb.Member(op2, 0, gogen.MemberFlagVal, src...); e != nil {
+			cb.InternalStack().PopN(1) // pop recv
+		}
 	}
 	return e
 }
@@ -251,7 +261,7 @@ func isBuiltin(o types.Object) bool {
 	return false
 }
 
-func compileMember(ctx *blockCtx, v ast.Node, name string, flags int) error {
+func compileMember(ctx *blockCtx, lhs int, v ast.Node, name string, flags int) error {
 	var mflag gogen.MemberFlag
 	switch {
 	case (flags & clIdentLHS) != 0:
@@ -261,7 +271,7 @@ func compileMember(ctx *blockCtx, v ast.Node, name string, flags int) error {
 	default:
 		mflag = gogen.MemberFlagMethodAlias
 	}
-	_, err := ctx.cb.Member(name, mflag, v)
+	_, err := ctx.cb.Member(name, lhs, mflag, v)
 	return err
 }
 
@@ -345,7 +355,7 @@ func compileExpr(ctx *blockCtx, lhs int, expr ast.Expr, inFlags ...int) {
 		compileCallExpr(ctx, lhs, v, flags)
 	case *ast.SelectorExpr:
 		flags, cmdNoArgs := identOrSelectorFlags(inFlags)
-		compileSelectorExpr(ctx, v, flags)
+		compileSelectorExpr(ctx, lhs, v, flags)
 		if cmdNoArgs {
 			callCmdNoArgs(ctx, expr, true)
 			return
@@ -389,15 +399,19 @@ func compileExpr(ctx *blockCtx, lhs int, expr ast.Expr, inFlags ...int) {
 	case *ast.ParenExpr:
 		compileExpr(ctx, lhs, v.X, inFlags...)
 	case *ast.ErrWrapExpr:
-		compileErrWrapExpr(ctx, v, 0)
+		compileErrWrapExpr(ctx, lhs, v, 0)
 	case *ast.FuncType:
 		ctx.cb.Typ(toFuncType(ctx, v, nil, nil), v)
 	case *ast.EnvExpr:
-		compileEnvExpr(ctx, v)
+		compileEnvExpr(ctx, lhs, v)
 	/* case *ast.MatrixLit:
 	compileMatrixLit(ctx, v) */
 	case *ast.DomainTextLit:
 		compileDomainTextLit(ctx, v)
+	case *ast.AnySelectorExpr:
+		compileAnySelectorExpr(ctx, lhs, v)
+	case *ast.CondExpr:
+		compileCondExpr(ctx, v)
 	default:
 		panic(ctx.newCodeErrorf(v.Pos(), v.End(), "compileExpr failed: unknown - %T", v))
 	}
@@ -408,41 +422,41 @@ func compileExpr(ctx *blockCtx, lhs int, expr ast.Expr, inFlags ...int) {
 
 func compileExprOrNone(ctx *blockCtx, expr ast.Expr) {
 	if expr != nil {
-		compileExpr(ctx, 0, expr)
+		compileExpr(ctx, 1, expr)
 	} else {
 		ctx.cb.None()
 	}
 }
 
 func compileUnaryExpr(ctx *blockCtx, lhs int, v *ast.UnaryExpr) {
-	compileExpr(ctx, 0, v.X)
+	compileExpr(ctx, 1, v.X)
 	ctx.cb.UnaryOpEx(gotoken.Token(v.Op), lhs, v)
 }
 
 func compileBinaryExpr(ctx *blockCtx, v *ast.BinaryExpr) {
-	compileExpr(ctx, 0, v.X)
-	compileExpr(ctx, 0, v.Y)
+	compileExpr(ctx, 1, v.X)
+	compileExpr(ctx, 1, v.Y)
 	ctx.cb.BinaryOp(gotoken.Token(v.Op), v)
 }
 
 func compileIndexExprLHS(ctx *blockCtx, v *ast.IndexExpr) {
-	compileExpr(ctx, 0, v.X)
-	compileExpr(ctx, 0, v.Index)
+	compileExpr(ctx, 1, v.X)
+	compileExpr(ctx, 1, v.Index)
 	ctx.cb.IndexRef(1, v)
 }
 
 func compileStarExprLHS(ctx *blockCtx, v *ast.StarExpr) { // *x = ...
-	compileExpr(ctx, 0, v.X)
+	compileExpr(ctx, 1, v.X)
 	ctx.cb.ElemRef()
 }
 
 func compileStarExpr(ctx *blockCtx, v *ast.StarExpr) { // ... = *x
-	compileExpr(ctx, 0, v.X)
+	compileExpr(ctx, 1, v.X)
 	ctx.cb.Star(v)
 }
 
 func compileTypeAssertExpr(ctx *blockCtx, lhs int, v *ast.TypeAssertExpr) {
-	compileExpr(ctx, 0, v.X)
+	compileExpr(ctx, 1, v.X)
 	if v.Type == nil {
 		panic("TODO: x.(type) is only used in type switch")
 	}
@@ -451,22 +465,22 @@ func compileTypeAssertExpr(ctx *blockCtx, lhs int, v *ast.TypeAssertExpr) {
 }
 
 func compileIndexExpr(ctx *blockCtx, lhs int, v *ast.IndexExpr, inFlags ...int) { // x[i]
-	compileExpr(ctx, 0, v.X, inFlags...)
-	compileExpr(ctx, 0, v.Index)
+	compileExpr(ctx, 1, v.X, inFlags...)
+	compileExpr(ctx, 1, v.Index)
 	ctx.cb.Index(1, lhs, v)
 }
 
 func compileIndexListExpr(ctx *blockCtx, lhs int, v *ast.IndexListExpr, inFlags ...int) { // fn[t1,t2]
-	compileExpr(ctx, 0, v.X, inFlags...)
+	compileExpr(ctx, 1, v.X, inFlags...)
 	n := len(v.Indices)
 	for i := 0; i < n; i++ {
-		compileExpr(ctx, 0, v.Indices[i])
+		compileExpr(ctx, 1, v.Indices[i])
 	}
 	ctx.cb.Index(n, lhs, v)
 }
 
 func compileSliceExpr(ctx *blockCtx, v *ast.SliceExpr) { // x[i:j:k]
-	compileExpr(ctx, 0, v.X)
+	compileExpr(ctx, 1, v.X)
 	compileExprOrNone(ctx, v.Low)
 	compileExprOrNone(ctx, v.High)
 	if v.Slice3 {
@@ -483,12 +497,109 @@ func compileSelectorExprLHS(ctx *blockCtx, v *ast.SelectorExpr) {
 			return
 		}
 	default:
-		compileExpr(ctx, 0, v.X)
+		compileExpr(ctx, 1, v.X)
 	}
 	ctx.cb.MemberRef(v.Sel.Name, v)
 }
 
-func compileSelectorExpr(ctx *blockCtx, v *ast.SelectorExpr, flags int) {
+func compileCondExpr(ctx *blockCtx, v *ast.CondExpr) {
+	const (
+		nameVal = "_xgo_val"
+		nameErr = "_xgo_err"
+	)
+	xExpr := v.X
+	condExpr := v.Cond
+	cb := ctx.cb
+	compileExpr(ctx, 1, xExpr)
+	if id, ok := condExpr.(*ast.Ident); ok {
+		name := id.Name
+		switch name[0] {
+		case '"', '`': // @"elem-name"
+			name = unquote(name)
+		}
+		cb.MemberVal("XGo_Select", 0, v).Val(name, id).CallWith(1, 1, 0, v)
+		return
+	}
+	pkg := ctx.pkg
+	x := cb.Get(-1) // x.Type is NodeSet
+	nsType := x.Type
+	pkgTypes := pkg.Types
+	cb.MemberVal("XGo_Enum", 0, xExpr).CallWith(0, 1, 0, xExpr)
+	varSelf := types.NewParam(0, pkgTypes, "self", nsType)
+	yieldParams := types.NewTuple(varSelf)
+	yieldRets := types.NewTuple(types.NewParam(0, nil, "", types.Typ[types.Bool]))
+	sigYield := types.NewSignatureType(nil, nil, nil, yieldParams, yieldRets, false)
+	cb.NewClosureWith(sigYield).BodyStart(pkg, condExpr).
+		If(condExpr)
+	compileExpr(ctx, 1, condExpr)
+	cb.Then(condExpr).
+		If().DefineVarStart(0, nameVal, nameErr).
+		Val(varSelf).MemberVal("XGo_first", 0, v).CallWith(0, 2, 0, v)
+	firstRet := cb.Get(-1)
+	nodeType := firstRet.Type.(*types.Tuple).At(0).Type()
+	varYield := newNodeSeqParam(pkgTypes, nodeType)
+	cb.EndInit(1).VarVal(nameErr).Val(nil).BinaryOp(gotoken.EQL).Then().
+		If().Val(varYield).VarVal(nameVal).CallWith(1, 1, 0).UnaryOpEx(gotoken.NOT, 1).Then().
+		Val(false).Return(1).
+		End().End().End().
+		Val(true).Return(1).
+		End().               // end func
+		CallWith(1, 0, 0, v) // ns.XGo_Enum()(func(self NodeSet) bool { ... })
+	stk := cb.InternalStack()
+	seq := stk.Pop()
+	sigSeq := types.NewSignatureType(nil, nil, nil, types.NewTuple(varYield), nil, false)
+	cb.Typ(nsType).
+		NewClosureWith(sigSeq).BodyStart(pkg)
+	stk.Push(seq)
+	cb.EndStmt().
+		End(). // end func
+		CallWith(1, 1, 0, v)
+}
+
+func newNodeSeqParam(pkgTypes *types.Package, nodeType types.Type) *types.Var {
+	yieldParams := types.NewTuple(types.NewParam(0, pkgTypes, "", nodeType))
+	yieldRets := types.NewTuple(types.NewParam(0, nil, "", types.Typ[types.Bool]))
+	sigYield := types.NewSignatureType(nil, nil, nil, yieldParams, yieldRets, false)
+	return types.NewParam(0, nil, "_xgo_yield", sigYield)
+}
+
+func compileAnySelectorExpr(ctx *blockCtx, lhs int, v *ast.AnySelectorExpr) {
+	compileExpr(ctx, 0, v.X)
+	// DQL (DOM Query Language) rules:
+	// - selector.**.name         -> XGo_Any("name")      - descendants by name
+	// - selector.**."elem-name"  -> XGo_Any("elem-name") - descendants by name
+	// - selector.**.*            -> XGo_Any("")          - all descendants
+	cb, sel := ctx.cb, v.Sel
+	name := sel.Name
+	switch name[0] {
+	case '"', '`': // ."elem-name"
+		name = unquote(name)
+	case '*':
+		name = ""
+	}
+	convMapToNodeSet(cb)
+	cb.MemberVal("XGo_Any", 0, v).Val(name).CallWith(1, lhs, 0, v)
+}
+
+func convMapToNodeSet(cb *gogen.CodeBuilder) {
+	e := cb.Get(-1)
+	switch t := types.Unalias(e.Type).(type) {
+	case *types.Interface:
+		if !t.Empty() {
+			return
+		}
+	case *types.Map:
+	default:
+		return
+	}
+	stk := cb.InternalStack()
+	stk.Pop()
+	cb.Val(cb.Pkg().Import("github.com/goplus/xgo/dql/maps").Ref("New"))
+	stk.Push(e)
+	cb.CallWith(1, 1, 0)
+}
+
+func compileSelectorExpr(ctx *blockCtx, lhs int, v *ast.SelectorExpr, flags int) {
 	switch x := v.X.(type) {
 	case *ast.Ident:
 		if at, kind := compileIdent(ctx, x, flags|clIdentCanAutoCall|clIdentSelectorExpr); kind != objNormal {
@@ -501,11 +612,55 @@ func compileSelectorExpr(ctx *blockCtx, v *ast.SelectorExpr, flags int) {
 			panic(ctx.newCodeErrorf(x.Pos(), x.End(), "cannot refer to unexported name %s.%s", x.Name, v.Sel.Name))
 		}
 	default:
-		compileExpr(ctx, 0, v.X)
+		compileExpr(ctx, 1, x)
 	}
-	if err := compileMember(ctx, v, v.Sel.Name, flags); err != nil {
-		panic(err)
+
+	// DQL (DOM Query Language) rules:
+	// - selector.name    -> XGo_Elem("name")   - children by name (fallback)
+	// - selector."name"  -> XGo_Elem("name")   - children by name (fallback)
+	// - selector.$attr   -> XGo_Attr("attr")   - attribute access
+	// - selector.$"attr" -> XGo_Attr("attr")   - attribute access
+	// - selector.*       -> XGo_Child()        - direct children
+	cb, sel := ctx.cb, v.Sel
+	name := sel.Name
+	switch name[0] {
+	case '*':
+		convMapToNodeSet(cb)
+		cb.MemberVal("XGo_Child", 0, v).CallWith(0, lhs, 0, v)
+	case '$':
+		if err := compileAttr(cb, lhs, name[1:], v); err != nil {
+			panic(err) // throw error
+		}
+	case '"', '`':
+		name = unquote(name)
+		fallthrough
+	default:
+		if err := compileMember(ctx, lhs, v, name, flags); err != nil {
+			if _, e := cb.Member("XGo_Elem", 0, 0, v); e != nil {
+				panic(err) // rethrow original error
+			}
+			cb.Val(name).CallWith(1, lhs, 0, v)
+		}
 	}
+}
+
+func compileAttr(cb *gogen.CodeBuilder, lhs int, name string, v ast.Node) error {
+	_, e := cb.Member("XGo_Attr", 1, gogen.MemberFlagVal, v)
+	if e == nil {
+		switch name[0] {
+		case '"', '`': // @"attr-name"
+			name = unquote(name)
+		}
+		cb.Val(name).CallWith(1, lhs, 0, v)
+	}
+	return e
+}
+
+func unquote(name string) string {
+	// parser package already checks the syntax of the quoted string,
+	// so we can ignore the error here
+	s, _ := strconv.Unquote(name)
+	return s
 }
 
 func compileFuncAlias(ctx *blockCtx, scope *types.Scope, x *ast.Ident, flags int) bool {
@@ -674,7 +829,7 @@ func (p *fnType) initFuncs(base int, funcs []types.Object, typeAsParams bool) {
 func compileCallExpr(ctx *blockCtx, lhs int, v *ast.CallExpr, inFlags int) {
 	// If you need to confirm the callExpr format, you can turn on
 	// if !v.NoParenEnd.IsValid() && !v.Rparen.IsValid() {
-	// 	panic("unexpected invalid Rparen and NoParenEnd in CallExpr")
+	// 	   panic("unexpected invalid Rparen and NoParenEnd in CallExpr")
 	// }
 	var ifn *ast.Ident
 	switch fn := v.Fun.(type) {
@@ -691,17 +846,17 @@ func compileCallExpr(ctx *blockCtx, lhs int, v *ast.CallExpr, inFlags int) {
 			ifn = fn
 		}
 	case *ast.SelectorExpr:
-		compileSelectorExpr(ctx, fn, 0)
+		compileSelectorExpr(ctx, 0, fn, 0)
 	case *ast.ErrWrapExpr:
 		if v.IsCommand() {
 			callExpr := *v
 			callExpr.Fun = fn.X
 			ewExpr := *fn
 			ewExpr.X = &callExpr
-			compileErrWrapExpr(ctx, &ewExpr, inFlags)
+			compileErrWrapExpr(ctx, 0, &ewExpr, inFlags)
 			return
 		}
-		compileErrWrapExpr(ctx, fn, 0)
+		compileErrWrapExpr(ctx, 1, fn, 0)
 	default:
 		compileExpr(ctx, 0, fn, clInCallExpr)
 	}
@@ -873,7 +1028,7 @@ func tryXGoExec(cb *gogen.CodeBuilder, ifn *ast.Ident) bool {
 
 func fnCall(ctx *blockCtx, lhs int, v *ast.CallExpr, flags gogen.InstrFlags, extra int) error {
 	for _, arg := range v.Args {
-		compileExpr(ctx, 0, arg)
+		compileExpr(ctx, 1, arg)
 	}
 	return ctx.cb.CallWithEx(len(v.Args)+extra, lhs, flags, v)
 }
@@ -901,7 +1056,7 @@ func compileCallArgs(ctx *blockCtx, lhs int, pfn *gogen.Element, fn *fnType, v *
 	if fn.typeAsParams && fn.typeparam {
 		n := fn.sig.TypeParams().Len()
 		for i := 0; i < n; i++ {
-			compileExpr(ctx, 0, vargs[i])
+			compileExpr(ctx, 1, vargs[i])
 		}
 		args := cb.InternalStack().GetArgs(n)
 		var targs []types.Type
@@ -982,7 +1137,7 @@ func compileCallArgs(ctx *blockCtx, lhs int, pfn *gogen.Element, fn *fnType, v *
 		case *ast.NumberUnitLit:
 			compileNumberUnitLit(ctx, expr, t)
 		default:
-			compileExpr(ctx, 0, arg)
+			compileExpr(ctx, 1, arg)
 			if sigParamLen(t) == 0 {
 				if nonClosure(cb.Get(-1).Type) {
 					cb.ConvertToClosure()
@@ -1134,7 +1289,7 @@ func compileLambdaExpr(ctx *blockCtx, v *ast.LambdaExpr, sig *types.Signature) e
 		defNames(ctx, v.Lhs, ctx.cb.Scope())
 	}
 	for _, v := range v.Rhs {
-		compileExpr(ctx, 0, v)
+		compileExpr(ctx, 1, v)
 	}
 	if rec := ctx.recorder(); rec != nil {
 		rec.Scope(v, ctx.cb.Scope())
@@ -1248,11 +1403,11 @@ func compileStringLitEx(ctx *blockCtx, cb *gogen.CodeBuilder, lit *ast.BasicLit)
 			if _, ok := v.(*ast.Ident); ok {
 				flags = clIdentInStringLitEx
 			}
-			compileExpr(ctx, 0, v, flags)
+			compileExpr(ctx, 1, v, flags)
 			t := cb.Get(-1).Type
 			if t.Underlying() != types.Typ[types.String] {
-				if _, err := cb.Member("string", gogen.MemberFlagAutoProperty); err != nil {
-					if _, e2 := cb.Member("error", gogen.MemberFlagAutoProperty); e2 != nil {
+				if _, err := cb.Member("string", 0, gogen.MemberFlagAutoProperty); err != nil {
+					if _, e2 := cb.Member("error", 0, gogen.MemberFlagAutoProperty); e2 != nil {
 						if e, ok := err.(*gogen.CodeError); ok {
 							err = ctx.newCodeErrorf(v.Pos(), v.End(), "%s.string%s", ctx.LoadExpr(v), e.Msg)
 						}
@@ -1271,7 +1426,8 @@ func compileStringLitEx(ctx *blockCtx, cb *gogen.CodeBuilder, lit *ast.BasicLit)
 }
 
 const (
-	tplPkgPath = "github.com/goplus/xgo/tpl"
+	tplPkgPath        = "github.com/goplus/xgo/tpl"
+	encodingPkgPrefix = "github.com/goplus/xgo/encoding/"
 )
 
 // A DomainTextLit node represents a domain-specific text literal.
@@ -1289,20 +1445,11 @@ func compileDomainTextLit(ctx *blockCtx, v *ast.DomainTextLit) {
 	if pi, ok := ctx.findImport(name); ok {
 		imp = pi.PkgRef
 		path = pi.Path()
-		if path == "golang.org/x/net/html" {
-			// html`...` => html.Parse(strings.NewReader(`...`))
-			cb.Val(imp.Ref("Parse")).
-				Val(ctx.pkg.Import("strings").Ref("NewReader")).
-				Val(&goast.BasicLit{Kind: gotoken.STRING, Value: v.Value}, v).
-				CallWith(1, 0, 0, v).
-				CallWith(1, 0, 0, v)
-			return
-		}
 	} else {
 		if name == "tpl" {
 			path = tplPkgPath
 		} else {
-			path = tplPkgPath + "/encoding/" + name
+			path = encodingPkgPrefix + name
 		}
 		imp = ctx.pkg.Import(path)
 		/* TODO(xsw):
@@ -1338,7 +1485,7 @@ func compileDomainTextLit(ctx *blockCtx, v *ast.DomainTextLit) {
 		if lit, ok := v.Extra.(*ast.DomainTextLitEx); ok {
 			cb.Val(lit.Raw)
 			for _, arg := range lit.Args {
-				compileExpr(ctx, 0, arg)
+				compileExpr(ctx, 1, arg)
 			}
 			n += len(lit.Args)
 		} else {
@@ -1395,7 +1542,7 @@ func compileCompositeLitElts(ctx *blockCtx, elts []ast.Expr, kind int, expected 
 			if key, ok := kv.Key.(*ast.CompositeLit); ok && key.Type == nil {
 				compileCompositeLit(ctx, key, expected.Key(), false)
 			} else {
-				compileExpr(ctx, 0, kv.Key)
+				compileExpr(ctx, 1, kv.Key)
 			}
 			err := compileCompositeLitElt(ctx, kv.Value, expected.Elem(), clLambaAssign, kv.Key)
 			if err != nil {
@@ -1429,7 +1576,7 @@ func compileCompositeLitElt(ctx *blockCtx, e ast.Expr, typ types.Type, flag clLa
 	case *ast.CompositeLit:
 		compileCompositeLit(ctx, v, typ, false)
 	default:
-		compileExpr(ctx, 0, v)
+		compileExpr(ctx, 1, v)
 	}
 	return nil
 }
@@ -1462,7 +1609,7 @@ func compileStructLitInKeyVal(ctx *blockCtx, elts []ast.Expr, t *types.Struct, t
 		name := kv.Key.(*ast.Ident)
 		idx := cb.LookupField(t, name.Name)
 		if idx >= 0 {
-			cb.Val(idx)
+			cb.Val(idx, src)
 		} else {
 			src := ctx.LoadExpr(name)
 			return ctx.newCodeErrorf(name.Pos(), name.End(), "%s undefined (type %v has no field or method %s)", src, typ, name.Name)
@@ -1630,7 +1777,7 @@ func compileSliceLit(ctx *blockCtx, v *ast.SliceLit, typ types.Type, noPanic ...
 	}
 	n := len(v.Elts)
 	for _, elt := range v.Elts {
-		compileExpr(ctx, 0, elt)
+		compileExpr(ctx, 1, elt)
 	}
 	if isSpecificSliceType(ctx, typ) {
 		ctx.cb.SliceLitEx(typ, n, false, v)
@@ -1650,7 +1797,7 @@ func compileTupleLit(ctx *blockCtx, v *ast.TupleLit, typ types.Type, noPanic ...
 	}
 	n := len(v.Elts)
 	for _, elt := range v.Elts {
-		compileExpr(ctx, 0, elt)
+		compileExpr(ctx, 1, elt)
 	}
 	ctx.cb.TupleLit(typ, n, v)
 	return
@@ -1662,13 +1809,13 @@ func compileRangeExpr(ctx *blockCtx, v *ast.RangeExpr) {
 	if v.First == nil {
 		ctx.cb.Val(0, v)
 	} else {
-		compileExpr(ctx, 0, v.First)
+		compileExpr(ctx, 1, v.First)
 	}
-	compileExpr(ctx, 0, v.Last)
+	compileExpr(ctx, 1, v.Last)
 	if v.Expr3 == nil {
 		ctx.cb.Val(1, v)
 	} else {
-		compileExpr(ctx, 0, v.Expr3)
+		compileExpr(ctx, 1, v.Expr3)
 	}
 	cb.Call(3)
 }
@@ -1736,7 +1883,7 @@ func compileComprehensionExpr(ctx *blockCtx, lhs int, v *ast.ComprehensionExpr) 
 		names = append(names, forStmt.Value.Name)
 		defineNames = append(defineNames, forStmt.Value)
 		cb.ForRange(names...)
-		compileExpr(ctx, 0, forStmt.X)
+		compileExpr(ctx, 1, forStmt.X)
 		cb.RangeAssignThen(forStmt.TokPos)
 		defNames(ctx, defineNames, cb.Scope())
 		if rec := ctx.recorder(); rec != nil {
@@ -1747,7 +1894,7 @@ func compileComprehensionExpr(ctx *blockCtx, lhs int, v *ast.ComprehensionExpr) 
 			if forStmt.Init != nil {
 				compileStmt(ctx, forStmt.Init)
 			}
-			compileExpr(ctx, 0, forStmt.Cond)
+			compileExpr(ctx, 1, forStmt.Cond)
 			cb.Then()
 			end++
 		}
@@ -1759,15 +1906,15 @@ func compileComprehensionExpr(ctx *blockCtx, lhs int, v *ast.ComprehensionExpr) 
 		cb.VarRef(ret)
 		cb.Val(pkg.Builtin().Ref("append"))
 		cb.Val(ret)
-		compileExpr(ctx, 0, v.Elt)
+		compileExpr(ctx, 1, v.Elt)
 		cb.Call(2).Assign(1)
 	case comprehensionMap:
 		// _xgo_ret[key] = val
 		cb.Val(ret)
 		kv := v.Elt.(*ast.KeyValueExpr)
-		compileExpr(ctx, 0, kv.Key)
+		compileExpr(ctx, 1, kv.Key)
 		cb.IndexRef(1)
-		compileExpr(ctx, 0, kv.Value)
+		compileExpr(ctx, 1, kv.Value)
 		cb.Assign(1)
 	default:
 		if v.Elt == nil {
@@ -1776,7 +1923,7 @@ func compileComprehensionExpr(ctx *blockCtx, lhs int, v *ast.ComprehensionExpr) 
 			cb.Return(1)
 		} else {
 			// return elt, true
-			compileExpr(ctx, 0, v.Elt)
+			compileExpr(ctx, 1, v.Elt)
 			n := 1
 			if lhs == 2 {
 				cb.Val(true)
@@ -1799,7 +1946,7 @@ var (
 	tyError = types.Universe.Lookup("error").Type()
 )
 
-func compileErrWrapExpr(ctx *blockCtx, v *ast.ErrWrapExpr, inFlags int) {
+func compileErrWrapExpr(ctx *blockCtx, lhs int, v *ast.ErrWrapExpr, inFlags int) {
 	const (
 		nameErr = "_xgo_err"
 		nameRet = "_xgo_ret"
@@ -1814,7 +1961,12 @@ func compileErrWrapExpr(ctx *blockCtx, v *ast.ErrWrapExpr, inFlags int) {
 	case *ast.Ident, *ast.SelectorExpr:
 		expr = &ast.CallExpr{Fun: expr, NoParenEnd: expr.End()}
 	}
-	compileExpr(ctx, 0, expr, inFlags)
+	if lhs != 0 {
+		// lhs == 0 means the result is discarded
+		// +1 accounts for the error value that will be stripped from the result tuple
+		lhs++
+	}
+	compileExpr(ctx, lhs, expr, inFlags)
 	x := cb.InternalStack().Pop()
 	n := 0
 	results, ok := x.Type.(*types.Tuple)
@@ -1877,7 +2029,7 @@ func compileErrWrapExpr(ctx *blockCtx, v *ast.ErrWrapExpr, inFlags int) {
 	} else if v.Default == nil { // expr?
 		cb.Val(err).ReturnErr(true)
 	} else { // expr?:val
-		compileExpr(ctx, 0, v.Default)
+		compileExpr(ctx, 1, v.Default)
 		cb.Return(1)
 	}
 	cb.End().Return(0).End()

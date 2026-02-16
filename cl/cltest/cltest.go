@@ -18,18 +18,12 @@ package cltest
 
 import (
 	"bytes"
-	"fmt"
-	"go/ast"
-	"go/build"
-	"go/types"
 	"io/fs"
 	"log"
 	"os"
 	"path"
 	"strings"
 	"testing"
-
-	goparser "go/parser"
 
 	"github.com/goplus/gogen"
 	"github.com/goplus/mod"
@@ -237,33 +231,6 @@ func testFrom(t *testing.T, pkgDir, sel string) {
 		conf = &confCopy
 	}
 	DoFS(t, conf, fsx.Local, pkgDir, filter, "main", b)
-}
-
-func Go1Point() int {
-	for i := len(build.Default.ReleaseTags) - 1; i >= 0; i-- {
-		var version int
-		if _, err := fmt.Sscanf(build.Default.ReleaseTags[i], "go1.%d", &version); err != nil {
-			continue
-		}
-		return version
-	}
-	panic("bad release tags")
-}
-
-func EnableTypesalias() bool {
-	ver := Go1Point()
-	if ver < 22 {
-		return false
-	} else if ver > 22 {
-		_, ok := types.Universe.Lookup("any").Type().(*types.Interface)
-		return !ok
-	} else {
-		fset := token.NewFileSet()
-		f, _ := goparser.ParseFile(fset, "a.go", "package p; type A = int", goparser.SkipObjectResolution)
-		pkg, _ := new(types.Config).Check("p", fset, []*ast.File{f}, nil)
-		_, ok := pkg.Scope().Lookup("A").Type().(*types.Basic)
-		return !ok
-	}
 }
 
 // -----------------------------------------------------------------------------

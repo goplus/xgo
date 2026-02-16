@@ -505,28 +505,111 @@ This is equivalent to Go's append operations:
 
 ### Maps
 
+A map literal is a list of expressions surrounded by curly braces.
+
 ```go
 a := {"Hello": 1, "xsw": 3}     // map[string]int
 b := {"Hello": 1, "xsw": 3.4}   // map[string]float64
 c := {"Hello": 1, "xsw": "XGo"} // map[string]any
+e := {1: "one", 2: "two"}       // map[int]string
 d := {}                         // map[string]any
 ```
 
-If a key is not found, a zero value is returned by default:
+Use `make` for empty maps or to **pre-allocate capacity** for better performance.
 
 ```go
-a := {"Hello": 1, "xsw": 3}
-c := {"Hello": 1, "xsw": "XGo"}
-echo a["bad_key"] // 0
-echo c["bad_key"] // <nil>
+m := make(map[string]int)          // Basic creation
+large := make(map[string]int, 100) // Pre-allocated for ~100 elements
 ```
 
-You can also check, if a key is present, and get its value.
+Before manipulating maps, it is important to understand that XGo supports two notations for referencing keys:
+
+- **Bracket Notation** (`m["key"]`): The universal syntax. It works for all key types and allows using variables as keys.
+- **Field Access Notation** (`m.key`): A convenient shorthand for string-keyed maps when the key is a valid identifier (no spaces or special characters).
+
+**Field access is pure syntax sugar** - `m.field` and `m["field"]` behave identically in all contexts.
+
+Both notations are used for both **assigning** values and **retrieving** them.
+
+#### Adding and Updating Elements
 
 ```go
-a := {"Hello": 1, "xsw": 3}
-if v, ok := a["xsw"]; ok {
-    echo "its value is", v
+a := {"a": 1, "b": 0}
+
+// Using bracket notation
+a["c"] = 100
+
+// Using field notation
+a.d = 200
+
+echo a  // Output: map[a:1 b:0 c:100 d:200]
+
+// Works with maps created by make too
+m := make(map[string]int)
+m["x"] = 10
+m.y = 20
+echo m  // Output: map[x:10 y:20]
+```
+
+#### Deleting Elements
+
+Use the `delete` function to remove elements from a map:
+
+```go
+a := {"a": 1, "b": 0, "c": 100}
+delete(a, "b")
+echo a  // Output: map[a:1 c:100]
+```
+
+#### Getting Map Length
+
+You can get the number of elements in a map using the `len` function:
+
+```go
+a := {"a": 1, "b": 2, "c": 3}
+echo len(a)  // Output: 3
+```
+
+#### Accessing Elements
+
+```go
+config := {"host": "localhost", "port": 8080}
+echo config.host  // Output: localhost
+echo config.port  // Output: 8080
+
+// Equivalent to:
+echo config["host"]
+echo config["port"]
+```
+
+##### Working with `any` Type
+
+Either notation also works with variables of type `any`, automatically treating them as `map[string]any`:
+
+```go
+var response any = {"status": "ok", "code": 200}
+echo response.status  // Output: ok
+echo response.code    // Output: 200
+```
+
+##### Safe Access with Comma-ok
+
+When accessing uncertain data (such as from JSON or external APIs), use the comma-ok form to safely check if a path exists. The comma-ok form returns two values:
+- The value itself (or zero value if path doesn't exist)
+- A boolean indicating whether the access succeeded
+
+With comma-ok, accessing non-existent paths **never panics** - it simply returns `false`:
+
+```go
+var data any = fetchFromAPI()
+
+// Without comma-ok - may panic if structure is wrong
+// name := data.user.profile.name.(string)
+
+// With comma-ok - safe, never panics
+name, ok := data.user.profile.name.(string)
+if ok {
+    // ...
 }
 ```
 
@@ -1379,73 +1462,128 @@ hasFailed := {for x in students if x.score < 60}     // is any student failed?
 
 ## Domain-Specific Text Literals
 
-XGo supports domain-specific text literals, which allow you to embed domain-specific languages directly in your code with syntax highlighting and type safety. This feature is inspired by Markdown code blocks but designed for seamless integration with XGo code.
+Domain-specific text literals allow you to write inline code in specialized formats—such as JSON, XML, regular expressions, or custom DSLs—without sacrificing the benefits of compile-time checking and editor support.
 
-### Syntax
+**Basic syntax:**
 
 ```go
-domainTag`text content`
+result := domainTag`content`
 ```
 
-For domain text literals with arguments:
+**With parameters:**
 
 ```go
-domainTag`> arg1, arg2, ...
-  text content
+result := domainTag`> param1, param2
+content
 `
 ```
 
-### Built-in Domain Text Formats
+The `!` suffix forces error handling, causing a panic if parsing fails—useful for literals you expect to always be valid.
 
-#### Text Processing Language (tpl)
+## Built-in Formats
 
-A grammar-based language for text processing that offers a more readable and maintainable alternative to regular expressions. For more details, see [tpl/README.md](../tpl/README.md).
+XGo currently supports several domain text literals natively:
 
-```go
-cl := tpl`expr = INT % ("+" | "-")`!
-echo cl.parseExpr("1+2-3", nil)
-```
+### Text Processing Language (tpl)
 
-#### JSON
+A grammar-based alternative to regular expressions that emphasizes clarity and composability. Ideal for defining parsers and text processors.
 
 ```go
-echo json`{"a":1, "b":2}`
+grammar := tpl`
+expr = term % ("+" | "-")
+term = INT % ("*" | "/")
+`!
+
+result := grammar.parseExpr("10+5*2", nil)
+echo result
 ```
 
-#### XML
+Learn more in the [TPL documentation](../tpl/README.md).
+
+### JSON
+
+Parse and validate JSON structures inline:
 
 ```go
-echo xml`<a>1</a>`
+config := json`{
+	"server": "localhost",
+	"port": 8080,
+	"features": ["auth", "logging"]
+}`!
+
+echo config.port
 ```
 
-#### CSV
+### XML
+
+Work with XML documents directly:
 
 ```go
-echo csv`a,b`
+doc := xml`
+<configuration>
+	<database>
+		<host>localhost</host>
+		<port>5432</port>
+	</database>
+</configuration>
+`!
 ```
 
-#### HTML
+### CSV
+
+Define tabular data inline:
+
+```go
+data := csv`
+name,age,city
+Alice,30,NYC
+Bob,25,SF
+`!
+```
+
+### HTML
+
+Embed HTML with proper parsing (requires `golang.org/x/net/html`):
 
 ```go
 import "golang.org/x/net/html"
 
-echo html`<html><body><h1>hello</h1></body></html>`
+page := html`
+<html>
+	<body>
+		<h1>Welcome</h1>
+		<p>Domain-specific literals in action</p>
+	</body>
+</html>
+`!
 ```
 
-#### Regular Expressions
+### Regular Expressions
+
+Define regex patterns with improved readability. XGo supports both standard and POSIX regex:
 
 ```go
-re := regexp`^[a-z]+\[[0-9]+\]$`!
-echo re.matchString("adam[23]")
+pattern := regexp`^[a-z]+\[[0-9]+\]$`!
+
+if pattern.matchString("item[42]") {
+	echo "Match found"
+}
+
+// POSIX variant
+posixPattern := regexposix`[[:alpha:]]+`!
 ```
 
-### How It Works
+## Implementation Details
 
-Each domain text literal is essentially a function call to a `New()` function in the corresponding package. For example, `json`{...}`` is equivalent to calling `json.New(...)`.
+Domain text literals compile to function calls to the corresponding package's `New()` function. For example:
 
-### Extensibility
+```go
+json`{"key": "value"}`
+// Compiles to:
+json.New(`{"key": "value"}`)
+```
 
-You can add support for custom domain text formats by creating a package with a global `func New(string)` function. This makes the system highly extensible for your specific needs.
+This design keeps the feature simple while allowing seamless integration with existing Go packages. The `domainTag` represents a package that must have a global `func New(string)` function with any return type.
 
 <h5 align="right"><a href="#table-of-contents">⬆ back to toc</a></h5>
 

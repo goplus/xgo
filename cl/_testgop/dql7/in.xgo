@@ -1,0 +1,17 @@
+doc := json`{
+	"animals": [
+		{"class": "gopher", "at": "Line 1"},
+		{"class": "armadillo", "at": "Line 2"},
+		{"class": "zebra", "at": "Line 3"},
+		{"class": "unknown", "at": "Line 4"},
+		{"class": "gopher", "at": "Line 5"},
+		{"class": "bee", "at": "Line 6"},
+		{"class": "gopher", "at": "Line 7"},
+		{"class": "zebra", "at": "Line 8"}
+	]
+}
+`!
+
+for animal in doc.animals.*@($class == "zebra") {
+	animal.$at
+}

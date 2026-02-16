@@ -465,6 +465,14 @@ func Walk(v Visitor, node Node) {
 	case *EnvExpr:
 		Walk(v, n.Name)
 
+	case *AnySelectorExpr:
+		Walk(v, n.X)
+		Walk(v, n.Sel)
+
+	case *CondExpr:
+		Walk(v, n.X)
+		Walk(v, n.Cond)
+
 	default:
 		panic(fmt.Sprintf("ast.Walk: unexpected node type %T", n))
 	}

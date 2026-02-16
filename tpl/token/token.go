@@ -133,7 +133,6 @@ const (
 	DRARROW   // =>
 	SRARROW   // ->
 	BIDIARROW // <>
-	POW       // **
 
 	operator_end
 )
@@ -219,7 +218,6 @@ var tokens = [...]string{
 	DRARROW:   "=>",
 	SRARROW:   "->",
 	BIDIARROW: "<>",
-	POW:       "**",
 }
 
 const (

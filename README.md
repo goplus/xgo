@@ -81,14 +81,15 @@ Code style is just the first step. We have made many efforts to make the code mo
 | Go code | XGo code | Note |
 | ---- | ---- | ---- |
 | package main<br><br>import "fmt"<br><br>func main() {<br>&nbsp;&nbsp;&nbsp;&nbsp;fmt.Println("Hi")<br>} | import "fmt"<br><br>fmt.Println("Hi")<br> | Program structure: XGo allows omitting `package main` and `func main` |
-| fmt.Println("Hi") | echo("Hi") | More builtin functions: It simplifies the expression of the most common tasks |
-| fmt.Println("Hi") | echo "Hi" | Command-line style code: It reduces the number of parentheses in the code as much as possible, making it closer to natural language |
-| name := "Ken"<br>fmt.Printf(<br>&nbsp;&nbsp;"Hi %s\n", name) | name := "Ken"<br>echo "Hi ${name}" | [Goodbye printf](doc/goodbye-printf.md), use `${expr}` in string literals |
-| a := []int{1, 2, 3} | a := [1, 2, 3] | List literals |
+| fmt.Println("Hi") | echo("Hi") | [More builtin functions](doc/builtin.md): It simplifies the expression of the most common tasks |
+| fmt.Println("Hi") | echo "Hi" | [Command-line](doc/fncall.md) style code: It reduces the number of parentheses in the code as much as possible, making it closer to natural language |
+| name := "Ken"<br>fmt.Printf(<br>&nbsp;&nbsp;"Hi %s\n", name) | name := "Ken"<br>echo "Hi ${name}" | [Goodbye printf](doc/goodbye-printf.md), use `${expr}` in [string](doc/string.md) literals |
+| a := []int{1, 2, 3} | a := [1, 2, 3] | [List/Slice](doc/slice.md) literals |
 | a = append(a, 4)<br>a = append(a, 5, 6, 7) | a <- 4<br>a <- 5, 6, 7 | Append values to a list |
-| a := map[string]int{<br>&nbsp;&nbsp;&nbsp;&nbsp;"Monday": 1,<br>&nbsp;&nbsp;&nbsp;&nbsp;"Tuesday": 2,<br>} | a := {<br>&nbsp;&nbsp;&nbsp;&nbsp;"Monday": 1,<br>&nbsp;&nbsp;&nbsp;&nbsp;"Tuesday": 2,<br>} | Mapping literals |
-| OnStart(func() {<br>&nbsp;&nbsp;&nbsp;&nbsp;...<br>}) | onStart => {<br>&nbsp;&nbsp;&nbsp;&nbsp;...<br>} | Lambda expressions |
-| Play("1.mp3", &Options{Loop: true}) | play "1.mp3", loop = true | Python-like [keyword arguments](doc/docs.md#keyword-arguments) (kwargs) |
+| a := map[string]int{<br>&nbsp;&nbsp;&nbsp;&nbsp;"Monday": 1,<br>&nbsp;&nbsp;&nbsp;&nbsp;"Tuesday": 2,<br>} | a := {<br>&nbsp;&nbsp;&nbsp;&nbsp;"Monday": 1,<br>&nbsp;&nbsp;&nbsp;&nbsp;"Tuesday": 2,<br>} | [Map](doc/map.md) literals |
+| OnStart(func() {<br>&nbsp;&nbsp;&nbsp;&nbsp;...<br>}) | onStart => {<br>&nbsp;&nbsp;&nbsp;&nbsp;...<br>} | [Lambda](doc/func-closure.md) expressions |
+| Play("1.mp3", &Options{Loop: true}) | play "1.mp3", loop = true | Python-like [keyword arguments](doc/func-closure.md#keyword-arguments) (kwargs) |
+| type Rect struct {<br>&nbsp;&nbsp;&nbsp;&nbsp;Width&nbsp; float64<br>&nbsp;&nbsp;&nbsp;&nbsp;Height float64<br>}<br> | type Rect (width, height float64) | [Tuples vs. Structs](doc/struct-vs-tuple.md): We encourage using tuples to implement UDTs instead of structs. |
 | type Rect struct {<br>&nbsp;&nbsp;&nbsp;&nbsp;Width&nbsp; float64<br>&nbsp;&nbsp;&nbsp;&nbsp;Height float64<br>}<br><br>func (this *Rect) Area() float64 { <br>&nbsp;&nbsp;&nbsp;&nbsp;return this.Width * this.Height<br>} | var (<br>&nbsp;&nbsp;&nbsp;&nbsp;Width&nbsp; float64<br>&nbsp;&nbsp;&nbsp;&nbsp;Height float64<br>)<br><br>func Area() float64 { <br>&nbsp;&nbsp;&nbsp;&nbsp;return Width * Height<br>} | [XGo Classfiles](doc/classfile.md): We can express OOP with global variables and functions. |
 
 For more details, see [The XGo Mini Specification](doc/spec-mini.md).

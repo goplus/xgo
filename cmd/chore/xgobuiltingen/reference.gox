@@ -59,7 +59,6 @@ var (
 		"strings": "${goroot}/src/strings",
 
 		"buil":        "${root}/../x/xgo",
-		"iox":         "${root}/../x/osx",
 		"osx":         "${root}/../x/osx",
 		"stringslice": "${root}/../x/stringslice",
 		"strx":        "${root}/../x/stringutil",

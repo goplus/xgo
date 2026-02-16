@@ -119,7 +119,7 @@ Greem.t4spx:1:1: cannot use  (type *Greem) as type github.com/goplus/xgo/cl/inte
 		"/foo/Greem.t4spx": ``,
 	})
 
-	gopSpxErrorTestMap(t, `Game.t4gmx:1:9: cannot use backdropName (type string) as type error in assignment`, map[string][]string{
+	gopSpxErrorTestMap(t, `Game.t4gmx:1:9: assignment mismatch: 2 variables but this.BackdropName returns 1 values`, map[string][]string{
 		"/foo": {"Game.t4gmx"},
 	}, map[string]string{
 		"/foo/Game.t4gmx": `println backdropName!`,
@@ -720,6 +720,12 @@ func main() {
 	new(Game).Main()
 }
 `, "Game.tgmx", "Kai.tspx")
+}
+
+func TestSpxErrorEnv(t *testing.T) {
+	gopSpxErrorTestEx(t, `Game.t2gmx:2:9: undefined: PATH`, `
+echo "${PATH}"
+`, ``, "Game.t2gmx", "Kai.t2spx")
 }
 
 func TestSpxErrorSel(t *testing.T) {

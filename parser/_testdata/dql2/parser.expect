@@ -1,0 +1,44 @@
+package main
+
+file dql.xgo
+noEntrypoint
+ast.FuncDecl:
+  Name:
+    ast.Ident:
+      Name: main
+  Type:
+    ast.FuncType:
+      Params:
+        ast.FieldList:
+  Body:
+    ast.BlockStmt:
+      List:
+        ast.ExprStmt:
+          X:
+            ast.CallExpr:
+              Fun:
+                ast.Ident:
+                  Name: echo
+              Args:
+                ast.SelectorExpr:
+                  X:
+                    ast.CondExpr:
+                      X:
+                        ast.CondExpr:
+                          X:
+                            ast.SelectorExpr:
+                              X:
+                                ast.Ident:
+                                  Name: doc
+                              Sel:
+                                ast.Ident:
+                                  Name: *
+                          Cond:
+                            ast.Ident:
+                              Name: users
+                      Cond:
+                        ast.Ident:
+                          Name: "users"
+                  Sel:
+                    ast.Ident:
+                      Name: $name

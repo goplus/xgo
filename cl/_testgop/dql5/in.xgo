@@ -1,0 +1,12 @@
+doc := html`<html><body>
+<p>Links:</p>
+<ul>
+	<li><a href="foo">Foo</a>
+	<li><a href="/bar/baz">BarBaz</a>
+</ul>
+</body></html>
+`!
+
+for a in doc.body.**.a.dump {
+	echo a.$href, a.text
+}

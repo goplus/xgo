@@ -1,0 +1,6 @@
+var (
+	score = 100
+	Spr Spr
+)
+
+run

@@ -1,0 +1,14 @@
+func BarOne() int {
+	return 0
+}
+
+func BarTwo() (int, error) {
+	return 0, nil
+}
+
+func Bar = (
+	BarOne
+	BarTwo
+)
+
+echo bar!

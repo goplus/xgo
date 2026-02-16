@@ -36,9 +36,6 @@ jobs:
         - windows-latest
         - macos-latest
         go:
-        - 1.19.x
-        - 1.21.x
-        - 1.22.x
         - 1.24.x
         - 1.25.x
     runs-on: ${{ matrix.os }}
@@ -49,37 +46,6 @@ jobs:
       uses: actions/setup-go@v6
       with:
         go-version: ${{ matrix.go }}
-
-    - name: Run testcases
-      run: go test -v -coverprofile="coverage.txt" -covermode=atomic ./...
-
-    - name: Codecov
-      uses: codecov/codecov-action@v5
-      with:
-        slug: goplus/xgo
-
-  TestTypeAlias:
-    strategy:
-      matrix:
-        os:
-        - ubuntu-latest
-        - windows-latest
-        - macos-latest
-        go:
-        - 1.23.x
-        - 1.24.x
-        - 1.25.x
-    runs-on: ${{ matrix.os }}
-    steps:
-    - uses: actions/checkout@v6
-
-    - name: Set up Go
-      uses: actions/setup-go@v6
-      with:
-        go-version: ${{ matrix.go }}
-
-    - name: Set types alias env
-      run: echo "GODEBUG=gotypesalias=1" >> $GITHUB_ENV
 
     - name: Run testcases
       run: go test -v -coverprofile="coverage.txt" -covermode=atomic ./...

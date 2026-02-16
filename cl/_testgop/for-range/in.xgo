@@ -1,0 +1,23 @@
+func foo(yield func() bool) {
+	yield()
+}
+
+func bar(yield func(v string) bool) {
+	yield("World")
+}
+
+func weekdays(yield func(k string, v int) bool) {
+	yield("Mon", 1)
+}
+
+for range foo {
+    echo "Hi"
+}
+
+for v := range bar {
+    echo v
+}
+
+for k, v := range weekdays {
+    echo k, v
+}

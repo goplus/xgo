@@ -1,0 +1,10 @@
+import "os"
+import "github.com/goplus/xgo/dql/html"
+
+doc := html.source(os.Args[1])
+
+for a in doc.**.a {
+	if url := a.$href; url != "" {
+		echo url
+	}
+}

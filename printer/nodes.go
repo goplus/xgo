@@ -854,6 +854,9 @@ func (p *printer) expr1(expr ast.Expr, prec1, depth int) {
 	case *ast.SelectorExpr:
 		p.selectorExpr(x, depth, false)
 
+	case *ast.AnySelectorExpr:
+		p.anySelectorExpr(x, depth)
+
 	case *ast.TypeAssertExpr:
 		p.expr1(x.X, token.HighestPrec, depth)
 		p.print(token.PERIOD, x.Lparen, token.LPAREN)
@@ -1159,6 +1162,11 @@ func (p *printer) expr1(expr ast.Expr, prec1, depth int) {
 			p.print(x.Name)
 		}
 
+	case *ast.CondExpr:
+		p.expr(x.X)
+		p.print(token.AT)
+		p.expr(x.Cond)
+
 	case *ast.ElemEllipsis:
 		p.expr(x.Elt)
 		p.print(token.ELLIPSIS)
@@ -1218,6 +1226,17 @@ func (p *printer) selectorExpr(x *ast.SelectorExpr, depth int, isMethod bool) bo
 		if !isMethod {
 			p.print(unindent)
 		}
+		return true
+	}
+	p.print(x.Sel.Pos(), x.Sel)
+	return false
+}
+
+func (p *printer) anySelectorExpr(x *ast.AnySelectorExpr, depth int) bool {
+	p.expr1(x.X, token.HighestPrec, depth)
+	p.print(token.PERIOD, token.MUL, token.MUL, token.PERIOD) // .**.
+	if line := p.lineFor(x.Sel.Pos()); p.pos.IsValid() && p.pos.Line < line {
+		p.print(indent, newline, x.Sel.Pos(), x.Sel, unindent)
 		return true
 	}
 	p.print(x.Sel.Pos(), x.Sel)

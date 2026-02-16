@@ -2467,6 +2467,7 @@ func (p *parser) checkExpr(x ast.Expr) ast.Expr {
 	case *ast.SliceLit:
 	case *ast.ComprehensionExpr:
 	case *ast.SelectorExpr:
+	case *ast.AnySelectorExpr:
 	case *ast.IndexExpr:
 	case *ast.IndexListExpr:
 	case *ast.ArrayType:
@@ -2492,6 +2493,7 @@ func (p *parser) checkExpr(x ast.Expr) ast.Expr {
 	case *ast.LambdaExpr2:
 	case *ast.TupleLit:
 	case *ast.EnvExpr:
+	case *ast.CondExpr:
 	case *ast.ElemEllipsis:
 	case *ast.NumberUnitLit:
 	case *ast.DomainTextLit:
@@ -2554,6 +2556,7 @@ L:
 	for {
 		switch p.tok {
 		case token.PERIOD: // .
+			posDot := p.pos
 			p.next()
 			if lhs {
 				p.resolve(x)
@@ -2564,18 +2567,102 @@ L:
 			case token.LPAREN:
 				x = p.parseTypeAssertion(p.checkExpr(x))
 			default:
-				pos := p.pos
-				p.errorExpected(pos, "selector or type assertion", 2)
-				p.next() // make progress
-				sel := &ast.Ident{NamePos: pos, Name: "_"}
-				x = &ast.SelectorExpr{X: x, Sel: sel}
+				processed := posDot+1 == p.pos
+				if processed {
+					switch p.tok {
+					case token.MUL: // .* .**
+						posTok := p.pos
+						p.next()
+						if p.tok == token.MUL && p.pos == posDot+2 { // .**
+							p.next()
+							p.expect(token.PERIOD)
+							sel := &ast.Ident{NamePos: p.pos}
+							x = &ast.AnySelectorExpr{X: p.checkExpr(x), TokPos: posTok, Sel: sel}
+							switch p.tok {
+							case token.IDENT, token.STRING: // .**.name .**."name"
+								sel.Name = p.lit
+								p.next()
+							case token.MUL: // .**.*
+								sel.Name = "*"
+								p.next()
+							default:
+								p.errorExpected(p.pos, "identifier after '**.'", 2)
+								sel.Name = "_"
+								if p.tok != token.RBRACE { // TODO(rFindley)
+									p.next() // make progress
+								}
+							}
+						} else {
+							sel := &ast.Ident{NamePos: posTok, Name: "*"}
+							x = &ast.SelectorExpr{X: p.checkExpr(x), Sel: sel}
+						}
+					case token.ENV: // .$attr .$"attr-name"
+						sel := &ast.Ident{NamePos: p.pos}
+						p.next()
+						if sel.NamePos+1 != p.pos || (p.tok != token.IDENT && p.tok != token.STRING) {
+							p.errorExpected(p.pos, "identifier after '$'", 2)
+							sel.Name = "$_"
+						} else {
+							sel.Name = "$" + p.lit
+							p.next()
+						}
+						x = &ast.SelectorExpr{X: p.checkExpr(x), Sel: sel}
+					case token.STRING: // ."field-name"
+						sel := &ast.Ident{NamePos: p.pos, Name: p.lit}
+						p.next()
+						x = &ast.SelectorExpr{X: p.checkExpr(x), Sel: sel}
+					default:
+						processed = false
+					}
+				}
+				if !processed {
+					pos := p.pos
+					p.errorExpected(pos, "selector or type assertion", 2)
+					// TODO(rFindley) The check for token.RBRACE below is a targeted fix
+					//                to error recovery sufficient to make the x/tools tests to
+					//                pass with the new parsing logic introduced for type
+					//                parameters. Remove this once error recovery has been
+					//                more generally reconsidered.
+					if p.tok != token.RBRACE {
+						p.next() // make progress
+					}
+					sel := &ast.Ident{NamePos: pos, Name: "_"}
+					x = &ast.SelectorExpr{X: x, Sel: sel}
+				}
 			}
+		case token.AT: // @
+			ce := &ast.CondExpr{X: x, OpPos: p.pos}
+			p.next()
+			switch p.tok {
+			case token.LPAREN:
+				cond, kind := p.parseOperand(0) // @(cond)
+				if kind != exprNormal {
+					p.error(cond.Pos(), "invalid condition expression")
+				}
+				ce.Cond = p.checkExpr(cond)
+			case token.IDENT:
+				fun := p.parseIdent()
+				if p.tok == token.LPAREN {
+					ce.Cond = p.parseCallOrConversion(fun, false) // @fun(...)
+				} else {
+					ce.Cond = fun // @name
+				}
+			case token.STRING: // @"elem-name"
+				ce.Cond = &ast.Ident{NamePos: p.pos, Name: p.lit}
+				p.next()
+			default:
+				pos := p.pos
+				p.errorExpected(pos, "condition expression", 2)
+				p.next() // make progress
+				ce.Cond = &ast.Ident{NamePos: pos, Name: "_"}
+			}
+			x = ce
 		case token.LBRACK: // [
 			if lhs {
 				p.resolve(x)
 			}
 			if allowCmd && p.isCmd(x) { // println [...]
-				x = p.parseCallOrConversion(p.checkExprOrType(x), true)
+				x = p.parseCallOrConversion(x, true)
 			} else {
 				x = p.parseIndexOrSlice(p.checkExpr(x))
 			}
@@ -2587,7 +2674,7 @@ L:
 			x = p.parseCallOrConversion(p.checkExprOrType(x), isCmd)
 		case token.LBRACE: // {
 			if allowCmd && p.isCmd(x) { // println {...}
-				x = p.parseCallOrConversion(p.checkExprOrType(x), true)
+				x = p.parseCallOrConversion(x, true)
 			} else {
 				t := unparen(x)
 				// determine if '{' belongs to a composite literal or a block statement
@@ -2615,7 +2702,7 @@ L:
 			}
 		case token.NOT: // !
 			if allowCmd && p.isCmd(x) {
-				x = p.parseCallOrConversion(p.checkExprOrType(x), true)
+				x = p.parseCallOrConversion(x, true)
 			} else {
 				x = &ast.ErrWrapExpr{X: x, Tok: token.NOT, TokPos: p.pos}
 				p.next()
@@ -2637,7 +2724,7 @@ L:
 				if lhs {
 					p.resolve(x)
 				}
-				x = p.parseCallOrConversion(p.checkExprOrType(x), true)
+				x = p.parseCallOrConversion(x, true)
 			} else if p.tok == token.FLOAT && p.lit[0] == '.' && x.End() == p.pos {
 				// tuple field: .0 .1 etc.
 				sel := &ast.Ident{NamePos: p.pos + 1, Name: p.lit[1:]}
@@ -3276,7 +3363,7 @@ func isForPhraseCondEnd(tok token.Token) bool {
 // parseForPhraseCond is an adjusted version of parseIfHeader
 func (p *parser) parseForPhraseCond() (init ast.Stmt, cond ast.Expr) {
 	if isForPhraseCondEnd(p.tok) {
-		p.error(p.pos, "missing condition in for <- statement")
+		p.error(p.pos, "missing condition in for..in statement")
 		cond = &ast.BadExpr{From: p.pos, To: p.pos}
 		return
 	}
@@ -3294,14 +3381,10 @@ func (p *parser) parseForPhraseCond() (init ast.Stmt, cond ast.Expr) {
 	}
 
 	var condStmt ast.Stmt
-	var semi struct {
-		pos token.Pos
-		//lit string // ";" or "\n"; valid if pos.IsValid()
-	}
+	var semiPos token.Pos
 	if !isForPhraseCondEnd(p.tok) {
 		if p.tok == token.SEMICOLON {
-			semi.pos = p.pos
-			//semi.lit = p.lit
+			semiPos = p.pos
 			p.next()
 		} else {
 			p.expect(token.SEMICOLON)
@@ -3316,8 +3399,8 @@ func (p *parser) parseForPhraseCond() (init ast.Stmt, cond ast.Expr) {
 
 	if condStmt != nil {
 		cond = p.makeExpr(condStmt, "boolean expression")
-	} else if semi.pos.IsValid() {
-		p.error(semi.pos, "missing condition in for <- statement")
+	} else if semiPos.IsValid() {
+		p.error(semiPos, "missing condition in for..in statement")
 	}
 
 	// make sure we have a valid AST
@@ -3580,16 +3663,22 @@ func (p *parser) parseForPhraseStmtPart(lhs []ast.Expr) *ast.ForPhraseStmt {
 		ifPos = p.pos
 		p.next()
 		cond = p.parseExpr(0)
+		// NOTE(xsw): why not parseForPhraseCond?
+		// init statements are not supported in for-phrase-if (can't use ';' in for loop)
 	}
 
-	stmt := &ast.ForPhraseStmt{ForPhrase: &ast.ForPhrase{TokPos: tokPos, X: x, IfPos: ifPos, Cond: cond}}
+	stmt := &ast.ForPhraseStmt{
+		ForPhrase: &ast.ForPhrase{
+			TokPos: tokPos, X: x, IfPos: ifPos, Cond: cond,
+		},
+	}
 	switch len(lhs) {
 	case 1:
 		stmt.Value = p.toIdent(lhs[0])
 	case 2:
 		stmt.Key, stmt.Value = p.toIdent(lhs[0]), p.toIdent(lhs[1])
 	default:
-		log.Panicln("TODO: parseForPhraseStmt - too many variables, 1 or 2 is required")
+		p.errorExpected(lhs[0].Pos(), "expect 1 or 2 identifiers", 2)
 	}
 	return stmt
 }
@@ -3629,7 +3718,7 @@ func (p *parser) parseForPhrase() *ast.ForPhrase { // for k, v in container if c
 	var init ast.Stmt
 	var cond ast.Expr
 	var ifPos token.Pos
-	if p.tok == token.IF || p.tok == token.COMMA { // `condition` or `init; condition`
+	if p.tok == token.IF || p.tok == token.COMMA { // `if condition` or `if init; condition`
 		ifPos = p.pos
 		p.next()
 		init, cond = p.parseForPhraseCond()
@@ -4190,10 +4279,11 @@ func (p *parser) parseFuncDeclOrCall() (ast.Decl, *ast.CallExpr) {
 		}
 	}
 	var body *ast.BlockStmt
-	if p.tok == token.LBRACE {
+	switch p.tok {
+	case token.LBRACE:
 		body = p.parseBody(scope)
 		p.expectSemi()
-	} else if p.tok == token.SEMICOLON {
+	case token.SEMICOLON:
 		p.next()
 		if p.tok == token.LBRACE {
 			// opening { of function declaration on next line
@@ -4201,7 +4291,7 @@ func (p *parser) parseFuncDeclOrCall() (ast.Decl, *ast.CallExpr) {
 			body = p.parseBody(scope)
 			p.expectSemi()
 		}
-	} else {
+	default:
 		p.expectSemi()
 	}
 

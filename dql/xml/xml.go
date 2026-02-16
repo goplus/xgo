@@ -1,0 +1,383 @@
+/*
+ * Copyright (c) 2026 The XGo Authors (xgo.dev). All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package xml
+
+import (
+	"bytes"
+	"encoding/xml"
+	"fmt"
+	"io"
+	"iter"
+	"os"
+	"unsafe"
+
+	"github.com/goplus/xgo/dql"
+	"github.com/qiniu/x/stream"
+)
+
+const (
+	XGoPackage = true
+)
+
+// -----------------------------------------------------------------------------
+
+// NodeSet represents a set of XML nodes.
+type NodeSet struct {
+	Data iter.Seq[*Node]
+	Err  error
+}
+
+// NodeSet(seq) casts a NodeSet from a sequence of nodes.
+func NodeSet_Cast(seq iter.Seq[*Node]) NodeSet {
+	return NodeSet{Data: seq}
+}
+
+// Root creates a NodeSet containing the provided root node.
+func Root(doc *Node) NodeSet {
+	return NodeSet{
+		Data: func(yield func(*Node) bool) {
+			yield(doc)
+		},
+	}
+}
+
+// Nodes creates a NodeSet containing the provided nodes.
+func Nodes(nodes ...*Node) NodeSet {
+	return NodeSet{
+		Data: func(yield func(*Node) bool) {
+			for _, node := range nodes {
+				if !yield(node) {
+					break
+				}
+			}
+		},
+	}
+}
+
+// New parses the XML document from the provided reader and returns a NodeSet
+// containing the root node. If there is an error during parsing, the NodeSet's
+// Err field is set.
+func New(r io.Reader) NodeSet {
+	doc, err := Parse(r)
+	if err != nil {
+		return NodeSet{Err: err}
+	}
+	return NodeSet{
+		Data: func(yield func(*Node) bool) {
+			yield(doc)
+		},
+	}
+}
+
+// Source creates a NodeSet from various types of sources:
+// - string: treated as an URL to read XML content from.
+// - []byte: treated as raw XML content.
+// - io.Reader: reads XML content from the reader.
+// - *Node: creates a NodeSet containing the single provided node.
+// - iter.Seq[*Node]: directly uses the provided sequence of nodes.
+// - NodeSet: returns the provided NodeSet as is.
+// If the source type is unsupported, it panics.
+func Source(r any) (ret NodeSet) {
+	switch v := r.(type) {
+	case string:
+		f, err := stream.Open(v)
+		if err != nil {
+			return NodeSet{Err: err}
+		}
+		defer f.Close()
+		return New(f)
+	case []byte:
+		r := bytes.NewReader(v)
+		return New(r)
+	case io.Reader:
+		return New(v)
+	case *Node:
+		return Root(v)
+	case iter.Seq[*Node]:
+		return NodeSet{Data: v}
+	case NodeSet:
+		return v
+	default:
+		panic("dql/xml.Source: unsupported source type")
+	}
+}
+
+// XGo_Enum returns an iterator over the nodes in the NodeSet.
+func (p NodeSet) XGo_Enum() iter.Seq[NodeSet] {
+	if p.Err != nil {
+		return dql.NopIter[NodeSet]
+	}
+	return func(yield func(NodeSet) bool) {
+		p.Data(func(node *Node) bool {
+			return yield(Root(node))
+		})
+	}
+}
+
+// XGo_Select returns a NodeSet containing the nodes with the specified name.
+//   - @name
+//   - @"element-name"
+func (p NodeSet) XGo_Select(name string) NodeSet {
+	if p.Err != nil {
+		return p
+	}
+	return NodeSet{
+		Data: func(yield func(*Node) bool) {
+			p.Data(func(node *Node) bool {
+				return selectNode(node, name, yield)
+			})
+		},
+	}
+}
+
+// selectNode yields the node if it matches the specified name.
+func selectNode(node *Node, name string, yield func(*Node) bool) bool {
+	if node.Name.Local == name {
+		return yield(node)
+	}
+	return true
+}
+
+// XGo_Elem returns a NodeSet containing the child nodes with the specified name.
+//   - .name
+//   - .“element-name”
+func (p NodeSet) XGo_Elem(name string) NodeSet {
+	if p.Err != nil {
+		return p
+	}
+	return NodeSet{
+		Data: func(yield func(*Node) bool) {
+			p.Data(func(node *Node) bool {
+				return yieldNode(node, name, yield)
+			})
+		},
+	}
+}
+
+// yieldNode yields the child node with the specified name if it exists.
+func yieldNode(n *Node, name string, yield func(*Node) bool) bool {
+	for _, c := range n.Children {
+		if child, ok := c.(*Node); ok {
+			if child.Name.Local == name {
+				if !yield(child) {
+					return false
+				}
+			}
+		}
+	}
+	return true
+}
+
+// XGo_Child returns a NodeSet containing all child nodes of the nodes in the NodeSet.
+func (p NodeSet) XGo_Child() NodeSet {
+	if p.Err != nil {
+		return p
+	}
+	return NodeSet{
+		Data: func(yield func(*Node) bool) {
+			p.Data(func(n *Node) bool {
+				return rangeChildNodes(n, yield)
+			})
+		},
+	}
+}
+
+// rangeChildNodes yields all child nodes of the given node.
+func rangeChildNodes(n *Node, yield func(*Node) bool) bool {
+	for _, c := range n.Children {
+		if child, ok := c.(*Node); ok {
+			if !yield(child) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+// XGo_Any returns a NodeSet containing all descendant nodes (including the
+// nodes themselves) with the specified name.
+// If name is "", it returns all nodes.
+//   - .**.name
+//   - .**.“element-name”
+//   - .**.*
+func (p NodeSet) XGo_Any(name string) NodeSet {
+	if p.Err != nil {
+		return p
+	}
+	return NodeSet{
+		Data: func(yield func(*Node) bool) {
+			p.Data(func(node *Node) bool {
+				return rangeAnyNodes(node, name, yield)
+			})
+		},
+	}
+}
+
+// rangeAnyNodes yields all descendant nodes of the given node that match the
+// specified name. If name is "", it yields all nodes.
+func rangeAnyNodes(n *Node, name string, yield func(*Node) bool) bool {
+	if name == "" || n.Name.Local == name {
+		if !yield(n) {
+			return false
+		}
+	}
+	for _, c := range n.Children {
+		if child, ok := c.(*Node); ok {
+			if !rangeAnyNodes(child, name, yield) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+// -----------------------------------------------------------------------------
+
+// _all returns a NodeSet containing all nodes.
+// It's a cache operation for performance optimization when you need to traverse
+// the nodes multiple times.
+func (p NodeSet) XGo_all() NodeSet {
+	if p.Err != nil {
+		return NodeSet{Err: p.Err}
+	}
+	nodes := dql.Collect(p.Data)
+	return Nodes(nodes...)
+}
+
+// _one returns a NodeSet containing the first node.
+// It's a performance optimization when you only need the first node (stop early).
+func (p NodeSet) XGo_one() NodeSet {
+	if p.Err != nil {
+		return NodeSet{Err: p.Err}
+	}
+	n, err := dql.First(p.Data)
+	if err != nil {
+		return NodeSet{Err: err}
+	}
+	return Root(n)
+}
+
+// _single returns a NodeSet containing the single node.
+// If there are zero or more than one nodes, it returns an error.
+// ErrNotFound or ErrMultiEntities is returned accordingly.
+func (p NodeSet) XGo_single() NodeSet {
+	if p.Err != nil {
+		return NodeSet{Err: p.Err}
+	}
+	n, err := dql.Single(p.Data)
+	if err != nil {
+		return NodeSet{Err: err}
+	}
+	return Root(n)
+}
+
+// -----------------------------------------------------------------------------
+
+// _dump prints the nodes in the NodeSet for debugging purposes.
+func (p NodeSet) XGo_dump() NodeSet {
+	if p.Err == nil {
+		p.Data(func(node *Node) bool {
+			fmt.Fprintln(os.Stderr, "node:", node.Name.Local, node.Attr)
+			return true
+		})
+	}
+	return p
+}
+
+// -----------------------------------------------------------------------------
+
+// _first returns the first node in the NodeSet.
+func (p NodeSet) XGo_first() (*Node, error) {
+	if p.Err != nil {
+		return nil, p.Err
+	}
+	return dql.First(p.Data)
+}
+
+// _hasAttr returns true if the first node in the NodeSet has the specified attribute.
+// It returns false otherwise.
+func (p NodeSet) XGo_hasAttr(name string) bool {
+	node, err := p.XGo_first()
+	if err == nil {
+		for _, attr := range node.Attr {
+			if attr.Name.Local == name {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// XGo_Attr returns the value of the specified attribute from the first node in the
+// NodeSet. It only retrieves the attribute from the first node.
+//   - $name
+//   - $“attr-name”
+func (p NodeSet) XGo_Attr__0(name string) string {
+	val, _ := p.XGo_Attr__1(name)
+	return val
+}
+
+// XGo_Attr returns the value of the specified attribute from the first node in the
+// NodeSet. It only retrieves the attribute from the first node.
+//   - $name
+//   - $“attr-name”
+func (p NodeSet) XGo_Attr__1(name string) (val string, err error) {
+	node, err := p.XGo_first()
+	if err == nil {
+		for _, attr := range node.Attr {
+			if attr.Name.Local == name {
+				return attr.Value, nil
+			}
+		}
+		err = dql.ErrNotFound // attribute not found on first node
+	}
+	return
+}
+
+// _text retrieves the text content of the first child text node.
+// It only retrieves from the first node in the NodeSet.
+func (p NodeSet) XGo_text__0() string {
+	val, _ := p.XGo_text__1()
+	return val
+}
+
+// _text retrieves the text content of the first child text node.
+// It only retrieves from the first node in the NodeSet.
+func (p NodeSet) XGo_text__1() (val string, err error) {
+	node, err := p.XGo_first()
+	if err == nil {
+		for _, c := range node.Children {
+			if data, ok := c.(xml.CharData); ok {
+				return unsafe.String(unsafe.SliceData(data), len(data)), nil
+			}
+		}
+		err = dql.ErrNotFound // text not found on first node
+	}
+	return
+}
+
+// _int retrieves the integer value from the text content of the first child
+// text node. It only retrieves from the first node in the NodeSet.
+func (p NodeSet) XGo_int() (int, error) {
+	text, err := p.XGo_text__1()
+	if err != nil {
+		return 0, err
+	}
+	return dql.Int(text)
+}
+
+// -----------------------------------------------------------------------------

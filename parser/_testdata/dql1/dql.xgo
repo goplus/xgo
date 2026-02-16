@@ -1,0 +1,4 @@
+echo doc.**.*@($class == "red")
+echo doc.**.users@($name == "ken").$age
+echo doc.*."elem-name"@isTotal(self).**.
+	"a".$"attr-name"

@@ -31,9 +31,7 @@ const (
 )
 
 var (
-	gblConfLine  *cl.Config
-	gotypesalias bool
-	go1point     int
+	gblConfLine *cl.Config
 )
 
 func init() {
@@ -47,8 +45,6 @@ func init() {
 		NoFileLine:    false,
 		NoAutoGenMain: true,
 	}
-	gotypesalias = cltest.EnableTypesalias()
-	go1point = cltest.Go1Point()
 }
 
 func gopClNamedTest(t *testing.T, name string, gopcode, expected string) {
@@ -1959,42 +1955,6 @@ func main() {
 }
 
 func TestStructType(t *testing.T) {
-	var expect string
-	if gotypesalias {
-		expect = `package main
-
-type bar = foo
-type foo struct {
-	p *bar
-	A int
-	B string ` + "`tag1:123`" + `
-}
-
-func main() {
-	type a struct {
-		p *a
-	}
-	type b = a
-}
-`
-	} else {
-		expect = `package main
-
-type bar = foo
-type foo struct {
-	p *foo
-	A int
-	B string ` + "`tag1:123`" + `
-}
-
-func main() {
-	type a struct {
-		p *a
-	}
-	type b = a
-}
-`
-	}
 	gopClTest(t, `
 type bar = foo
 
@@ -2010,7 +1970,22 @@ func main() {
 	}
 	type b = a
 }
-`, expect)
+`, `package main
+
+type bar = foo
+type foo struct {
+	p *bar
+	A int
+	B string `+"`tag1:123`"+`
+}
+
+func main() {
+	type a struct {
+		p *a
+	}
+	type b = a
+}
+`)
 }
 
 func TestDeferGo(t *testing.T) {
@@ -2306,7 +2281,7 @@ func main() {
 func TestForPhrase(t *testing.T) {
 	gopClTest(t, `
 sum := 0
-for x <- [1, 3, 5, 7, 11, 13, 17], x > 3 {
+for x <- [1, 3, 5, 7, 11, 13, 17] if x > 3 {
 	sum = sum + x
 }
 for i, x <- [1, 3, 5, 7, 11, 13, 17] {
@@ -2332,64 +2307,9 @@ func main() {
 `)
 }
 
-func TestMapComprehension(t *testing.T) {
-	gopClTest(t, `
-y := {x: i for i, x <- ["1", "3", "5", "7", "11"]}
-`, `package main
-
-func main() {
-	y := func() (_xgo_ret map[string]int) {
-		_xgo_ret = map[string]int{}
-		for i, x := range []string{"1", "3", "5", "7", "11"} {
-			_xgo_ret[x] = i
-		}
-		return
-	}()
-}
-`)
-}
-
-func TestMapComprehensionCond(t *testing.T) {
-	gopClTest(t, `
-z := {v: k for k, v <- {"Hello": 1, "Hi": 3, "xsw": 5, "XGo": 7}, v > 3}
-`, `package main
-
-func main() {
-	z := func() (_xgo_ret map[int]string) {
-		_xgo_ret = map[int]string{}
-		for k, v := range map[string]int{"Hello": 1, "Hi": 3, "xsw": 5, "XGo": 7} {
-			if v > 3 {
-				_xgo_ret[v] = k
-			}
-		}
-		return
-	}()
-}
-`)
-}
-
-func TestMapComprehensionCond2(t *testing.T) {
-	gopClTest(t, `
-z := {t: k for k, v <- {"Hello": 1, "Hi": 3, "xsw": 5, "XGo": 7}, t := v; t > 3}
-`, `package main
-
-func main() {
-	z := func() (_xgo_ret map[int]string) {
-		_xgo_ret = map[int]string{}
-		for k, v := range map[string]int{"Hello": 1, "Hi": 3, "xsw": 5, "XGo": 7} {
-			if t := v; t > 3 {
-				_xgo_ret[t] = k
-			}
-		}
-		return
-	}()
-}
-`)
-}
-
 func TestExistsComprehension(t *testing.T) {
 	gopClTest(t, `
-hasFive := {for x <- ["1", "3", "5", "7", "11"], x == "5"}
+hasFive := {for x <- ["1", "3", "5", "7", "11"] if x == "5"}
 `, `package main
 
 func main() {
@@ -2401,108 +2321,6 @@ func main() {
 		}
 		return
 	}()
-}
-`)
-}
-
-func TestSelectComprehension(t *testing.T) {
-	gopClTest(t, `
-y := {i for i, x <- ["1", "3", "5", "7", "11"], x == "5"}
-`, `package main
-
-func main() {
-	y := func() (_xgo_ret int) {
-		for i, x := range []string{"1", "3", "5", "7", "11"} {
-			if x == "5" {
-				return i
-			}
-		}
-		return
-	}()
-}
-`)
-}
-
-func TestSelectComprehensionTwoValue(t *testing.T) {
-	gopClTest(t, `
-y, ok := {i for i, x <- ["1", "3", "5", "7", "11"], x == "5"}
-`, `package main
-
-func main() {
-	y, ok := func() (_xgo_ret int, _xgo_ok bool) {
-		for i, x := range []string{"1", "3", "5", "7", "11"} {
-			if x == "5" {
-				return i, true
-			}
-		}
-		return
-	}()
-}
-`)
-}
-
-func TestSelectComprehensionRetTwoValue(t *testing.T) {
-	gopClTest(t, `
-func foo() (int, bool) {
-	return {i for i, x <- ["1", "3", "5", "7", "11"], x == "5"}
-}
-`, `package main
-
-func foo() (int, bool) {
-	return func() (_xgo_ret int, _xgo_ok bool) {
-		for i, x := range []string{"1", "3", "5", "7", "11"} {
-			if x == "5" {
-				return i, true
-			}
-		}
-		return
-	}()
-}
-`)
-}
-
-func TestListComprehension(t *testing.T) {
-	gopClTest(t, `
-a := [1, 3.4, 5]
-b := [x*x for x <- a]
-`, `package main
-
-func main() {
-	a := []float64{1, 3.4, 5}
-	b := func() (_xgo_ret []float64) {
-		for _, x := range a {
-			_xgo_ret = append(_xgo_ret, x*x)
-		}
-		return
-	}()
-}
-`)
-}
-
-func TestListComprehensionMultiLevel(t *testing.T) {
-	gopClTest(t, `
-arr := [1, 2, 3, 4.1, 5, 6]
-x := [[a, b] for a <- arr, a < b for b <- arr, b > 2]
-println("x:", x)
-`, `package main
-
-import "fmt"
-
-func main() {
-	arr := []float64{1, 2, 3, 4.1, 5, 6}
-	x := func() (_xgo_ret [][]float64) {
-		for _, b := range arr {
-			if b > 2 {
-				for _, a := range arr {
-					if a < b {
-						_xgo_ret = append(_xgo_ret, []float64{a, b})
-					}
-				}
-			}
-		}
-		return
-	}()
-	fmt.Println("x:", x)
 }
 `)
 }
@@ -4075,7 +3893,7 @@ func main() {
 }
 `)
 	gopClTest(t, `sum := 0
-for x <- [1, 3, 5, 7, 11, 13, 17], x > 3 {
+for x <- [1, 3, 5, 7, 11, 13, 17] if x > 3 {
 	sum = sum + x
 	println x
 	x := 200
