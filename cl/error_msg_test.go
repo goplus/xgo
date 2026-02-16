@@ -692,6 +692,14 @@ echo doc.users@($age < 18).$name
 
 func TestErrMember(t *testing.T) {
 	codeErrorTest(t,
+		`bar.xgo:5:6: a.* undefined (type interface{Read(p []byte) (n int, err error)} has no field or method XGo_Child)`,
+		`
+var a interface {
+	Read(p []byte) (n int, err error)
+}
+b := a.*.$x
+`)
+	codeErrorTest(t,
 		`bar.xgo:3:6: a.$x undefined (type string has no field or method XGo_Attr)`,
 		`
 a := "Hello"
