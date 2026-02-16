@@ -577,7 +577,26 @@ func compileAnySelectorExpr(ctx *blockCtx, lhs int, v *ast.AnySelectorExpr) {
 	case '*':
 		name = ""
 	}
+	convMapToNodeSet(cb)
 	cb.MemberVal("XGo_Any", 0, v).Val(name).CallWith(1, lhs, 0, v)
+}
+
+func convMapToNodeSet(cb *gogen.CodeBuilder) {
+	e := cb.Get(-1)
+	switch t := types.Unalias(e.Type).(type) {
+	case *types.Interface:
+		if !t.Empty() {
+			return
+		}
+	case *types.Map:
+	default:
+		return
+	}
+	stk := cb.InternalStack()
+	stk.Pop()
+	cb.Val(cb.Pkg().Import("github.com/goplus/xgo/dql/maps").Ref("New"))
+	stk.Push(e)
+	cb.CallWith(1, 1, 0)
 }
 
 func compileSelectorExpr(ctx *blockCtx, lhs int, v *ast.SelectorExpr, flags int) {
@@ -606,6 +625,7 @@ func compileSelectorExpr(ctx *blockCtx, lhs int, v *ast.SelectorExpr, flags int)
 	name := sel.Name
 	switch name[0] {
 	case '*':
+		convMapToNodeSet(cb)
 		cb.MemberVal("XGo_Child", 0, v).CallWith(0, lhs, 0, v)
 	case '$':
 		if err := compileAttr(cb, lhs, name[1:], v); err != nil {
