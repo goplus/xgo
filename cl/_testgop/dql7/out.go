@@ -13,17 +13,17 @@ func main() {
 	"animals": [
 		{"class": "gopher", "at": "Line 1"},
 		{"class": "armadillo", "at": "Line 2"},
-		{"class": "zebra", "at": Line 3"},
-		{"class": "unknown", "at": Line 4"},
-		{"class": "gopher", "at": Line 5"},
-		{"class": "bee", "at": Line 6"},
-		{"class": "gopher", "at": Line 7"},
-		{"class": "zebra", "at": Line 8"}
+		{"class": "zebra", "at": "Line 3"},
+		{"class": "unknown", "at": "Line 4"},
+		{"class": "gopher", "at": "Line 5"},
+		{"class": "bee", "at": "Line 6"},
+		{"class": "gopher", "at": "Line 7"},
+		{"class": "zebra", "at": "Line 8"}
 	]
 }
 `)
 		if _xgo_err != nil {
-			_xgo_err = errors.NewFrame(_xgo_err, "json`{\n\t\"animals\": [\n\t\t{\"class\": \"gopher\", \"at\": \"Line 1\"},\n\t\t{\"class\": \"armadillo\", \"at\": \"Line 2\"},\n\t\t{\"class\": \"zebra\", \"at\": Line 3\"},\n\t\t{\"class\": \"unknown\", \"at\": Line 4\"},\n\t\t{\"class\": \"gopher\", \"at\": Line 5\"},\n\t\t{\"class\": \"bee\", \"at\": Line 6\"},\n\t\t{\"class\": \"gopher\", \"at\": Line 7\"},\n\t\t{\"class\": \"zebra\", \"at\": Line 8\"}\n\t]\n}\n`", "cl/_testgop/dql7/in.xgo", 1, "main.main")
+			_xgo_err = errors.NewFrame(_xgo_err, "json`{\n\t\"animals\": [\n\t\t{\"class\": \"gopher\", \"at\": \"Line 1\"},\n\t\t{\"class\": \"armadillo\", \"at\": \"Line 2\"},\n\t\t{\"class\": \"zebra\", \"at\": \"Line 3\"},\n\t\t{\"class\": \"unknown\", \"at\": \"Line 4\"},\n\t\t{\"class\": \"gopher\", \"at\": \"Line 5\"},\n\t\t{\"class\": \"bee\", \"at\": \"Line 6\"},\n\t\t{\"class\": \"gopher\", \"at\": \"Line 7\"},\n\t\t{\"class\": \"zebra\", \"at\": \"Line 8\"}\n\t]\n}\n`", "cl/_testgop/dql7/in.xgo", 1, "main.main")
 			panic(_xgo_err)
 		}
 		return
