@@ -14,20 +14,20 @@ func main() {
 		_xgo_ret, _xgo_err = golang.New(`package main
 
 var (
-    a, b string
-    c    int
+	a, b string
+	c    int
 )
 
 func add(a, b int) int {
-    return a + b
+	return a + b
 }
 
 func mul(a, b float64) float64 {
-    return a * b
+	return a * b
 }
 `)
 		if _xgo_err != nil {
-			_xgo_err = errors.NewFrame(_xgo_err, "golang`package main\n\nvar (\n    a, b string\n    c    int\n)\n\nfunc add(a, b int) int {\n    return a + b\n}\n\nfunc mul(a, b float64) float64 {\n    return a * b\n}\n`", "cl/_testgop/dql6/in.xgo", 1, "main.main")
+			_xgo_err = errors.NewFrame(_xgo_err, "golang`package main\n\nvar (\n\ta, b string\n\tc    int\n)\n\nfunc add(a, b int) int {\n\treturn a + b\n}\n\nfunc mul(a, b float64) float64 {\n\treturn a * b\n}\n`", "cl/_testgop/dql6/in.xgo", 1, "main.main")
 			panic(_xgo_err)
 		}
 		return

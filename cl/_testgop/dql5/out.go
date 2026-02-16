@@ -12,13 +12,13 @@ func main() {
 		_xgo_ret, _xgo_err = html.New(`<html><body>
 <p>Links:</p>
 <ul>
-  <li><a href="foo">Foo</a>
-  <li><a href="/bar/baz">BarBaz</a>
+	<li><a href="foo">Foo</a>
+	<li><a href="/bar/baz">BarBaz</a>
 </ul>
 </body></html>
 `)
 		if _xgo_err != nil {
-			_xgo_err = errors.NewFrame(_xgo_err, "html`<html><body>\n<p>Links:</p>\n<ul>\n  <li><a href=\"foo\">Foo</a>\n  <li><a href=\"/bar/baz\">BarBaz</a>\n</ul>\n</body></html>\n`", "cl/_testgop/dql5/in.xgo", 1, "main.main")
+			_xgo_err = errors.NewFrame(_xgo_err, "html`<html><body>\n<p>Links:</p>\n<ul>\n\t<li><a href=\"foo\">Foo</a>\n\t<li><a href=\"/bar/baz\">BarBaz</a>\n</ul>\n</body></html>\n`", "cl/_testgop/dql5/in.xgo", 1, "main.main")
 			panic(_xgo_err)
 		}
 		return
