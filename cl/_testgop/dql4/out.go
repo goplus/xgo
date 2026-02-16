@@ -11,18 +11,18 @@ func main() {
 	doc := func() (_xgo_ret *xml.Object) {
 		var _xgo_err error
 		_xgo_ret, _xgo_err = xml.New(`<doc><animals>
-  <animal class="gopher">Line 1</animal>
-  <animal class="armadillo">Line 2</animal>
-  <animal class="zebra">Line 3</animal>
-  <animal class="unknown">Line 4</animal>
-  <animal class="gopher">Line 5</animal>
-  <animal class="bee">Line 6</animal>
-  <animal class="gopher">Line 7</animal>
-  <animal class="zebra">Line 8</animal>
+	<animal class="gopher">Line 1</animal>
+	<animal class="armadillo">Line 2</animal>
+	<animal class="zebra">Line 3</animal>
+	<animal class="unknown">Line 4</animal>
+	<animal class="gopher">Line 5</animal>
+	<animal class="bee">Line 6</animal>
+	<animal class="gopher">Line 7</animal>
+	<animal class="zebra">Line 8</animal>
 </animals></doc>
 `)
 		if _xgo_err != nil {
-			_xgo_err = errors.NewFrame(_xgo_err, "xml`<doc><animals>\n  <animal class=\"gopher\">Line 1</animal>\n  <animal class=\"armadillo\">Line 2</animal>\n  <animal class=\"zebra\">Line 3</animal>\n  <animal class=\"unknown\">Line 4</animal>\n  <animal class=\"gopher\">Line 5</animal>\n  <animal class=\"bee\">Line 6</animal>\n  <animal class=\"gopher\">Line 7</animal>\n  <animal class=\"zebra\">Line 8</animal>\n</animals></doc>\n`", "cl/_testgop/dql4/in.xgo", 1, "main.main")
+			_xgo_err = errors.NewFrame(_xgo_err, "xml`<doc><animals>\n\t<animal class=\"gopher\">Line 1</animal>\n\t<animal class=\"armadillo\">Line 2</animal>\n\t<animal class=\"zebra\">Line 3</animal>\n\t<animal class=\"unknown\">Line 4</animal>\n\t<animal class=\"gopher\">Line 5</animal>\n\t<animal class=\"bee\">Line 6</animal>\n\t<animal class=\"gopher\">Line 7</animal>\n\t<animal class=\"zebra\">Line 8</animal>\n</animals></doc>\n`", "cl/_testgop/dql4/in.xgo", 1, "main.main")
 			panic(_xgo_err)
 		}
 		return

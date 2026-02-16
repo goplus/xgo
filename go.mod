@@ -8,7 +8,7 @@ require (
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/goccy/go-yaml v1.19.2
 	github.com/goplus/cobra v1.9.12 //xgo:class
-	github.com/goplus/gogen v1.21.1
+	github.com/goplus/gogen v1.21.2-0.20260216000249-2210ad3e11aa
 	github.com/goplus/lib v0.3.1
 	github.com/goplus/mod v0.19.1
 	github.com/qiniu/x v1.16.1

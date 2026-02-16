@@ -40,7 +40,7 @@ type NodeSet = maps.NodeSet
 
 // New creates a JSON NodeSet from JSON data read from r.
 func New(r io.Reader) NodeSet {
-	var data map[string]any
+	var data any
 	err := json.NewDecoder(r).Decode(&data)
 	if err != nil {
 		return NodeSet{Err: err}
@@ -53,6 +53,7 @@ func New(r io.Reader) NodeSet {
 // - []byte: reads JSON data from the byte slice.
 // - io.Reader: reads JSON data from the provided reader.
 // - map[string]any: creates a NodeSet from the provided map.
+// - []any: creates a NodeSet from the provided slice.
 // - Node: creates a NodeSet containing the single provided node.
 // - iter.Seq[Node]: directly uses the provided sequence of nodes.
 // - NodeSet: returns the provided NodeSet as is.
@@ -71,7 +72,7 @@ func Source(r any) (ret NodeSet) {
 		return New(r)
 	case io.Reader:
 		return New(v)
-	case map[string]any:
+	case map[string]any, []any:
 		return maps.New(v)
 	case Node:
 		return maps.Root(v)

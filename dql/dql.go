@@ -81,17 +81,8 @@ func Collect[T any, Seq ~func(func(T) bool)](seq Seq) []T {
 
 // Int parses the given string as an integer, removing any commas and trimming
 // whitespace.
-func Int__0(text string) (int, error) {
+func Int(text string) (int, error) {
 	return strconv.Atoi(strings.ReplaceAll(strings.TrimSpace(text), ",", ""))
-}
-
-// Int parses the given string as an integer, removing any commas and trimming
-// whitespace. If an error occurs, it returns 0 and the error.
-func Int__1(text string, err error) (int, error) {
-	if err != nil {
-		return 0, err
-	}
-	return Int__0(text)
 }
 
 // -----------------------------------------------------------------------------

@@ -588,19 +588,18 @@ func NewPackage(pkgPath string, pkg *ast.Package, conf *Config) (p *gogen.Packag
 		generics:   make(map[string]bool),
 	}
 	confGox := &gogen.Config{
-		Types:            conf.Types,
-		Fset:             fset,
-		Importer:         conf.Importer,
-		LoadNamed:        ctx.loadNamed,
-		HandleErr:        ctx.handleErr,
-		NodeInterpreter:  interp,
-		NewBuiltin:       ctx.newBuiltinDefault,
-		DefaultGoFile:    defaultGoFile,
-		NoSkipConstant:   conf.NoSkipConstant,
-		PkgPathOsx:       osxPkgPath,
-		DbgPositioner:    interp,
-		CanImplicitCast:  implicitCast,
-		EnableTypesalias: true,
+		Types:           conf.Types,
+		Fset:            fset,
+		Importer:        conf.Importer,
+		LoadNamed:       ctx.loadNamed,
+		HandleErr:       ctx.handleErr,
+		NodeInterpreter: interp,
+		NewBuiltin:      ctx.newBuiltinDefault,
+		DefaultGoFile:   defaultGoFile,
+		NoSkipConstant:  conf.NoSkipConstant,
+		PkgPathOsx:      osxPkgPath,
+		DbgPositioner:   interp,
+		CanImplicitCast: implicitCast,
 	}
 	var rec *goxRecorder
 	if conf.Recorder != nil {
