@@ -18,12 +18,10 @@ package xml
 
 import (
 	"bytes"
-	"encoding/xml"
 	"fmt"
 	"io"
 	"iter"
 	"os"
-	"unsafe"
 
 	"github.com/goplus/xgo/dql"
 	"github.com/qiniu/x/stream"
@@ -351,38 +349,6 @@ func (p NodeSet) XGo_Attr__1(name string) (val string, err error) {
 		err = dql.ErrNotFound // attribute not found on first node
 	}
 	return
-}
-
-// _text retrieves the text content of the first child text node.
-// It only retrieves from the first node in the NodeSet.
-func (p NodeSet) XGo_text__0() string {
-	val, _ := p.XGo_text__1()
-	return val
-}
-
-// _text retrieves the text content of the first child text node.
-// It only retrieves from the first node in the NodeSet.
-func (p NodeSet) XGo_text__1() (val string, err error) {
-	node, err := p.XGo_first()
-	if err == nil {
-		for _, c := range node.Children {
-			if data, ok := c.(xml.CharData); ok {
-				return unsafe.String(unsafe.SliceData(data), len(data)), nil
-			}
-		}
-		err = dql.ErrNotFound // text not found on first node
-	}
-	return
-}
-
-// _int retrieves the integer value from the text content of the first child
-// text node. It only retrieves from the first node in the NodeSet.
-func (p NodeSet) XGo_int() (int, error) {
-	text, err := p.XGo_text__1()
-	if err != nil {
-		return 0, err
-	}
-	return dql.Int(text)
 }
 
 // -----------------------------------------------------------------------------
