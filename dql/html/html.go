@@ -193,14 +193,14 @@ func (p NodeSet) XGo_Child() NodeSet {
 	return NodeSet{
 		Data: func(yield func(*Node) bool) {
 			p.Data(func(n *Node) bool {
-				return rangeChildNodes(n, yield)
+				return yieldChildNodes(n, yield)
 			})
 		},
 	}
 }
 
-// rangeChildNodes yields all child nodes of the given node.
-func rangeChildNodes(n *Node, yield func(*Node) bool) bool {
+// yieldChildNodes yields all child nodes of the given node.
+func yieldChildNodes(n *Node, yield func(*Node) bool) bool {
 	for c := n.FirstChild; c != nil; c = c.NextSibling {
 		if !yield(c) {
 			return false
@@ -223,16 +223,16 @@ func (p NodeSet) XGo_Any(name string) NodeSet {
 	return NodeSet{
 		Data: func(yield func(*Node) bool) {
 			p.Data(func(node *Node) bool {
-				return rangeAnyNodes(node, name, yield)
+				return yieldAnyNodes(node, name, yield)
 			})
 		},
 	}
 }
 
-// rangeAnyNodes yields all descendant nodes of the given node that match the
+// yieldAnyNodes yields all descendant nodes of the given node that match the
 // specified name. If name is "textNode", it yields text nodes. If name is "",
 // it yields all nodes.
-func rangeAnyNodes(n *Node, name string, yield func(*Node) bool) bool {
+func yieldAnyNodes(n *Node, name string, yield func(*Node) bool) bool {
 	switch name {
 	case "textNode":
 		if n.Type == html.TextNode {
@@ -252,7 +252,7 @@ func rangeAnyNodes(n *Node, name string, yield func(*Node) bool) bool {
 		}
 	}
 	for c := n.FirstChild; c != nil; c = c.NextSibling {
-		if !rangeAnyNodes(c, name, yield) {
+		if !yieldAnyNodes(c, name, yield) {
 			return false
 		}
 	}

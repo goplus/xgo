@@ -225,7 +225,7 @@ func isNode(v reflect.Value) bool {
 	return false
 }
 
-func rangeChildNodes(node reflect.Value, yield func(Node) bool) bool {
+func yieldChildNodes(node reflect.Value, yield func(Node) bool) bool {
 	kind, node := deref(node)
 	switch kind {
 	case reflect.Struct:
@@ -263,16 +263,16 @@ func rangeChildNodes(node reflect.Value, yield func(Node) bool) bool {
 	return true
 }
 
-// rangeAnyNodes yields all descendant nodes of the given node that match the
+// yieldAnyNodes yields all descendant nodes of the given node that match the
 // specified name. If name is "", it yields all nodes.
-func rangeAnyNodes(name string, node Node, yield func(Node) bool) bool {
+func yieldAnyNodes(name string, node Node, yield func(Node) bool) bool {
 	if name == "" || node.Name == name {
 		if !yield(node) {
 			return false
 		}
 	}
-	return rangeChildNodes(node.Children, func(n Node) bool {
-		return rangeAnyNodes(name, n, yield)
+	return yieldChildNodes(node.Children, func(n Node) bool {
+		return yieldAnyNodes(name, n, yield)
 	})
 }
 
@@ -284,7 +284,7 @@ func (p NodeSet) XGo_Child() NodeSet {
 	return NodeSet{
 		Data: func(yield func(Node) bool) {
 			p.Data(func(node Node) bool {
-				return rangeChildNodes(node.Children, yield)
+				return yieldChildNodes(node.Children, yield)
 			})
 		},
 	}
@@ -303,7 +303,7 @@ func (p NodeSet) XGo_Any(name string) NodeSet {
 	return NodeSet{
 		Data: func(yield func(Node) bool) {
 			p.Data(func(node Node) bool {
-				return rangeAnyNodes(name, node, yield)
+				return yieldAnyNodes(name, node, yield)
 			})
 		},
 	}

@@ -190,14 +190,14 @@ func (p NodeSet) XGo_Child() NodeSet {
 	return NodeSet{
 		Data: func(yield func(*Node) bool) {
 			p.Data(func(n *Node) bool {
-				return rangeChildNodes(n, yield)
+				return yieldChildNodes(n, yield)
 			})
 		},
 	}
 }
 
-// rangeChildNodes yields all child nodes of the given node.
-func rangeChildNodes(n *Node, yield func(*Node) bool) bool {
+// yieldChildNodes yields all child nodes of the given node.
+func yieldChildNodes(n *Node, yield func(*Node) bool) bool {
 	for _, c := range n.Children {
 		if child, ok := c.(*Node); ok {
 			if !yield(child) {
@@ -221,15 +221,15 @@ func (p NodeSet) XGo_Any(name string) NodeSet {
 	return NodeSet{
 		Data: func(yield func(*Node) bool) {
 			p.Data(func(node *Node) bool {
-				return rangeAnyNodes(node, name, yield)
+				return yieldAnyNodes(node, name, yield)
 			})
 		},
 	}
 }
 
-// rangeAnyNodes yields all descendant nodes of the given node that match the
+// yieldAnyNodes yields all descendant nodes of the given node that match the
 // specified name. If name is "", it yields all nodes.
-func rangeAnyNodes(n *Node, name string, yield func(*Node) bool) bool {
+func yieldAnyNodes(n *Node, name string, yield func(*Node) bool) bool {
 	if name == "" || n.Name.Local == name {
 		if !yield(n) {
 			return false
@@ -237,7 +237,7 @@ func rangeAnyNodes(n *Node, name string, yield func(*Node) bool) bool {
 	}
 	for _, c := range n.Children {
 		if child, ok := c.(*Node); ok {
-			if !rangeAnyNodes(child, name, yield) {
+			if !yieldAnyNodes(child, name, yield) {
 				return false
 			}
 		}

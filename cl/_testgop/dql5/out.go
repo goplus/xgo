@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	doc := func() (_xgo_ret *html.Object) {
+	doc := func() (_xgo_ret html.Object) {
 		var _xgo_err error
 		_xgo_ret, _xgo_err = html.New(`<html><body>
 <p>Links:</p>

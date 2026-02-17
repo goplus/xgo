@@ -14,28 +14,13 @@
  * limitations under the License.
  */
 
-package golang
+package fs
 
 import (
-	"go/parser"
-	"strings"
-
-	"github.com/goplus/xgo/dql/golang"
+	"github.com/goplus/xgo/dql/fs"
 )
 
-const (
-	XGoPackage = "github.com/goplus/xgo/dql/golang"
-)
-
-// Object represents a Go File.
-type Object = *golang.File
-
-// New parses Go source code from the given text, returning a Go File object.
-// An optional parser Mode can be provided to customize the parsing behavior.
-func New(text string, mode ...parser.Mode) (f Object, err error) {
-	var conf []golang.Config
-	if len(mode) > 0 {
-		conf = []golang.Config{{Mode: mode[0]}}
-	}
-	return golang.ParseFile("", strings.NewReader(text), conf...)
+// New returns a new fs.NodeSet for the specified directory.
+func New(dir string) fs.NodeSet {
+	return fs.Dir(dir)
 }
