@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	doc := func() (_xgo_ret *xml.Object) {
+	doc := func() (_xgo_ret xml.Object) {
 		var _xgo_err error
 		_xgo_ret, _xgo_err = xml.New(`<doc><animals>
 	<animal class="gopher">Line 1</animal>

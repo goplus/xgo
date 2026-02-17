@@ -59,18 +59,23 @@ func (p *Node) IsDir() (bool, error) {
 	return p.de.IsDir(), nil
 }
 
-// Size returns the size of the file in bytes.
-// If the file is a directory, the size is system-dependent and should not be used.
-func (p *Node) Size() (int64, error) {
+func (p *Node) info() (fs.FileInfo, error) {
 	if p.fi == nil {
 		if p.err == nil {
 			p.fi, p.err = p.de.Info()
 		}
-		if p.err != nil {
-			return 0, p.err
-		}
 	}
-	return p.fi.Size(), nil
+	return p.fi, p.err
+}
+
+// Size returns the size of the file in bytes.
+// If the file is a directory, the size is system-dependent and should not be used.
+func (p *Node) Size() (int64, error) {
+	fi, err := p.info()
+	if err != nil {
+		return 0, err
+	}
+	return fi.Size(), nil
 }
 
 // Type returns the type bits for the entry.
@@ -84,41 +89,29 @@ func (p *Node) Type() (fs.FileMode, error) {
 
 // Mode returns file mode bits.
 func (p *Node) Mode() (fs.FileMode, error) {
-	if p.fi == nil {
-		if p.err == nil {
-			p.fi, p.err = p.de.Info()
-		}
-		if p.err != nil {
-			return 0, p.err
-		}
+	fi, err := p.info()
+	if err != nil {
+		return 0, err
 	}
-	return p.fi.Mode(), nil
+	return fi.Mode(), nil
 }
 
 // ModTime returns the modification time of the file.
 func (p *Node) ModTime() (time.Time, error) {
-	if p.fi == nil {
-		if p.err == nil {
-			p.fi, p.err = p.de.Info()
-		}
-		if p.err != nil {
-			return time.Time{}, p.err
-		}
+	fi, err := p.info()
+	if err != nil {
+		return time.Time{}, err
 	}
-	return p.fi.ModTime(), nil
+	return fi.ModTime(), nil
 }
 
 // Sys returns the underlying data source (can return nil).
 func (p *Node) Sys() (any, error) {
-	if p.fi == nil {
-		if p.err == nil {
-			p.fi, p.err = p.de.Info()
-		}
-		if p.err != nil {
-			return nil, p.err
-		}
+	fi, err := p.info()
+	if err != nil {
+		return nil, err
 	}
-	return p.fi.Sys(), nil
+	return fi.Sys(), nil
 }
 
 // -----------------------------------------------------------------------------
@@ -203,7 +196,7 @@ func (p rootDirEntry) Info() (fs.FileInfo, error) {
 }
 
 func (p rootDirEntry) ModTime() time.Time {
-	return time.Now()
+	return time.Time{}
 }
 
 func (p rootDirEntry) IsDir() bool {
@@ -395,11 +388,15 @@ func (p NodeSet) Match(pattern string) NodeSet {
 	if p.Err != nil {
 		return NodeSet{Err: p.Err}
 	}
+	if _, err := path.Match(pattern, ""); err != nil {
+		return NodeSet{Err: err}
+	}
 	return NodeSet{
 		Base: p.Base,
 		Data: func(yield func(*Node) bool) {
 			p.Data(func(node *Node) bool {
 				if name, err := node.Name(); err == nil {
+					// The pattern has been validated, so we can ignore the error here.
 					matched, _ := path.Match(pattern, name)
 					if matched {
 						return yield(node)

@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	doc := func() (_xgo_ret *golang.Object) {
+	doc := func() (_xgo_ret golang.Object) {
 		var _xgo_err error
 		_xgo_ret, _xgo_err = golang.New(`package main
 
