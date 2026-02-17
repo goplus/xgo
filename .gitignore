@@ -36,6 +36,7 @@ coverage.txt
 .gop/
 gop_autogen*.go
 xgo_autogen*.go
+!dql/fetcher/**/xgo_autogen.go
 !cmd/xgo/gop_autogen*.go
 !cmd/xgo/xgo_autogen*.go
 !demo/fullspec/mixgo-complex/xgo_autogen.go

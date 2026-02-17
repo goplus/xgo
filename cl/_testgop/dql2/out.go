@@ -7,7 +7,7 @@ import (
 
 func main() {
 	doc := dql.New()
-	fmt.Println(dql.NodeSet_Cast(func(_xgo_yield func(*dql.Node) bool) {
+	name := dql.NodeSet_Cast(func(_xgo_yield func(*dql.Node) bool) {
 		doc.XGo_Elem("users").XGo_Enum()(func(self dql.NodeSet) bool {
 			if func() (_xgo_ret int) {
 				var _xgo_err error
@@ -25,5 +25,6 @@ func main() {
 			}
 			return true
 		})
-	}).XGo_Attr__0("name"))
+	}).XGo_Attr__0("name")
+	fmt.Println(name)
 }

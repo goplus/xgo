@@ -299,7 +299,7 @@ normal:
 
 func compileAssignStmt(ctx *blockCtx, expr *ast.AssignStmt) {
 	tok := expr.Tok
-	lhs := 0
+	lhs := 1
 	if len(expr.Lhs) > 1 && len(expr.Rhs) == 1 {
 		lhs = len(expr.Lhs)
 	}
