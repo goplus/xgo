@@ -193,7 +193,7 @@ func TestCompileFuncAlias(t *testing.T) {
 	}
 	scope := types.NewScope(nil, 0, 0, "")
 	x := ast.NewIdent("foo")
-	if compileFuncAlias(ctx, scope, x, 0) {
+	if compileFuncAlias(ctx, 0, scope, x, 0) {
 		t.Fatal("compileFuncAlias: ok?")
 	}
 }

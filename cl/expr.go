@@ -79,7 +79,7 @@ const (
 	objXGoExec = objXGoExecOrEnv
 )
 
-func compileIdent(ctx *blockCtx, ident *ast.Ident, flags int) (pkg gogen.PkgRef, kind int) {
+func compileIdent(ctx *blockCtx, lhs int, ident *ast.Ident, flags int) (pkg gogen.PkgRef, kind int) {
 	fvalue := (flags&clIdentSelectorExpr) != 0 || (flags&clIdentLHS) == 0
 	cb := ctx.cb
 	name := ident.Name
@@ -108,7 +108,7 @@ func compileIdent(ctx *blockCtx, ident *ast.Ident, flags int) (pkg gogen.PkgRef,
 			if chkFlag&clIdentSelectorExpr != 0 { // TODO(xsw): remove this condition
 				chkFlag = clIdentCanAutoCall
 			}
-			if compileMember(ctx, 0, ident, name, chkFlag) == nil { // class member object
+			if compileMember(ctx, lhs, ident, name, chkFlag) == nil { // class member object
 				return
 			}
 			cb.InternalStack().PopN(1)
@@ -134,12 +134,12 @@ func compileIdent(ctx *blockCtx, ident *ast.Ident, flags int) (pkg gogen.PkgRef,
 	}
 
 	// function alias
-	if compileFuncAlias(ctx, scope, ident, flags) {
+	if compileFuncAlias(ctx, lhs, scope, ident, flags) {
 		return
 	}
 
 	// object from import . "xxx"
-	if compilePkgRef(ctx, gogen.PkgRef{}, ident, flags, objPkgRef) {
+	if compilePkgRef(ctx, lhs, gogen.PkgRef{}, ident, flags, objPkgRef) {
 		return
 	}
 
@@ -278,7 +278,7 @@ func compileMember(ctx *blockCtx, lhs int, v ast.Node, name string, flags int) e
 func compileExprLHS(ctx *blockCtx, expr ast.Expr) {
 	switch v := expr.(type) {
 	case *ast.Ident:
-		compileIdent(ctx, v, clIdentLHS)
+		compileIdent(ctx, 1, v, clIdentLHS)
 	case *ast.IndexExpr:
 		compileIndexExprLHS(ctx, v)
 	case *ast.SelectorExpr:
@@ -329,7 +329,7 @@ func compileExpr(ctx *blockCtx, lhs int, expr ast.Expr, inFlags ...int) {
 		if cmdNoArgs {
 			flags |= clCommandIdent // for support XGo_Exec, see TestSpxXGoExec
 		}
-		_, kind := compileIdent(ctx, v, flags)
+		_, kind := compileIdent(ctx, lhs, v, flags)
 		if cmdNoArgs || kind == objXGoExecOrEnv {
 			cb := ctx.cb
 			if kind == objXGoExecOrEnv {
@@ -492,7 +492,7 @@ func compileSliceExpr(ctx *blockCtx, v *ast.SliceExpr) { // x[i:j:k]
 func compileSelectorExprLHS(ctx *blockCtx, v *ast.SelectorExpr) {
 	switch x := v.X.(type) {
 	case *ast.Ident:
-		if at, kind := compileIdent(ctx, x, clIdentLHS|clIdentSelectorExpr); kind != objNormal {
+		if at, kind := compileIdent(ctx, 1, x, clIdentLHS|clIdentSelectorExpr); kind != objNormal {
 			ctx.cb.VarRef(at.Ref(v.Sel.Name))
 			return
 		}
@@ -602,8 +602,8 @@ func convMapToNodeSet(cb *gogen.CodeBuilder) {
 func compileSelectorExpr(ctx *blockCtx, lhs int, v *ast.SelectorExpr, flags int) {
 	switch x := v.X.(type) {
 	case *ast.Ident:
-		if at, kind := compileIdent(ctx, x, flags|clIdentCanAutoCall|clIdentSelectorExpr); kind != objNormal {
-			if compilePkgRef(ctx, at, v.Sel, flags, kind) {
+		if at, kind := compileIdent(ctx, 1, x, flags|clIdentCanAutoCall|clIdentSelectorExpr); kind != objNormal {
+			if compilePkgRef(ctx, 1, at, v.Sel, flags, kind) {
 				return
 			}
 			if token.IsExported(v.Sel.Name) {
@@ -663,7 +663,7 @@ func unquote(name string) string {
 	return s
 }
 
-func compileFuncAlias(ctx *blockCtx, scope *types.Scope, x *ast.Ident, flags int) bool {
+func compileFuncAlias(ctx *blockCtx, lhs int, scope *types.Scope, x *ast.Ident, flags int) bool {
 	name := x.Name
 	if c := name[0]; c >= 'a' && c <= 'z' {
 		name = string(rune(c)+('A'-'a')) + name[1:]
@@ -672,7 +672,7 @@ func compileFuncAlias(ctx *blockCtx, scope *types.Scope, x *ast.Ident, flags int
 			o = scope.Lookup(name)
 		}
 		if o != nil {
-			return identVal(ctx, x, flags, o, true)
+			return identVal(ctx, lhs, x, flags, o, true)
 		}
 	}
 	return false
@@ -710,7 +710,7 @@ func lookupPkgRef(ctx *blockCtx, pkg gogen.PkgRef, x *ast.Ident, pkgKind int) (o
 }
 
 // allow at.Types to be nil
-func compilePkgRef(ctx *blockCtx, at gogen.PkgRef, x *ast.Ident, flags, pkgKind int) bool {
+func compilePkgRef(ctx *blockCtx, lhs int, at gogen.PkgRef, x *ast.Ident, flags, pkgKind int) bool {
 	if v, alias := lookupPkgRef(ctx, at, x, pkgKind); v != nil {
 		if (flags & clIdentLHS) != 0 {
 			if rec := ctx.recorder(); rec != nil {
@@ -719,12 +719,12 @@ func compilePkgRef(ctx *blockCtx, at gogen.PkgRef, x *ast.Ident, flags, pkgKind 
 			ctx.cb.VarRef(v, x)
 			return true
 		}
-		return identVal(ctx, x, flags, v, alias)
+		return identVal(ctx, lhs, x, flags, v, alias)
 	}
 	return false
 }
 
-func identVal(ctx *blockCtx, x *ast.Ident, flags int, v types.Object, alias bool) bool {
+func identVal(ctx *blockCtx, lhs int, x *ast.Ident, flags int, v types.Object, alias bool) bool {
 	autocall := false
 	if alias {
 		if autocall = (flags & clIdentCanAutoCall) != 0; autocall {
@@ -738,7 +738,7 @@ func identVal(ctx *blockCtx, x *ast.Ident, flags int, v types.Object, alias bool
 	}
 	cb := ctx.cb.Val(v, x)
 	if autocall {
-		cb.CallWith(0, 0, 0, x)
+		cb.CallWith(0, lhs, 0, x)
 	}
 	return true
 }
@@ -837,7 +837,7 @@ func compileCallExpr(ctx *blockCtx, lhs int, v *ast.CallExpr, inFlags int) {
 		if v.IsCommand() { // for support XGo_Exec, see TestSpxXGoExec
 			inFlags |= clCommandIdent
 		}
-		if _, kind := compileIdent(ctx, fn, clIdentAllowBuiltin|inFlags); kind == objXGoExec {
+		if _, kind := compileIdent(ctx, 1, fn, clIdentAllowBuiltin|inFlags); kind == objXGoExec {
 			args := make([]ast.Expr, 1, len(v.Args)+1)
 			args[0] = toBasicLit(fn)
 			args = append(args, v.Args...)
@@ -846,7 +846,7 @@ func compileCallExpr(ctx *blockCtx, lhs int, v *ast.CallExpr, inFlags int) {
 			ifn = fn
 		}
 	case *ast.SelectorExpr:
-		compileSelectorExpr(ctx, lhs, fn, 0)
+		compileSelectorExpr(ctx, 1, fn, 0)
 	case *ast.ErrWrapExpr:
 		if v.IsCommand() {
 			callExpr := *v
@@ -858,7 +858,7 @@ func compileCallExpr(ctx *blockCtx, lhs int, v *ast.CallExpr, inFlags int) {
 		}
 		compileErrWrapExpr(ctx, 1, fn, 0)
 	default:
-		compileExpr(ctx, 0, fn, clInCallExpr)
+		compileExpr(ctx, 1, fn, clInCallExpr)
 	}
 	var err error
 	var stk = ctx.cb.InternalStack()
@@ -1083,7 +1083,7 @@ func compileCallArgs(ctx *blockCtx, lhs int, pfn *gogen.Element, fn *fnType, v *
 		case *ast.LambdaExpr:
 			if fn.typeparam {
 				needInferFunc = true
-				compileIdent(ctx, ast.NewIdent("nil"), 0)
+				compileIdent(ctx, 0, ast.NewIdent("nil"), 0) // TODO(xsw): check lhs
 				continue
 			}
 			sig, e := checkLambdaFuncType(ctx, expr, t, clLambaArgument, v.Fun)
@@ -1096,7 +1096,7 @@ func compileCallArgs(ctx *blockCtx, lhs int, pfn *gogen.Element, fn *fnType, v *
 		case *ast.LambdaExpr2:
 			if fn.typeparam {
 				needInferFunc = true
-				compileIdent(ctx, ast.NewIdent("nil"), 0)
+				compileIdent(ctx, 0, ast.NewIdent("nil"), 0) // TODO(xsw): check lhs
 				continue
 			}
 			sig, e := checkLambdaFuncType(ctx, expr, t, clLambaArgument, v.Fun)
@@ -1956,17 +1956,12 @@ func compileErrWrapExpr(ctx *blockCtx, lhs int, v *ast.ErrWrapExpr, inFlags int)
 	if !useClosure && (cb.Scope().Parent() == types.Universe) {
 		panic("TODO: can't use expr? in global")
 	}
-	expr := v.X
-	switch expr.(type) {
-	case *ast.Ident, *ast.SelectorExpr:
-		expr = &ast.CallExpr{Fun: expr, NoParenEnd: expr.End()}
-	}
 	if lhs != 0 {
 		// lhs == 0 means the result is discarded
 		// +1 accounts for the error value that will be stripped from the result tuple
 		lhs++
 	}
-	compileExpr(ctx, lhs, expr, inFlags)
+	compileExpr(ctx, lhs, v.X, inFlags)
 	x := cb.InternalStack().Pop()
 	n := 0
 	results, ok := x.Type.(*types.Tuple)
