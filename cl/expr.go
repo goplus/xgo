@@ -1957,9 +1957,15 @@ func compileErrWrapExpr(ctx *blockCtx, lhs int, v *ast.ErrWrapExpr, inFlags int)
 		panic("TODO: can't use expr? in global")
 	}
 	expr := v.X
-	switch expr.(type) {
-	case *ast.Ident, *ast.SelectorExpr:
+	switch x := expr.(type) {
+	case *ast.Ident:
 		expr = &ast.CallExpr{Fun: expr, NoParenEnd: expr.End()}
+	case *ast.SelectorExpr:
+		// Don't wrap $attr (attribute access) in CallExpr since compileAttr
+		// already calls XGo_Attr internally via CallWith
+		if name := x.Sel.Name; name[0] != '$' {
+			expr = &ast.CallExpr{Fun: expr, NoParenEnd: expr.End()}
+		}
 	}
 	if lhs != 0 {
 		// lhs == 0 means the result is discarded
