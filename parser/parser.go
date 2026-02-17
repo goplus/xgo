@@ -2118,12 +2118,16 @@ func (p *parser) parseEnvExpr() (ret *ast.EnvExpr) {
 	}
 	ret = &ast.EnvExpr{TokPos: p.pos}
 	p.next()
-	if p.tok == token.LBRACE { // ${name}
+	switch p.tok {
+	case token.LBRACE: // ${name}
 		ret.Lbrace = p.pos
 		p.next()
 		ret.Name = p.parseIdent()
 		ret.Rbrace = p.expect(token.RBRACE)
-	} else { // $name
+	case token.STRING: // $"attr-name"
+		ret.Name = &ast.Ident{NamePos: p.pos, Name: p.lit}
+		p.next()
+	default: // $name
 		ret.Name = p.parseIdent()
 	}
 	return
