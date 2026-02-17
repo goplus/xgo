@@ -27,9 +27,9 @@ const (
 )
 
 // Object represents an HTML object.
-type Object = html.File
+type Object = *html.File
 
 // New creates a new HTML object from a string.
-func New(text string) (ret *Object, err error) {
+func New(text string) (ret Object, err error) {
 	return html.Parse(strings.NewReader(text))
 }

@@ -21,9 +21,9 @@ import (
 )
 
 // Object is a type alias for a compiled regular expression.
-type Object = regexp.Regexp
+type Object = *regexp.Regexp
 
 // New creates a new regexp object from a string.
-func New(text string) (*Object, error) {
+func New(text string) (Object, error) {
 	return regexp.Compile(text)
 }

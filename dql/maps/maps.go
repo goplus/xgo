@@ -181,14 +181,14 @@ func (p NodeSet) XGo_Child() NodeSet {
 	return NodeSet{
 		Data: func(yield func(Node) bool) {
 			p.Data(func(node Node) bool {
-				return rangeChildNodes(node, yield)
+				return yieldChildNodes(node, yield)
 			})
 		},
 	}
 }
 
-// rangeChildNodes yields all child nodes of the given node.
-func rangeChildNodes(node Node, yield func(Node) bool) bool {
+// yieldChildNodes yields all child nodes of the given node.
+func yieldChildNodes(node Node, yield func(Node) bool) bool {
 	switch children := node.Children.(type) {
 	case map[string]any:
 		for k, v := range children {
@@ -219,15 +219,15 @@ func (p NodeSet) XGo_Any(name string) NodeSet {
 	return NodeSet{
 		Data: func(yield func(Node) bool) {
 			p.Data(func(node Node) bool {
-				return rangeAnyNodes(name, node, yield)
+				return yieldAnyNodes(name, node, yield)
 			})
 		},
 	}
 }
 
-// rangeAnyNodes yields all descendant nodes of the given node that match the
+// yieldAnyNodes yields all descendant nodes of the given node that match the
 // specified name. If name is "", it yields all nodes.
-func rangeAnyNodes(name string, node Node, yield func(Node) bool) bool {
+func yieldAnyNodes(name string, node Node, yield func(Node) bool) bool {
 	if name == "" || node.Name == name {
 		if !yield(node) {
 			return false
@@ -255,7 +255,7 @@ func rangeAnyNodes(name string, node Node, yield func(Node) bool) bool {
 func yieldAnyNode(name, k string, v any, yield func(Node) bool) bool {
 	switch v.(type) {
 	case map[string]any, []any:
-		return rangeAnyNodes(name, Node{Name: k, Children: v}, yield)
+		return yieldAnyNodes(name, Node{Name: k, Children: v}, yield)
 	}
 	return true
 }

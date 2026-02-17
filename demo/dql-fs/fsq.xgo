@@ -1,0 +1,3 @@
+for e in fs`.`.file.match("*.xgo") {
+    echo e.path
+}

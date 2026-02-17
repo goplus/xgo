@@ -28,11 +28,11 @@ const (
 )
 
 // Object represents a XGo File.
-type Object = xgo.File
+type Object = *xgo.File
 
 // New parses XGo source code from the given text, returning a XGo File object.
 // An optional parser Mode can be provided to customize the parsing behavior.
-func New(text string, mode ...parser.Mode) (f *Object, err error) {
+func New(text string, mode ...parser.Mode) (f Object, err error) {
 	var conf []xgo.Config
 	if len(mode) > 0 {
 		conf = []xgo.Config{{Mode: mode[0]}}
