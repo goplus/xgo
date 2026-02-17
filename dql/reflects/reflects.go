@@ -351,6 +351,11 @@ func (p NodeSet) XGo_single() NodeSet {
 
 // -----------------------------------------------------------------------------
 
+// _ok returns true if there is no error in the NodeSet.
+func (p NodeSet) XGo_ok() bool {
+	return p.Err == nil
+}
+
 // _first returns the first node in the NodeSet.
 func (p NodeSet) XGo_first() (Node, error) {
 	if p.Err != nil {

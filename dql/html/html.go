@@ -447,6 +447,11 @@ func (p NodeSet) Dump() NodeSet {
 
 // -----------------------------------------------------------------------------
 
+// Ok returns true if there is no error in the NodeSet.
+func (p NodeSet) Ok() bool {
+	return p.Err == nil
+}
+
 // _first returns the first node in the NodeSet.
 // It's required by XGo compiler.
 func (p NodeSet) XGo_first() (ret *Node, err error) {

@@ -223,6 +223,11 @@ func (p NodeSet) Single() NodeSet {
 
 // -----------------------------------------------------------------------------
 
+// Ok returns true if there is no error in the NodeSet.
+func (p NodeSet) Ok() bool {
+	return p.Err == nil
+}
+
 // XGo_Attr returns the value of the specified attribute from the first node in the
 // NodeSet. It only retrieves the attribute from the first node.
 //   - $name

@@ -37,7 +37,7 @@ type Result struct {
 func New(input any, doc html.NodeSet) Result {
 	issue := input.(string)
 	taskList := doc.**.ul@($class == "contains-task-list").one
-	tasks := [Task{li.text!, li.firstElementChild.hasAttr("checked")} for li in taskList.li]
+	tasks := [Task{li.text, li.firstElementChild.hasAttr("checked")} for li in taskList.li]
 	return {issue, tasks}
 }
 
