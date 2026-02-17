@@ -1,5 +1,5 @@
 import "github.com/goplus/xgo/cl/internal/dql"
 
 doc := dql.new
-name := doc.users@($age?:100 < 18).$name
+name := doc.users@($age?:100 < 18).$name!
 echo name
