@@ -1,0 +1,1 @@
+a := doc.**.a@(($"aria-label"?:"").hasPrefix(importedBy))

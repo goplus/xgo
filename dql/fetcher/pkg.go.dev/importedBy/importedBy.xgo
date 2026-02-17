@@ -37,9 +37,9 @@ func New(input any, doc html.NodeSet) Result {
 		return {path, 0}
 	}
 	label := a.$"aria-label"!
-	importedBy := dql.int(label[len(importedBy):])!
+	nImported := dql.int(label[len(importedBy):])!
 	// dql.int support comma in number string, e.g. "1,234"
-	return {path, importedBy}
+	return {path, nImported}
 }
 
 // URL returns the input URL for the given input.

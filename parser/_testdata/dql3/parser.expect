@@ -1,0 +1,56 @@
+package main
+
+file dql.xgo
+noEntrypoint
+ast.FuncDecl:
+  Name:
+    ast.Ident:
+      Name: main
+  Type:
+    ast.FuncType:
+      Params:
+        ast.FieldList:
+  Body:
+    ast.BlockStmt:
+      List:
+        ast.AssignStmt:
+          Lhs:
+            ast.Ident:
+              Name: a
+          Tok: :=
+          Rhs:
+            ast.CondExpr:
+              X:
+                ast.AnySelectorExpr:
+                  X:
+                    ast.Ident:
+                      Name: doc
+                  Sel:
+                    ast.Ident:
+                      Name: a
+              Cond:
+                ast.ParenExpr:
+                  X:
+                    ast.CallExpr:
+                      Fun:
+                        ast.SelectorExpr:
+                          X:
+                            ast.ParenExpr:
+                              X:
+                                ast.ErrWrapExpr:
+                                  X:
+                                    ast.EnvExpr:
+                                      Name:
+                                        ast.Ident:
+                                          Name: "aria-label"
+                                  Tok: ?
+                                  Default:
+                                    ast.BasicLit:
+                                      Kind: STRING
+                                      Value: ""
+                          Sel:
+                            ast.Ident:
+                              Name: hasPrefix
+                      Args:
+                        ast.Ident:
+                          Name: importedBy
