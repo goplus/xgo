@@ -357,22 +357,22 @@ func yieldAnyNodes(kind int, base fs.FS, node *Node, yield func(*Node) bool) boo
 	if err != nil {
 		return yield(&Node{Path: node.Path, err: err}) // yield the error as a node
 	}
-	var needDir bool
-	var filter filterType
 	switch kind {
 	case kindFile:
-		filter = filterFile
+		if isDir {
+			goto checkChildren
+		}
 	case kindDir:
-		filter = filterDir
-		needDir = true
-	}
-	if kind == kindAny || isDir == needDir {
-		if !yield(node) {
-			return false
+		if !isDir {
+			return true
 		}
 	}
+	if !yield(node) {
+		return false
+	}
+checkChildren:
 	if isDir {
-		return yieldChildNodes(base, node, filter, func(n *Node) bool {
+		return yieldChildNodes(base, node, nil, func(n *Node) bool {
 			return yieldAnyNodes(kind, base, n, yield)
 		})
 	}
