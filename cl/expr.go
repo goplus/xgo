@@ -846,7 +846,7 @@ func compileCallExpr(ctx *blockCtx, lhs int, v *ast.CallExpr, inFlags int) {
 			ifn = fn
 		}
 	case *ast.SelectorExpr:
-		compileSelectorExpr(ctx, 0, fn, 0)
+		compileSelectorExpr(ctx, lhs, fn, 0)
 	case *ast.ErrWrapExpr:
 		if v.IsCommand() {
 			callExpr := *v
