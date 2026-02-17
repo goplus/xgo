@@ -18,7 +18,6 @@ package xml
 
 import (
 	"encoding/xml"
-	"unsafe"
 
 	"github.com/goplus/xgo/dql"
 )
@@ -39,7 +38,7 @@ func (p NodeSet) XGo_text__1() (val string, err error) {
 	if err == nil {
 		for _, c := range node.Children {
 			if data, ok := c.(xml.CharData); ok {
-				return unsafe.String(unsafe.SliceData(data), len(data)), nil
+				return string(data), nil
 			}
 		}
 		err = dql.ErrNotFound // text not found on first node

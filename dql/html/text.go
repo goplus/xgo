@@ -30,7 +30,7 @@ const (
 	spaces = " \t\r\n"
 )
 
-// textOf returns text data of node's all childs.
+// textOf returns text data of all node's children.
 func textOf(node *html.Node) string {
 	var printer textPrinter
 	printer.printNode(node)
@@ -68,7 +68,8 @@ func (p *textPrinter) printNode(node *html.Node) {
 		p.printNode(child)
 	}
 	switch node.DataAtom {
-	case atom.P:
+	case atom.P, atom.Div, atom.Br, atom.H1, atom.H2, atom.H3, atom.H4,
+		atom.H5, atom.H6, atom.Li, atom.Blockquote, atom.Pre:
 		p.data = append(p.data, '\n')
 		p.notLineStart = false
 	}
@@ -107,8 +108,8 @@ func (p NodeSet) Text__1() (val string, err error) {
 	return
 }
 
-// Int retrieves the integer value from the text content of the first child
-// text node. It only retrieves from the first node in the NodeSet.
+// Int retrieves the integer value from the text content of the first node in
+// the NodeSet.
 func (p NodeSet) Int() (int, error) {
 	text, err := p.Text__1()
 	if err != nil {
