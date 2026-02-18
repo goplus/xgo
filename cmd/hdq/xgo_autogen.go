@@ -49,7 +49,7 @@ func (this *App) Main() {
 func (this *Cmd_fetch) Main(_xgo_arg0 string) {
 	this.Command.Main(_xgo_arg0)
 //line cmd/hdq/fetch_cmd.gox:24:1
-	this.Use("fetch [flags] fetchType [input ...]")
+	this.Use("fetch [flags] fetchType [input ... | -]")
 //line cmd/hdq/fetch_cmd.gox:26:1
 	this.Short("Fetch objects from the html source with the specified fetchType and inputs")
 //line cmd/hdq/fetch_cmd.gox:28:1
@@ -115,7 +115,21 @@ func (this *Cmd_fetch) Main(_xgo_arg0 string) {
 //line cmd/hdq/fetch_cmd.gox:45:1
 		enc.SetIndent("", "  ")
 //line cmd/hdq/fetch_cmd.gox:46:1
-		enc.Encode(docs)
+		func() {
+//line cmd/hdq/fetch_cmd.gox:46:1
+			var _xgo_err error
+//line cmd/hdq/fetch_cmd.gox:46:1
+			_xgo_err = enc.Encode(docs)
+//line cmd/hdq/fetch_cmd.gox:46:1
+			if _xgo_err != nil {
+//line cmd/hdq/fetch_cmd.gox:46:1
+				_xgo_err = errors.NewFrame(_xgo_err, "enc.encode docs", "cmd/hdq/fetch_cmd.gox", 46, "main.Main")
+//line cmd/hdq/fetch_cmd.gox:46:1
+				panic(_xgo_err)
+			}
+//line cmd/hdq/fetch_cmd.gox:46:1
+			return
+		}()
 	})
 }
 func (this *Cmd_fetch) Classfname() string {

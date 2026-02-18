@@ -21,7 +21,7 @@ import (
 	"xgo/dql/fetcher"
 )
 
-use "fetch [flags] fetchType [input ...]"
+use "fetch [flags] fetchType [input ... | -]"
 
 short "Fetch objects from the html source with the specified fetchType and inputs"
 
@@ -43,5 +43,5 @@ run args => {
 	}
 	enc := json.newEncoder(os.Stdout)
 	enc.setIndent "", "  "
-	enc.encode docs
+	enc.encode! docs
 }
