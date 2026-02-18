@@ -45,7 +45,7 @@ func New(input any, doc html.NodeSet) Result {
 	}
 	if doc.ok {
 		fn := doc.**.dl@($class == "py function").one
-		decl := fn.firstElementChild.dt.text
+		decl := fn.firstElementChild@dt.text
 		pos := decl.indexByte('(')
 		if pos > 0 {
 			sig := decl[pos:]
