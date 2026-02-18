@@ -32,9 +32,9 @@ const (
 
 // textOf returns text data of all node's children.
 func textOf(node *html.Node) string {
-	var printer textPrinter
-	printer.printNode(node)
-	return string(printer.data)
+	var p textPrinter
+	p.printNode(node)
+	return string(p.data)
 }
 
 type textPrinter struct {

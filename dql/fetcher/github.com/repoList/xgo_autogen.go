@@ -5,6 +5,7 @@ package repoList
 import (
 	"github.com/goplus/xgo/dql/fetcher"
 	"github.com/goplus/xgo/dql/html"
+	"strings"
 )
 
 const XGoPackage = "github.com/goplus/xgo/dql/html"
@@ -56,7 +57,7 @@ func newRepo(node html.NodeSet) Repo {
 //line dql/fetcher/github.com/repoList/repoList.xgo:45:1
 		root.XGo_Any("span").XGo_Any("textNode").XGo_Enum()(func(self html.NodeSet) bool {
 //line dql/fetcher/github.com/repoList/repoList.xgo:45:1
-			if self.Value__0() == "Forked from" {
+			if strings.Contains(self.Value__0(), "Forked from") {
 //line dql/fetcher/github.com/repoList/repoList.xgo:45:1
 				if
 //line dql/fetcher/github.com/repoList/repoList.xgo:45:1

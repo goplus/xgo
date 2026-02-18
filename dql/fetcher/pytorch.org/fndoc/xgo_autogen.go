@@ -56,7 +56,7 @@ func New(input interface{}, doc html.NodeSet) Result {
 			})
 		}).One()
 //line dql/fetcher/pytorch.org/fndoc/fndoc.xgo:48:1
-		decl := fn.FirstElementChild().XGo_Elem("dt").Text__0()
+		decl := fn.FirstElementChild().XGo_Select("dt").Text__0()
 //line dql/fetcher/pytorch.org/fndoc/fndoc.xgo:49:1
 		pos := strings.IndexByte(decl, '(')
 //line dql/fetcher/pytorch.org/fndoc/fndoc.xgo:50:1
