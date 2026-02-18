@@ -19,6 +19,7 @@ package fetcher
 import (
 	"errors"
 	"reflect"
+	"sort"
 
 	"github.com/goplus/xgo/dql/html"
 )
@@ -81,6 +82,16 @@ var (
 func Register(fetchType string, conv Conv, urlOf func(input any) string) {
 	vConv := reflect.ValueOf(conv)
 	convs[fetchType] = fetchInfo{vConv, urlOf}
+}
+
+// List returns a list of registered fetch types.
+func List() []string {
+	keys := make([]string, 0, len(convs))
+	for k := range convs {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
 }
 
 // -----------------------------------------------------------------------------

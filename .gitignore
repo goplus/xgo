@@ -39,6 +39,7 @@ xgo_autogen*.go
 !dql/fetcher/**/xgo_autogen.go
 !cmd/xgo/gop_autogen*.go
 !cmd/xgo/xgo_autogen*.go
+!cmd/hdq/xgo_autogen*.go
 !demo/fullspec/mixgo-complex/xgo_autogen.go
 !demo/mixgo/xgo_autogen.go
 go.json
