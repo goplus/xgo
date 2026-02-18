@@ -4,6 +4,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/goplus/cobra/xcmd"
 	"github.com/goplus/xgo/dql/fetcher"
 	_ "github.com/goplus/xgo/dql/fetcher/github.com/issueTask"
@@ -25,6 +26,10 @@ type Cmd_fetch struct {
 	xcmd.Command
 	*App
 }
+type Cmd_list struct {
+	xcmd.Command
+	*App
+}
 type App struct {
 	xcmd.App
 }
@@ -37,7 +42,8 @@ func (this *App) MainEntry() {
 }
 func (this *App) Main() {
 	_xgo_obj0 := &Cmd_fetch{App: this}
-	xcmd.Gopt_App_Main(this, _xgo_obj0)
+	_xgo_obj1 := &Cmd_list{App: this}
+	xcmd.Gopt_App_Main(this, _xgo_obj0, _xgo_obj1)
 }
 //line cmd/hdq/fetch_cmd.gox:24
 func (this *Cmd_fetch) Main(_xgo_arg0 string) {
@@ -114,6 +120,26 @@ func (this *Cmd_fetch) Main(_xgo_arg0 string) {
 }
 func (this *Cmd_fetch) Classfname() string {
 	return "fetch"
+}
+//line cmd/hdq/list_cmd.gox:20
+func (this *Cmd_list) Main(_xgo_arg0 string) {
+	this.Command.Main(_xgo_arg0)
+//line cmd/hdq/list_cmd.gox:20:1
+	this.Use("list")
+//line cmd/hdq/list_cmd.gox:22:1
+	this.Short("List all supported fetchTypes.")
+//line cmd/hdq/list_cmd.gox:24:1
+	this.Run__0(func() {
+		for
+//line cmd/hdq/list_cmd.gox:25:1
+		_, ft := range fetcher.List() {
+//line cmd/hdq/list_cmd.gox:26:1
+			fmt.Println(ft)
+		}
+	})
+}
+func (this *Cmd_list) Classfname() string {
+	return "list"
 }
 func main() {
 	new(App).Main()
