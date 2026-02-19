@@ -49,7 +49,7 @@ func uncapitalize(name string) string {
 
 // -----------------------------------------------------------------------------
 
-// Node represents a node.
+// Node represents a named value in a DQL query tree.
 type Node struct {
 	Name  string
 	Value reflect.Value
