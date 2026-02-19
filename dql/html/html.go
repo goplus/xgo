@@ -478,6 +478,23 @@ func (p NodeSet) Collect() ([]*Node, error) {
 	return dql.Collect(p.Data), nil
 }
 
+// Name returns the name of the first node in the NodeSet.
+// empty string is returned if the NodeSet is empty or error occurs.
+func (p NodeSet) Name__0() string {
+	val, _ := p.Name__1()
+	return val
+}
+
+// Name returns the name of the first node in the NodeSet.
+// If the NodeSet is empty, it returns ErrNotFound.
+func (p NodeSet) Name__1() (ret string, err error) {
+	node, err := p.XGo_first()
+	if err == nil {
+		ret = node.DataAtom.String()
+	}
+	return
+}
+
 // Value returns the data content of the first node in the NodeSet.
 func (p NodeSet) Value__0() string {
 	val, _ := p.Value__1()

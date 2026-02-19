@@ -1,0 +1,12 @@
+config := yaml`server: localhost
+port: 8080
+features:
+  - auth
+  - logging
+`!
+
+echo config.port
+
+for feature in config.features.* {
+	echo feature._value
+}
