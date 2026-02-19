@@ -581,22 +581,28 @@ func compileAnySelectorExpr(ctx *blockCtx, lhs int, v *ast.AnySelectorExpr) {
 	cb.MemberVal("XGo_Any", 0, v).Val(name).CallWith(1, lhs, 0, v)
 }
 
-func convMapToNodeSet(cb *gogen.CodeBuilder) {
+func checkAnyOrMap(cb *gogen.CodeBuilder) *gogen.Element {
 	e := cb.Get(-1)
 	switch t := types.Unalias(e.Type).(type) {
 	case *types.Interface:
 		if !t.Empty() {
-			return
+			return nil
 		}
 	case *types.Map:
 	default:
-		return
+		return nil
 	}
-	stk := cb.InternalStack()
-	stk.Pop()
-	cb.Val(cb.Pkg().Import("github.com/goplus/xgo/dql/maps").Ref("New"))
-	stk.Push(e)
-	cb.CallWith(1, 1, 0)
+	return e
+}
+
+func convMapToNodeSet(cb *gogen.CodeBuilder) {
+	if e := checkAnyOrMap(cb); e != nil {
+		stk := cb.InternalStack()
+		stk.Pop()
+		cb.Val(cb.Pkg().Import("github.com/goplus/xgo/dql/maps").Ref("New"))
+		stk.Push(e)
+		cb.CallWith(1, 1, 0)
+	}
 }
 
 func compileSelectorExpr(ctx *blockCtx, lhs int, v *ast.SelectorExpr, flags int) {
@@ -636,7 +642,7 @@ func compileSelectorExpr(ctx *blockCtx, lhs int, v *ast.SelectorExpr, flags int)
 		fallthrough
 	default:
 		if err := compileMember(ctx, lhs, v, name, flags); err != nil {
-			if _, e := cb.Member("XGo_Elem", 0, 0, v); e != nil {
+			if kind, _ := cb.Member("XGo_Elem", 0, 0, v); kind == gogen.MemberInvalid {
 				panic(err) // rethrow original error
 			}
 			cb.Val(name).CallWith(1, lhs, 0, v)
@@ -644,16 +650,18 @@ func compileSelectorExpr(ctx *blockCtx, lhs int, v *ast.SelectorExpr, flags int)
 	}
 }
 
-func compileAttr(cb *gogen.CodeBuilder, lhs int, name string, v ast.Node) error {
-	_, e := cb.Member("XGo_Attr", 1, gogen.MemberFlagVal, v)
-	if e == nil {
-		switch name[0] {
-		case '"', '`': // @"attr-name"
-			name = unquote(name)
-		}
+func compileAttr(cb *gogen.CodeBuilder, lhs int, name string, v ast.Node) (err error) {
+	switch name[0] {
+	case '"', '`': // @"attr-name"
+		name = unquote(name)
+	}
+	if e := checkAnyOrMap(cb); e != nil {
+		// v.$name => v["name"] as fallback if v is a map or empty interface
+		cb.MemberVal(name, lhs, v)
+	} else if _, err = cb.Member("XGo_Attr", 1, gogen.MemberFlagVal, v); err == nil {
 		cb.Val(name).CallWith(1, lhs, 0, v)
 	}
-	return e
+	return
 }
 
 func unquote(name string) string {
@@ -1407,7 +1415,7 @@ func compileStringLitEx(ctx *blockCtx, cb *gogen.CodeBuilder, lit *ast.BasicLit)
 			t := cb.Get(-1).Type
 			if t.Underlying() != types.Typ[types.String] {
 				if _, err := cb.Member("string", 0, gogen.MemberFlagAutoProperty); err != nil {
-					if _, e2 := cb.Member("error", 0, gogen.MemberFlagAutoProperty); e2 != nil {
+					if kind, _ := cb.Member("error", 0, gogen.MemberFlagAutoProperty); kind == gogen.MemberInvalid {
 						if e, ok := err.(*gogen.CodeError); ok {
 							err = ctx.newCodeErrorf(v.Pos(), v.End(), "%s.string%s", ctx.LoadExpr(v), e.Msg)
 						}
