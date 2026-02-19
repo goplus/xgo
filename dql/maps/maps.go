@@ -28,10 +28,10 @@ const (
 
 // -----------------------------------------------------------------------------
 
-// Node represents a map[string]any or []any node.
+// Node represents a named value in a DQL query tree.
 type Node struct {
-	Name     string
-	Children any // map[string]any or []any
+	Name  string
+	Value any
 }
 
 // NodeSet represents a set of nodes.
@@ -78,7 +78,7 @@ func New(doc any) NodeSet {
 	}
 	return NodeSet{
 		Data: func(yield func(Node) bool) {
-			yield(Node{Name: "", Children: doc})
+			yield(Node{Name: "", Value: doc})
 		},
 	}
 }
@@ -156,19 +156,10 @@ func (p NodeSet) XGo_Elem(name string) NodeSet {
 
 // yieldElem yields the child node with the specified name if it exists.
 func yieldElem(node Node, name string, yield func(Node) bool) bool {
-	if children, ok := node.Children.(map[string]any); ok {
+	if children, ok := node.Value.(map[string]any); ok {
 		if v, ok := children[name]; ok {
-			return yieldNode(name, v, yield)
+			return yield(Node{Name: name, Value: v})
 		}
-	}
-	return true
-}
-
-// yieldNode yields a node if the value is a map[string]any or []any.
-func yieldNode(name string, v any, yield func(Node) bool) bool {
-	switch v.(type) {
-	case map[string]any, []any:
-		return yield(Node{Name: name, Children: v})
 	}
 	return true
 }
@@ -189,16 +180,16 @@ func (p NodeSet) XGo_Child() NodeSet {
 
 // yieldChildNodes yields all child nodes of the given node.
 func yieldChildNodes(node Node, yield func(Node) bool) bool {
-	switch children := node.Children.(type) {
+	switch children := node.Value.(type) {
 	case map[string]any:
 		for k, v := range children {
-			if !yieldNode(k, v, yield) {
+			if !yield(Node{Name: k, Value: v}) {
 				return false
 			}
 		}
 	case []any:
 		for _, v := range children {
-			if !yieldNode("", v, yield) {
+			if !yield(Node{Name: "", Value: v}) {
 				return false
 			}
 		}
@@ -233,7 +224,7 @@ func yieldAnyNodes(name string, node Node, yield func(Node) bool) bool {
 			return false
 		}
 	}
-	switch children := node.Children.(type) {
+	switch children := node.Value.(type) {
 	case map[string]any:
 		for k, v := range children {
 			if !yieldAnyNode(name, k, v, yield) {
@@ -255,7 +246,7 @@ func yieldAnyNodes(name string, node Node, yield func(Node) bool) bool {
 func yieldAnyNode(name, k string, v any, yield func(Node) bool) bool {
 	switch v.(type) {
 	case map[string]any, []any:
-		return yieldAnyNodes(name, Node{Name: k, Children: v}, yield)
+		return yieldAnyNodes(name, Node{Name: k, Value: v}, yield)
 	}
 	return true
 }
@@ -315,12 +306,46 @@ func (p NodeSet) XGo_first() (Node, error) {
 	return dql.First(p.Data)
 }
 
+// _name returns the name of the first node in the NodeSet.
+// empty string is returned if the NodeSet is empty or error occurs.
+func (p NodeSet) XGo_name__0() string {
+	val, _ := p.XGo_name__1()
+	return val
+}
+
+// _name returns the name of the first node in the NodeSet.
+// If the NodeSet is empty, it returns ErrNotFound.
+func (p NodeSet) XGo_name__1() (ret string, err error) {
+	node, err := p.XGo_first()
+	if err == nil {
+		ret = node.Name
+	}
+	return
+}
+
+// _value returns the value of the first node in the NodeSet.
+// nil is returned if the NodeSet is empty or error occurs.
+func (p NodeSet) XGo_value__0() any {
+	val, _ := p.XGo_value__1()
+	return val
+}
+
+// _value returns the value of the first node in the NodeSet.
+// If the NodeSet is empty, it returns ErrNotFound.
+func (p NodeSet) XGo_value__1() (ret any, err error) {
+	node, err := p.XGo_first()
+	if err == nil {
+		ret = node.Value
+	}
+	return
+}
+
 // _hasAttr returns true if the first node in the NodeSet has the specified attribute.
 // It returns false otherwise.
 func (p NodeSet) XGo_hasAttr(name string) bool {
 	node, err := p.XGo_first()
 	if err == nil {
-		switch children := node.Children.(type) {
+		switch children := node.Value.(type) {
 		case map[string]any:
 			_, ok := children[name]
 			return ok
@@ -345,7 +370,7 @@ func (p NodeSet) XGo_Attr__0(name string) any {
 func (p NodeSet) XGo_Attr__1(name string) (val any, err error) {
 	node, err := p.XGo_first()
 	if err == nil {
-		switch children := node.Children.(type) {
+		switch children := node.Value.(type) {
 		case map[string]any:
 			if v, ok := children[name]; ok {
 				return v, nil
