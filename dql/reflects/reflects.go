@@ -203,9 +203,10 @@ func yieldChildNodes(node reflect.Value, yield func(Node) bool) bool {
 	case reflect.Struct:
 		typ := node.Type()
 		for i, n := 0, typ.NumField(); i < n; i++ {
-			v := node.Field(i)
-			if !yield(Node{Name: uncapitalize(typ.Field(i).Name), Value: v}) {
-				return false
+			if v := node.Field(i); v.CanInterface() { // only yield exported fields
+				if !yield(Node{Name: uncapitalize(typ.Field(i).Name), Value: v}) {
+					return false
+				}
 			}
 		}
 	case reflect.Map:
