@@ -34,9 +34,6 @@ const (
 
 // -----------------------------------------------------------------------------
 
-// Node represents an HTML node.
-type Node = html.Node
-
 // NodeSet represents a set of HTML nodes.
 type NodeSet struct {
 	Data iter.Seq[*Node]
@@ -52,7 +49,7 @@ func NodeSet_Cast(seq iter.Seq[*Node]) NodeSet {
 func Root(doc *Node) NodeSet {
 	if doc.Type == html.DocumentNode {
 		if n := doc.FirstChild; n.NextSibling == nil {
-			doc = n // skip document node
+			doc = toNode(n) // skip document node
 		}
 	}
 	return NodeSet{
@@ -83,7 +80,7 @@ func New(r io.Reader) NodeSet {
 	if err != nil {
 		return NodeSet{Err: err}
 	}
-	return Root(doc)
+	return Root(toNode(doc))
 }
 
 // Source creates a NodeSet from various types of sources:
@@ -177,7 +174,7 @@ func (p NodeSet) XGo_Elem(name string) NodeSet {
 func yieldNode(n *Node, name string, yield func(*Node) bool) bool {
 	for c := n.FirstChild; c != nil; c = c.NextSibling {
 		if c.Type == html.ElementNode && c.Data == name {
-			if !yield(c) {
+			if !yield(toNode(c)) {
 				return false
 			}
 		}
@@ -202,7 +199,7 @@ func (p NodeSet) XGo_Child() NodeSet {
 // yieldChildNodes yields all child nodes of the given node.
 func yieldChildNodes(n *Node, yield func(*Node) bool) bool {
 	for c := n.FirstChild; c != nil; c = c.NextSibling {
-		if !yield(c) {
+		if !yield(toNode(c)) {
 			return false
 		}
 	}
@@ -252,7 +249,7 @@ func yieldAnyNodes(n *Node, name string, yield func(*Node) bool) bool {
 		}
 	}
 	for c := n.FirstChild; c != nil; c = c.NextSibling {
-		if !yieldAnyNodes(c, name, yield) {
+		if !yieldAnyNodes(toNode(c), name, yield) {
 			return false
 		}
 	}
@@ -316,7 +313,7 @@ func (p NodeSet) ParentN(n int) NodeSet {
 func yieldParentN(node *Node, n int, yield func(*Node) bool) bool {
 	if n > 0 {
 		for {
-			node = node.Parent
+			node = toNode(node.Parent)
 			if node == nil {
 				break
 			}
@@ -338,7 +335,7 @@ func (p NodeSet) Parent() NodeSet {
 		Data: func(yield func(*Node) bool) {
 			p.Data(func(node *Node) bool {
 				if next := node.Parent; next != nil {
-					return yield(next)
+					return yield(toNode(next))
 				}
 				return true
 			})
@@ -355,7 +352,7 @@ func (p NodeSet) PrevSibling() NodeSet {
 		Data: func(yield func(*Node) bool) {
 			p.Data(func(node *Node) bool {
 				if next := node.PrevSibling; next != nil {
-					return yield(next)
+					return yield(toNode(next))
 				}
 				return true
 			})
@@ -372,7 +369,7 @@ func (p NodeSet) NextSibling() NodeSet {
 		Data: func(yield func(*Node) bool) {
 			p.Data(func(node *Node) bool {
 				if next := node.NextSibling; next != nil {
-					return yield(next)
+					return yield(toNode(next))
 				}
 				return true
 			})
@@ -391,7 +388,7 @@ func (p NodeSet) FirstElementChild() NodeSet {
 			p.Data(func(node *Node) bool {
 				for c := node.FirstChild; c != nil; c = c.NextSibling {
 					if c.Type == html.ElementNode {
-						return yield(c)
+						return yield(toNode(c))
 					}
 				}
 				return true
@@ -417,7 +414,7 @@ func (p NodeSet) TextNode() NodeSet {
 func yieldNodeType(node *Node, typ html.NodeType, yield func(*Node) bool) bool {
 	for c := node.FirstChild; c != nil; c = c.NextSibling {
 		if c.Type == typ {
-			if !yield(c) {
+			if !yield(toNode(c)) {
 				return false
 			}
 		}
@@ -479,26 +476,16 @@ func (p NodeSet) Collect() ([]*Node, error) {
 }
 
 // Name returns the name of the first node in the NodeSet.
-// empty string is returned if the NodeSet is empty or the first node is
-// not an element node.
-func (p NodeSet) Name__0() string {
-	val, _ := p.Name__1()
-	return val
-}
-
-// Name returns the name of the first node in the NodeSet.
-// If the NodeSet is empty or the first node is not an element node, it
-// returns ErrNotFound.
-func (p NodeSet) Name__1() (ret string, err error) {
-	node, err := p.XGo_first()
+// empty string is returned if the NodeSet is empty or the first node is not
+// an element node.
+func (p NodeSet) Name() string {
+	node, err := p.First()
 	if err == nil {
 		if node.Type == html.ElementNode {
-			ret = node.Data
-		} else {
-			err = dql.ErrNotFound // not an element node
+			return node.Data
 		}
 	}
-	return
+	return ""
 }
 
 // Value returns the data content of the first node in the NodeSet.
@@ -521,11 +508,7 @@ func (p NodeSet) Value__1() (val string, err error) {
 func (p NodeSet) HasAttr(name string) bool {
 	node, err := p.First()
 	if err == nil {
-		for _, attr := range node.Attr {
-			if attr.Key == name {
-				return true
-			}
-		}
+		return node.HasAttr(name)
 	}
 	return false
 }
@@ -546,12 +529,7 @@ func (p NodeSet) XGo_Attr__0(name string) string {
 func (p NodeSet) XGo_Attr__1(name string) (val string, err error) {
 	node, err := p.First()
 	if err == nil {
-		for _, attr := range node.Attr {
-			if attr.Key == name {
-				return attr.Val, nil
-			}
-		}
-		err = dql.ErrNotFound // attribute not found on first node
+		return node.XGo_Attr__1(name)
 	}
 	return
 }

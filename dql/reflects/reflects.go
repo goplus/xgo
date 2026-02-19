@@ -27,33 +27,7 @@ const (
 	XGoPackage = true
 )
 
-// capitalize capitalizes the first letter of the given name.
-func capitalize(name string) string {
-	if name != "" {
-		if c := name[0]; c >= 'a' && c <= 'z' {
-			return string(c-'a'+'A') + name[1:]
-		}
-	}
-	return name
-}
-
-// uncapitalize uncapitalizes the first letter of the given name.
-func uncapitalize(name string) string {
-	if name != "" {
-		if c := name[0]; c >= 'A' && c <= 'Z' {
-			return string(c-'A'+'a') + name[1:]
-		}
-	}
-	return name
-}
-
 // -----------------------------------------------------------------------------
-
-// Node represents a named value in a DQL query tree.
-type Node struct {
-	Name  string
-	Value reflect.Value
-}
 
 // NodeSet represents a set of nodes.
 type NodeSet struct {
@@ -171,30 +145,6 @@ func yieldElem(node Node, name string, yield func(Node) bool) bool {
 		return yield(Node{Name: name, Value: v})
 	}
 	return true
-}
-
-func lookup(node reflect.Value, name string) (ret reflect.Value) {
-	kind, node := deref(node)
-	switch kind {
-	case reflect.Struct:
-		ret = node.FieldByName(capitalize(name))
-	case reflect.Map:
-		ret = node.MapIndex(reflect.ValueOf(name))
-	}
-	return
-}
-
-func deref(v reflect.Value) (reflect.Kind, reflect.Value) {
-	kind := v.Kind()
-	if kind == reflect.Interface {
-		v = v.Elem()
-		kind = v.Kind()
-	}
-	if kind == reflect.Pointer {
-		v = v.Elem()
-		kind = v.Kind()
-	}
-	return kind, v
 }
 
 func yieldChildNodes(node reflect.Value, yield func(Node) bool) bool {
