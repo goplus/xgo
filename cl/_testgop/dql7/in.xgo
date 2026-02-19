@@ -12,6 +12,6 @@ doc := json`{
 }
 `!
 
-for animal in doc.animals.*@($class == "zebra") {
+for animal in doc.$animals.*@($class == "zebra") {
 	animal.$at
 }
