@@ -28,12 +28,6 @@ const (
 
 // -----------------------------------------------------------------------------
 
-// Node represents a named value in a DQL query tree.
-type Node struct {
-	Name  string
-	Value any
-}
-
 // NodeSet represents a set of nodes.
 type NodeSet struct {
 	Data iter.Seq[Node]
@@ -345,11 +339,7 @@ func (p NodeSet) XGo_value__1() (ret any, err error) {
 func (p NodeSet) XGo_hasAttr(name string) bool {
 	node, err := p.XGo_first()
 	if err == nil {
-		switch children := node.Value.(type) {
-		case map[string]any:
-			_, ok := children[name]
-			return ok
-		}
+		return node.XGo_hasAttr(name)
 	}
 	return false
 }
@@ -370,13 +360,7 @@ func (p NodeSet) XGo_Attr__0(name string) any {
 func (p NodeSet) XGo_Attr__1(name string) (val any, err error) {
 	node, err := p.XGo_first()
 	if err == nil {
-		switch children := node.Value.(type) {
-		case map[string]any:
-			if v, ok := children[name]; ok {
-				return v, nil
-			}
-		}
-		err = dql.ErrNotFound
+		return node.XGo_Attr__1(name)
 	}
 	return
 }

@@ -103,7 +103,7 @@ func (p NodeSet) Text__0() string {
 func (p NodeSet) Text__1() (val string, err error) {
 	node, err := p.First()
 	if err == nil {
-		val = textOf(node)
+		val = textOf(&node.Node)
 	}
 	return
 }

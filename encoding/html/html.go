@@ -27,7 +27,7 @@ const (
 )
 
 // Object represents an HTML object.
-type Object = *html.File
+type Object = *html.Node
 
 // New creates a new HTML object from a string.
 func New(text string) (ret Object, err error) {

@@ -316,11 +316,7 @@ func (p NodeSet) XGo_first() (*Node, error) {
 func (p NodeSet) XGo_hasAttr(name string) bool {
 	node, err := p.XGo_first()
 	if err == nil {
-		for _, attr := range node.Attr {
-			if attr.Name.Local == name {
-				return true
-			}
-		}
+		return node.XGo_hasAttr(name)
 	}
 	return false
 }
@@ -341,12 +337,7 @@ func (p NodeSet) XGo_Attr__0(name string) string {
 func (p NodeSet) XGo_Attr__1(name string) (val string, err error) {
 	node, err := p.XGo_first()
 	if err == nil {
-		for _, attr := range node.Attr {
-			if attr.Name.Local == name {
-				return attr.Value, nil
-			}
-		}
-		err = dql.ErrNotFound // attribute not found on first node
+		return node.XGo_Attr__1(name)
 	}
 	return
 }

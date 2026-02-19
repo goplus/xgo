@@ -19,6 +19,8 @@ package xml
 import (
 	"encoding/xml"
 	"io"
+
+	"github.com/goplus/xgo/dql"
 )
 
 // -----------------------------------------------------------------------------
@@ -113,6 +115,40 @@ func (n *Node) XGo_Any(name string) NodeSet {
 // _dump prints the node for debugging purposes.
 func (n *Node) XGo_dump() NodeSet {
 	return Root(n).XGo_dump()
+}
+
+// -----------------------------------------------------------------------------
+
+// _hasAttr returns true if the node has the specified attribute.
+func (n *Node) XGo_hasAttr(name string) bool {
+	for _, attr := range n.Attr {
+		if attr.Name.Local == name {
+			return true
+		}
+	}
+	return false
+}
+
+// XGo_Attr returns the value of the specified attribute from the node.
+// If the attribute is not found, it returns an empty string.
+//   - $name
+//   - $“attr-name”
+func (n *Node) XGo_Attr__0(name string) string {
+	val, _ := n.XGo_Attr__1(name)
+	return val
+}
+
+// XGo_Attr returns the value of the specified attribute from the node.
+// If the attribute is not found, it returns ErrNotFound.
+//   - $name
+//   - $“attr-name”
+func (n *Node) XGo_Attr__1(name string) (string, error) {
+	for _, attr := range n.Attr {
+		if attr.Name.Local == name {
+			return attr.Value, nil
+		}
+	}
+	return "", dql.ErrNotFound
 }
 
 // -----------------------------------------------------------------------------
