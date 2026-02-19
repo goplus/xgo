@@ -351,15 +351,12 @@ func (p NodeSet) XGo_Attr__0(name string) any {
 // NodeSet. It only retrieves the attribute from the first node.
 //   - $name
 //   - $“attr-name”
-func (p NodeSet) XGo_Attr__1(name string) (val any, err error) {
+func (p NodeSet) XGo_Attr__1(name string) (any, error) {
 	node, err := p.XGo_first()
 	if err == nil {
-		if v := lookup(node.Value, name); v.IsValid() {
-			return v.Interface(), nil
-		}
-		err = dql.ErrNotFound
+		return node.XGo_Attr__1(name)
 	}
-	return
+	return nil, err
 }
 
 // -----------------------------------------------------------------------------

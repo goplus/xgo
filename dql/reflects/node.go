@@ -102,14 +102,13 @@ func (n Node) XGo_Any(name string) NodeSet {
 
 // -----------------------------------------------------------------------------
 
-// _hasAttr returns true if the first node in the NodeSet has the specified attribute.
-// It returns false otherwise.
+// _hasAttr checks if the node has an attribute with the specified name.
 func (n Node) XGo_hasAttr(name string) bool {
 	return lookup(n.Value, name).IsValid()
 }
 
-// XGo_Attr returns the value of the specified attribute from the first node in the
-// NodeSet. It only retrieves the attribute from the first node.
+// XGo_Attr returns the value of the attribute with the specified name.
+// If the attribute does not exist, it returns nil.
 //   - $name
 //   - $“attr-name”
 func (n Node) XGo_Attr__0(name string) any {
@@ -117,8 +116,8 @@ func (n Node) XGo_Attr__0(name string) any {
 	return val
 }
 
-// XGo_Attr returns the value of the specified attribute from the first node in the
-// NodeSet. It only retrieves the attribute from the first node.
+// XGo_Attr returns the value of the attribute with the specified name.
+// If the attribute does not exist, it returns ErrNotFound.
 //   - $name
 //   - $“attr-name”
 func (n Node) XGo_Attr__1(name string) (any, error) {
