@@ -651,17 +651,14 @@ func compileSelectorExpr(ctx *blockCtx, lhs int, v *ast.SelectorExpr, flags int)
 }
 
 func compileAttr(cb *gogen.CodeBuilder, lhs int, name string, v ast.Node) (err error) {
+	switch name[0] {
+	case '"', '`': // @"attr-name"
+		name = unquote(name)
+	}
 	if e := checkAnyOrMap(cb); e != nil {
 		// v.$name => v["name"] as fallback if v is a map or empty interface
 		cb.MemberVal(name, lhs, v)
-		return
-	}
-	_, err = cb.Member("XGo_Attr", 1, gogen.MemberFlagVal, v)
-	if err == nil {
-		switch name[0] {
-		case '"', '`': // @"attr-name"
-			name = unquote(name)
-		}
+	} else if _, err = cb.Member("XGo_Attr", 1, gogen.MemberFlagVal, v); err == nil {
 		cb.Val(name).CallWith(1, lhs, 0, v)
 	}
 	return
