@@ -17,6 +17,7 @@
 package xgo
 
 import (
+	"reflect"
 	"unsafe"
 
 	"github.com/goplus/xgo/ast"
@@ -42,11 +43,11 @@ func ParseFile(filename string, src any, conf ...Config) (f *File, err error) {
 
 // -----------------------------------------------------------------------------
 
-// XGo_Elem returns a NodeSet containing the child nodes with the specified name.
+// XGo_Elem returns a Node representing the specified child element of the node.
 //   - .name
 //   - .“element-name”
-func (f *File) XGo_Elem(name string) NodeSet {
-	return New(&f.File).XGo_Elem(name)
+func (f *File) XGo_Elem(name string) Node {
+	return Node{Value: reflect.ValueOf(&f.File)}.XGo_Elem(name)
 }
 
 // XGo_Child returns a NodeSet containing all child nodes of the node.
