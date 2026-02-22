@@ -28,11 +28,11 @@ import (
 	"github.com/goplus/xgo/ast"
 	"github.com/goplus/xgo/parser/fsx"
 	"github.com/goplus/xgo/parser/fsx/memfs"
-	"github.com/goplus/xgo/parser/iox"
 	"github.com/goplus/xgo/parser/parsertest"
 	"github.com/goplus/xgo/scanner"
 	"github.com/goplus/xgo/token"
 	"github.com/qiniu/x/log"
+	"github.com/qiniu/x/stream"
 )
 
 // -----------------------------------------------------------------------------
@@ -54,17 +54,17 @@ func TestParseExprFrom(t *testing.T) {
 
 func TestReadSource(t *testing.T) {
 	buf := bytes.NewBuffer(nil)
-	if _, err := iox.ReadSource(buf); err != nil {
+	if _, err := stream.ReadSource(buf); err != nil {
 		t.Fatal("readSource failed:", err)
 	}
 	sr := strings.NewReader("")
-	if _, err := iox.ReadSource(sr); err != nil {
+	if _, err := stream.ReadSource(sr); err != nil {
 		t.Fatal("readSource strings.Reader failed:", err)
 	}
-	if _, err := iox.ReadSource(0); err == nil {
+	if _, err := stream.ReadSource(0); err == nil {
 		t.Fatal("readSource int failed: no error?")
 	}
-	if _, err := iox.ReadSourceLocal("/foo/bar/not-exists", nil); err == nil {
+	if _, err := stream.ReadSourceLocal("/foo/bar/not-exists", nil); err == nil {
 		t.Fatal("readSourceLocal int failed: no error?")
 	}
 }
@@ -78,7 +78,7 @@ func TestParseFiles(t *testing.T) {
 
 func TestIparseFileInvalidSrc(t *testing.T) {
 	fset := token.NewFileSet()
-	if _, err := parseFile(fset, "/foo/bar/not-exists", 1, PackageClauseOnly); err != iox.ErrInvalidSource {
+	if _, err := parseFile(fset, "/foo/bar/not-exists", 1, PackageClauseOnly); err != stream.ErrInvalidSource {
 		t.Fatal("ParseFile failed: not errInvalidSource?")
 	}
 }

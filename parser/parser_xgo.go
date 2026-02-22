@@ -27,8 +27,8 @@ import (
 
 	"github.com/goplus/xgo/ast"
 	"github.com/goplus/xgo/parser/fsx"
-	"github.com/goplus/xgo/parser/iox"
 	"github.com/goplus/xgo/token"
+	"github.com/qiniu/x/stream"
 )
 
 const (
@@ -339,7 +339,7 @@ func ParseFSFile(fset *token.FileSet, fs FileSystem, filename string, src any, m
 
 func readSourceFS(fs FileSystem, filename string, src any) ([]byte, error) {
 	if src != nil {
-		return iox.ReadSource(src)
+		return stream.ReadSource(src)
 	}
 	return fs.ReadFile(filename)
 }

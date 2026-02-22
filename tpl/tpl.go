@@ -22,7 +22,6 @@ import (
 	"os"
 	"reflect"
 
-	"github.com/goplus/xgo/parser/iox"
 	"github.com/goplus/xgo/tpl/ast"
 	"github.com/goplus/xgo/tpl/cl"
 	"github.com/goplus/xgo/tpl/matcher"
@@ -31,6 +30,7 @@ import (
 	"github.com/goplus/xgo/tpl/token"
 	"github.com/goplus/xgo/tpl/types"
 	"github.com/qiniu/x/errors"
+	"github.com/qiniu/x/stream"
 )
 
 // -----------------------------------------------------------------------------
@@ -224,7 +224,7 @@ func (p *MatchState) Next() *Token {
 
 // Match matches a source file.
 func (p *Compiler) Match(filename string, src any, conf *Config) (ms MatchState, result any, err error) {
-	b, err := iox.ReadSourceLocal(filename, src)
+	b, err := stream.ReadSourceLocal(filename, src)
 	if err != nil {
 		return
 	}
