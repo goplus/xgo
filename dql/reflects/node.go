@@ -42,11 +42,29 @@ func uncapitalize(name string) string {
 	return name
 }
 
-func lookup(node reflect.Value, name string) (ret reflect.Value) {
-	kind, node := deref(node)
+const (
+	lookupNormal = iota
+	lookupCallMethod
+	lookupDontCallMethod
+)
+
+func lookup(obj reflect.Value, name string, mode int) (ret reflect.Value) {
+	kind, node := deref(obj)
 	switch kind {
 	case reflect.Struct:
-		ret = node.FieldByName(capitalize(name))
+		name = capitalize(name)
+		ret = node.FieldByName(name)
+		if !ret.IsValid() && mode != lookupNormal {
+			if mth := obj.MethodByName(name); mth.IsValid() {
+				if t := mth.Type(); t.NumIn() == 0 && t.NumOut() == 1 {
+					if mode == lookupDontCallMethod {
+						return mth // only find the method, do not call it
+					}
+					// method call as attribute value
+					ret = mth.Call(nil)[0]
+				}
+			}
+		}
 	case reflect.Map:
 		ret = node.MapIndex(reflect.ValueOf(name))
 	}
@@ -78,7 +96,7 @@ type Node struct {
 //   - .name
 //   - .“element-name”
 func (n Node) XGo_Elem(name string) (ret Node) {
-	if v := lookup(n.Value, name); v.IsValid() {
+	if v := lookup(n.Value, name, lookupNormal); v.IsValid() {
 		ret = Node{Name: name, Value: v}
 	}
 	return
@@ -104,7 +122,7 @@ func (n Node) XGo_Any(name string) NodeSet {
 
 // _hasAttr checks if the node has an attribute with the specified name.
 func (n Node) XGo_hasAttr(name string) bool {
-	return lookup(n.Value, name).IsValid()
+	return lookup(n.Value, name, lookupDontCallMethod).IsValid()
 }
 
 // XGo_Attr returns the value of the attribute with the specified name.
@@ -121,7 +139,7 @@ func (n Node) XGo_Attr__0(name string) any {
 //   - $name
 //   - $“attr-name”
 func (n Node) XGo_Attr__1(name string) (any, error) {
-	if v := lookup(n.Value, name); v.IsValid() {
+	if v := lookup(n.Value, name, lookupCallMethod); v.IsValid() {
 		return v.Interface(), nil
 	}
 	return nil, dql.ErrNotFound

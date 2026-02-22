@@ -141,7 +141,7 @@ func (p NodeSet) XGo_Elem(name string) NodeSet {
 
 // yieldElem yields the child node with the specified name if it exists.
 func yieldElem(node Node, name string, yield func(Node) bool) bool {
-	if v := lookup(node.Value, name); v.IsValid() {
+	if v := lookup(node.Value, name, lookupNormal); v.IsValid() {
 		return yield(Node{Name: name, Value: v})
 	}
 	return true
@@ -333,7 +333,7 @@ func (p NodeSet) XGo_class() (class string) {
 func (p NodeSet) XGo_hasAttr(name string) bool {
 	node, err := p.XGo_first()
 	if err == nil {
-		return lookup(node.Value, name).IsValid()
+		return node.XGo_hasAttr(name)
 	}
 	return false
 }
