@@ -17,10 +17,10 @@
 package parser
 
 import (
-	"github.com/goplus/xgo/parser/iox"
 	"github.com/goplus/xgo/tpl/ast"
 	"github.com/goplus/xgo/tpl/scanner"
 	"github.com/goplus/xgo/tpl/token"
+	"github.com/qiniu/x/stream"
 )
 
 // -----------------------------------------------------------------------------
@@ -35,7 +35,7 @@ type Config struct {
 
 // ParseFile parses a file and returns the AST.
 func ParseFile(fset *token.FileSet, filename string, src any, conf *Config) (f *ast.File, err error) {
-	b, err := iox.ReadSourceLocal(filename, src)
+	b, err := stream.ReadSourceLocal(filename, src)
 	if err != nil {
 		return nil, err
 	}

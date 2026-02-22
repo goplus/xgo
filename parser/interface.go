@@ -23,8 +23,8 @@ import (
 	"go/scanner"
 
 	"github.com/goplus/xgo/ast"
-	"github.com/goplus/xgo/parser/iox"
 	"github.com/goplus/xgo/token"
+	"github.com/qiniu/x/stream"
 )
 
 // A Mode value is a set of flags (or 0).
@@ -87,7 +87,7 @@ func parseFile(fset *token.FileSet, filename string, src any, mode Mode) (f *ast
 	}
 
 	// get source
-	text, err := iox.ReadSourceLocal(filename, src)
+	text, err := stream.ReadSourceLocal(filename, src)
 	if err != nil {
 		return
 	}
@@ -136,7 +136,7 @@ func parseFile(fset *token.FileSet, filename string, src any, mode Mode) (f *ast
 // are returned via a scanner.ErrorList which is sorted by source position.
 func ParseExprFrom(fset *token.FileSet, filename string, src any, mode Mode) (expr ast.Expr, err error) {
 	// get source
-	text, err := iox.ReadSourceLocal(filename, src)
+	text, err := stream.ReadSourceLocal(filename, src)
 	if err != nil {
 		return
 	}
