@@ -127,21 +127,29 @@ func (p NodeSet) XGo_Select(name string) NodeSet {
 //   - .name
 //   - .“element-name”
 func (p NodeSet) XGo_Elem(name string) NodeSet {
+	return p.XGo_ElemEx(name, allowAnyMethod)
+}
+
+// XGo_ElemEx returns a NodeSet containing the child nodes with the specified name.
+// It allows you to specify a custom function to determine whether to call a method.
+//   - .name
+//   - .“element-name”
+func (p NodeSet) XGo_ElemEx(name string, allowMthd func(reflect.Value, string) bool) NodeSet {
 	if p.Err != nil {
 		return p
 	}
 	return NodeSet{
 		Data: func(yield func(Node) bool) {
 			p.Data(func(node Node) bool {
-				return yieldElem(node, name, yield)
+				return yieldElem(node, name, allowMthd, yield)
 			})
 		},
 	}
 }
 
 // yieldElem yields the child node with the specified name if it exists.
-func yieldElem(node Node, name string, yield func(Node) bool) bool {
-	if v := lookup(node.Value, name, lookupNormal); v.IsValid() {
+func yieldElem(node Node, name string, allowMthd func(reflect.Value, string) bool, yield func(Node) bool) bool {
+	if v := lookup(node.Value, name, allowMthd); v.IsValid() {
 		return yield(Node{Name: name, Value: v})
 	}
 	return true
@@ -343,7 +351,7 @@ func (p NodeSet) XGo_hasAttr(name string) bool {
 //   - $name
 //   - $“attr-name”
 func (p NodeSet) XGo_Attr__0(name string) any {
-	val, _ := p.XGo_Attr__1(name)
+	val, _ := p.XGo_AttrEx(name, allowAnyMethod)
 	return val
 }
 
@@ -352,9 +360,18 @@ func (p NodeSet) XGo_Attr__0(name string) any {
 //   - $name
 //   - $“attr-name”
 func (p NodeSet) XGo_Attr__1(name string) (any, error) {
+	return p.XGo_AttrEx(name, allowAnyMethod)
+}
+
+// XGo_AttrEx returns the value of the specified attribute from the first node in the
+// NodeSet. It allows you to specify a custom function to determine whether to call a
+// method.
+//   - $name
+//   - $“attr-name”
+func (p NodeSet) XGo_AttrEx(name string, allowMthd func(reflect.Value, string) bool) (any, error) {
 	node, err := p.XGo_first()
 	if err == nil {
-		return node.XGo_Attr__1(name)
+		return node.XGo_AttrEx(name, allowMthd)
 	}
 	return nil, err
 }

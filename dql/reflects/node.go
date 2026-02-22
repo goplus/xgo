@@ -42,26 +42,29 @@ func uncapitalize(name string) string {
 	return name
 }
 
-const (
-	lookupNormal = iota
-	lookupCallMethod
-	lookupDontCallMethod
+func allowAnyMethod(obj reflect.Value, name string) bool {
+	return true
+}
+
+var (
+	tyError = reflect.TypeFor[error]()
 )
 
-func lookup(obj reflect.Value, name string, mode int) (ret reflect.Value) {
+func lookup(obj reflect.Value, name string, allowMthd func(reflect.Value, string) bool) (ret reflect.Value) {
 	kind, node := deref(obj)
 	switch kind {
 	case reflect.Struct:
 		name = capitalize(name)
 		ret = node.FieldByName(name)
-		if !ret.IsValid() && mode != lookupNormal {
+		if !ret.IsValid() {
 			if mth := obj.MethodByName(name); mth.IsValid() {
-				if t := mth.Type(); t.NumIn() == 0 && t.NumOut() == 1 {
-					if mode == lookupDontCallMethod {
+				if t := mth.Type(); t.NumIn() == 0 && t.NumOut() == 1 && t.Out(0) != tyError {
+					if allowMthd == nil {
 						return mth // only find the method, do not call it
+					} else if allowMthd(obj, name) {
+						// method call as attribute value
+						ret = mth.Call(nil)[0]
 					}
-					// method call as attribute value
-					ret = mth.Call(nil)[0]
 				}
 			}
 		}
@@ -96,7 +99,15 @@ type Node struct {
 //   - .name
 //   - .“element-name”
 func (n Node) XGo_Elem(name string) (ret Node) {
-	if v := lookup(n.Value, name, lookupNormal); v.IsValid() {
+	return n.XGo_ElemEx(name, allowAnyMethod)
+}
+
+// XGo_ElemEx returns the child node with the specified name.
+// It allows you to specify a custom function to determine whether to call a method.
+//   - .name
+//   - .“element-name”
+func (n Node) XGo_ElemEx(name string, allowMthd func(reflect.Value, string) bool) (ret Node) {
+	if v := lookup(n.Value, name, allowMthd); v.IsValid() {
 		ret = Node{Name: name, Value: v}
 	}
 	return
@@ -122,7 +133,7 @@ func (n Node) XGo_Any(name string) NodeSet {
 
 // _hasAttr checks if the node has an attribute with the specified name.
 func (n Node) XGo_hasAttr(name string) bool {
-	return lookup(n.Value, name, lookupDontCallMethod).IsValid()
+	return lookup(n.Value, name, nil).IsValid()
 }
 
 // XGo_Attr returns the value of the attribute with the specified name.
@@ -130,7 +141,7 @@ func (n Node) XGo_hasAttr(name string) bool {
 //   - $name
 //   - $“attr-name”
 func (n Node) XGo_Attr__0(name string) any {
-	val, _ := n.XGo_Attr__1(name)
+	val, _ := n.XGo_AttrEx(name, allowAnyMethod)
 	return val
 }
 
@@ -139,7 +150,16 @@ func (n Node) XGo_Attr__0(name string) any {
 //   - $name
 //   - $“attr-name”
 func (n Node) XGo_Attr__1(name string) (any, error) {
-	if v := lookup(n.Value, name, lookupCallMethod); v.IsValid() {
+	return n.XGo_AttrEx(name, allowAnyMethod)
+}
+
+// XGo_AttrEx returns the value of the attribute with the specified name.
+// If the attribute does not exist, it returns ErrNotFound.
+// It allows you to specify a custom function to determine whether to call a method.
+//   - $name
+//   - $“attr-name”
+func (n Node) XGo_AttrEx(name string, allowMthd func(reflect.Value, string) bool) (any, error) {
+	if v := lookup(n.Value, name, allowMthd); v.IsValid() {
 		return v.Interface(), nil
 	}
 	return nil, dql.ErrNotFound
