@@ -95,7 +95,7 @@ func parse(filename string, src any, conf ...Config) (f *ast.File, err error) {
 	return parser.ParseFile(c.Fset, filename, src, c.Mode)
 }
 
-// From parses Go source code from the given filename or source, returning a NodeSet.
+// From parses XGo source code from the given filename or source, returning a NodeSet.
 // An optional Config can be provided to customize the parsing behavior.
 func From(filename string, src any, conf ...Config) NodeSet {
 	f, err := parse(filename, src, conf...)
@@ -105,12 +105,12 @@ func From(filename string, src any, conf ...Config) NodeSet {
 	return New(f)
 }
 
-// Source creates a NodeSet from various types of Go sources.
+// Source creates a NodeSet from various types of XGo sources.
 // It supports the following source types:
-// - string: treats the string as a file path, opens the file, and reads Go source code from it.
-// - []byte: treated as Go source code.
-// - *bytes.Buffer: treated as Go source code.
-// - io.Reader: treated as Go source code.
+// - string: treats the string as a file path, opens the file, and reads XGo source code from it.
+// - []byte: treated as XGo source code.
+// - *bytes.Buffer: treated as XGo source code.
+// - io.Reader: treated as XGo source code.
 // - *ast.File: creates a NodeSet from the provided *ast.File.
 // - reflect.Value: creates a NodeSet from the provided reflect.Value (expected to be *ast.File).
 // - Node: creates a NodeSet containing the single provided node.
