@@ -27,6 +27,7 @@ import (
 	"github.com/goplus/xgo/dql/reflects"
 	"github.com/goplus/xgo/parser"
 	"github.com/goplus/xgo/token"
+	"github.com/qiniu/x/stream"
 )
 
 const (
@@ -81,8 +82,12 @@ const (
 	defaultMode = parser.ParseComments
 )
 
-// parse parses XGo source code from the given filename or source.
-func parse(filename string, src any, conf ...Config) (f *ast.File, err error) {
+// parse parses XGo source code from the given URI or source.
+func parse(uri string, src any, conf ...Config) (f *ast.File, err error) {
+	in, err := stream.ReadSourceFromURI(uri, src)
+	if err != nil {
+		return
+	}
 	var c Config
 	if len(conf) > 0 {
 		c = conf[0]
@@ -92,13 +97,13 @@ func parse(filename string, src any, conf ...Config) (f *ast.File, err error) {
 	if c.Fset == nil {
 		c.Fset = token.NewFileSet()
 	}
-	return parser.ParseFile(c.Fset, filename, src, c.Mode)
+	return parser.ParseFile(c.Fset, uri, in, c.Mode)
 }
 
-// From parses XGo source code from the given filename or source, returning a NodeSet.
+// From parses XGo source code from the given URI or source, returning a NodeSet.
 // An optional Config can be provided to customize the parsing behavior.
-func From(filename string, src any, conf ...Config) NodeSet {
-	f, err := parse(filename, src, conf...)
+func From(uri string, src any, conf ...Config) NodeSet {
+	f, err := parse(uri, src, conf...)
 	if err != nil {
 		return NodeSet{NodeSet: reflects.NodeSet{Err: err}}
 	}
@@ -107,7 +112,7 @@ func From(filename string, src any, conf ...Config) NodeSet {
 
 // Source creates a NodeSet from various types of XGo sources.
 // It supports the following source types:
-// - string: treats the string as a file path, opens the file, and reads XGo source code from it.
+// - string: treats the string as a URI, opens the resource, and reads XGo source code from it.
 // - []byte: treated as XGo source code.
 // - *bytes.Buffer: treated as XGo source code.
 // - io.Reader: treated as XGo source code.
