@@ -1,8 +1,6 @@
 module github.com/goplus/xgo
 
-go 1.24.0
-
-toolchain go1.24.2
+go 1.25.0
 
 require (
 	github.com/fsnotify/fsnotify v1.9.0
@@ -12,7 +10,7 @@ require (
 	github.com/goplus/lib v0.3.1
 	github.com/goplus/mod v0.19.5
 	github.com/qiniu/x v1.16.3
-	golang.org/x/net v0.50.0
+	golang.org/x/net v0.51.0
 )
 
 require (
