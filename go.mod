@@ -7,7 +7,7 @@ toolchain go1.24.2
 require (
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/goccy/go-yaml v1.19.2
-	github.com/goplus/cobra v1.9.12 //xgo:class
+	github.com/goplus/cobra v1.9.13 //xgo:class
 	github.com/goplus/gogen v1.21.2
 	github.com/goplus/lib v0.3.1
 	github.com/goplus/mod v0.19.6
