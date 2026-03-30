@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Package run implements the “gop run” command.
+// Package run implements the "gop run" command.
 package run
 
 import (
@@ -77,6 +77,13 @@ func runCmd(cmd *base.Command, args []string) {
 
 	if *flagProf {
 		panic("TODO: profile not impl")
+	}
+
+	if handled, err := tryRunWithCommandRunner(proj, args, "."); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	} else if handled {
+		return
 	}
 
 	noChdir := *flagNoChdir
