@@ -11,7 +11,7 @@ require (
 	github.com/goplus/gogen v1.21.5
 	github.com/goplus/lib v0.3.1
 	github.com/goplus/mod v0.20.0
-	github.com/qiniu/x v1.16.5
+	github.com/qiniu/x v1.17.0
 	golang.org/x/net v0.50.0
 )
 
