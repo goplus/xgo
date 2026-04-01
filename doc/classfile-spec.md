@@ -2,7 +2,7 @@
 
 This document defines the syntax and semantics of XGo classfiles.
 
-A classfile is a source file that is compiled as a generated class type plus a set of generated methods and helper glue.
+A classfile is a source file compiled through classfile-specific type, method, and entrypoint lowering.
 
 There are two kinds of classfiles:
 - A normal classfile, which is an otherwise unregistered `.gox` file
@@ -13,13 +13,27 @@ There are two kinds of classfiles:
 The following terms are used throughout this document:
 - Class extension: the normalized classfile suffix used for framework lookup, e.g., `_app.gox` and `.gsh`
 - Class file stem: the filename without the class extension
-- Class type: the generated named type for a classfile
-- Field declaration block: the unique top-level `var` declaration that is interpreted as class fields rather than
-  package variables
-- Shadow entry: the synthetic function created from top-level statements
+- Classfile project: the source tree rooted at the analyzed package directory and interpreted by the classfile mechanism
+- Framework registration: one project group loaded into the classfile registry
+- Active project group: a framework registration under which at least one source file in the analyzed classfile project
+  is recognized as a framework classfile
+- Project root directory: the root directory of one classfile project
+- Pack root: the directory named by one `pack` directive and resolved relative to one project root directory
+- Pack document: the logical merged configuration object derived from one pack root and its declared index filename
+- Project file kind: a framework file kind declared by one `project` directive and used for project classfiles and, in a
+  flat project group, project fragments
+- Work file kind: a framework file kind declared by one `class` directive and used for work classfiles
+- Flat project group: a project group declared with `project -flat`
 - Project classfile: the framework file that represents the project-level class
 - Work classfile: a framework file that represents a non-project class within the same framework
+- Project fragment classfile: a framework classfile in a flat project group that is not the project classfile and that
+  contributes to the shared project class type
+- Class type: a generated named type for one classfile or one flat project group
 - Base class: an embedded framework type declared by classfile metadata
+- Work prototype type: an exported type declared by classfile metadata and associated with one work file kind
+- Field declaration block: a top-level `var` declaration that is interpreted as class fields rather than package
+  variables
+- Shadow entry: the synthetic function created from top-level statements
 
 ## File classification
 
@@ -49,24 +63,31 @@ If the second rule applies, the file is a normal classfile.
 
 If the first rule applies, the file is a framework classfile.
 
-### Project and work classification
+### Project, work, and fragment classification
 
 Each recognized class extension belongs to exactly one framework registration.
 
-A recognized file is a project classfile if the registration marks it as a project file for the pair
-`(class extension, filename)`. Otherwise it is a work classfile.
+A recognized file in a non-flat project group is a project classfile if the registration marks it as a project file for
+the pair `(class extension, filename)`. Otherwise it is a work classfile.
 
-A recognized file is classified as follows:
+A recognized file in a non-flat project group is classified as follows:
 - If a project extension and a work extension are different, every file whose normalized class extension equals the
   project extension is a project file
 - If a project extension and a work extension are the same, only the filename `main` plus that extension is a project
   file and all other files with the same extension are work files
+
+In a flat project group:
+- The filename `main` plus the project extension is the project classfile
+- Every other recognized file with the project extension is a project fragment classfile
+- No file is a work classfile
 
 Examples:
 - Under metadata where the project extension and work extension are both `_case.gox`, `main_case.gox` is a project file
   and `foo_case.gox` is a work file
 - Under metadata where `_app.gox` is the project extension and `_cmd.gox` is the work extension, `demo_app.gox` is a
   project file and `list_cmd.gox` is a work file
+- Under metadata `project -flat .spx Game example.com/framework`, `main.spx` is the project file and `hero.spx` is a
+  project fragment
 
 ## Source form
 
@@ -157,9 +178,15 @@ Within the field declaration block:
 
 ### Type naming
 
-For every classfile, the compiler generates one named class type.
+The compiler generates:
+- One named class type for each normal classfile
+- One named class type for each project or work classfile in a non-flat project group
+- One shared named project class type for each active flat project group
 
-The initial class type name is derived from the class file stem.
+A project fragment does not generate a distinct class type.
+
+The initial class type name is derived from the class file stem of the corresponding classfile. For a flat project
+group, it is derived from the project classfile.
 
 The class file stem is normalized as follows:
 - `:` is removed
@@ -172,9 +199,9 @@ Examples:
 - `get_p_#id_app.gox` has class file stem `get_p_#id` and normalized type name `get_p_id`
 
 Framework metadata may further transform the type name:
-- A project file whose class file stem is `main`, or a framework that has no explicit project file, uses the project
-  base-class name as its default class type name. A leading `*` on the base-class name is removed
-- A non-empty work-class `-prefix=` is prepended to the normalized work-file stem
+- A project classfile whose class file stem is `main`, or a framework that has no explicit project classfile, uses the
+  name of the base type named by the project base class as its default class type name
+- A non-empty `-prefix=` on a work file kind is prepended to the normalized class file stem of a work classfile
 - If neither of the previous rules applies and the class type name would otherwise equal one of the reserved names
   `init`, `main`, `go`, `goto`, `type`, `var`, `import`, `package`, `interface`, `struct`, `const`, `func`, `map`,
   `chan`, `for`, `if`, `else`, `switch`, `case`, `select`, `defer`, `range`, `return`, `break`, `continue`,
@@ -188,19 +215,26 @@ The underlying type of every class type is a struct type.
 
 For a normal classfile, the struct fields are the user fields declared in the field declaration block, in source order.
 
-For a framework classfile, framework-added fields precede user fields.
+For a class type in a non-flat project group, framework-added fields precede the user fields declared in that
+classfile's field declaration block.
+
+For a flat project group, framework-added fields precede all user fields contributed by its project classfile and
+project fragments. The project classfile contributes first. Project fragments contribute in lexicographic source-file
+path order. Fields within each field declaration block retain source order.
 
 ### Framework-added fields
 
 Framework-added fields are inserted in the following order:
 - For a project classfile, the embedded project base class
-- For a project classfile, each embedded work-class field requested by the `-embed` flag, in work-class declaration
+- For a project classfile, each embedded work class field requested by the `-embed` flag, in work file kind declaration
   order and lexicographic source-file path order
 - For a work classfile, the embedded work base class
 - For a work classfile, an embedded pointer to the project class type, if a project class type exists and its field name
   does not conflict with an already-present field name
 
-User fields from the field declaration block are appended after all framework-added fields.
+The embedded project base class is the only framework-added field in a flat project class type.
+
+User fields are appended after all framework-added fields in the order defined above.
 
 It is an error for two generated fields of the same class type to have the same field name.
 
@@ -208,8 +242,8 @@ It is an error for two generated fields of the same class type to have the same 
 
 ### Implicit receiver rewriting
 
-In a classfile, every top-level function declaration without an explicit receiver is rewritten as a method on the
-generated class type.
+In a classfile, every top-level function declaration without an explicit receiver is rewritten as a method on the class
+type associated with that classfile. For a project fragment, the associated class type is the shared project class type.
 
 The injected receiver is:
 - Named `this`
@@ -235,8 +269,8 @@ The classfile parser also accepts the following classfile-only `FuncDecl` form:
 StaticMethodDecl = "func" "." identifier Signature [ FunctionBody ] .
 ```
 
-This form declares a static method associated with the generated class type. Its further lowering follows the ordinary
-XGo static-method machinery.
+This form declares a static method on the class type associated with that classfile. Its further lowering follows the
+ordinary XGo static-method machinery.
 
 ### Shadow entry
 
@@ -245,22 +279,27 @@ Top-level statements are not compiled as package-level statements.
 Instead, they are wrapped into a synthetic function with an initially empty parameter list, called the shadow entry.
 After classfile lowering, the shadow entry is renamed as follows:
 - `MainEntry` for a project classfile
-- `Main` for any other classfile
+- `Main` for a work or normal classfile
+- an implementation-defined unexported name for a project fragment
 
-If a framework classfile has no explicit top-level statement sequence, the compiler still synthesizes an empty shadow
-entry with the same name. This ensures that framework entry methods always exist.
+If a project or work classfile has no explicit top-level statement sequence, the compiler still synthesizes an empty
+shadow entry with the same name. This ensures that those framework entry methods always exist.
+
+A project fragment without top-level statements has no shadow entry.
 
 For a normal classfile, no empty shadow entry is synthesized. A normal classfile without top-level statements therefore
 has no synthetic `Main` method.
 
 ### Base-entry forwarding
 
-If a synthetic `Main` or `MainEntry` method is created for a framework classfile, and the embedded base class declares a
-method with the same name, the synthetic method adopts that base method's parameter list and result list, with the
-classfile receiver `*T` replacing the base receiver.
+If a synthetic `Main` or `MainEntry` method is created for a project or work classfile, and the embedded base class
+declares a method with the same name, the synthetic method adopts that base method's parameter list and result list,
+with the classfile receiver `*T` replacing the base receiver.
 
 The generated body forwards the incoming arguments to the embedded base method before executing any user-written
 top-level statements.
+
+A project fragment shadow entry always has no parameters and no results. It does not forward to a base method.
 
 ### Execution order inside a synthetic entry method
 
@@ -271,6 +310,9 @@ If a synthetic `Main` or `MainEntry` method is generated, its body executes in t
 
 This order is fixed.
 
+A project fragment shadow entry executes only its user-written top-level statements and does not call `XGo_Init`. Any
+automatic initialization of the shared project class type occurs through its synthetic `MainEntry` method.
+
 If the adopted method signature has result parameters, the resulting body is checked under ordinary Go control-flow
 rules for that signature after lowering.
 
@@ -278,15 +320,18 @@ rules for that signature after lowering.
 
 ### `XGo_Init` generation
 
-If at least one field in the field declaration block has an initializer, the compiler generates a method:
+If at least one user field of a class type has an initializer, the compiler generates a method:
 
 ```xgo
 func (this *T) XGo_Init() *T
 ```
 
-The generated method assigns all field initializers in field-declaration order and then returns `this`.
+The generated method assigns all field initializers in generated field order and then returns `this`.
 
-If the field declaration block contains no initializers, no `XGo_Init` method is generated.
+For a flat project class type, this includes initializers contributed by the project classfile and all project
+fragments.
+
+If the class type has no user field initializers, no `XGo_Init` method is generated.
 
 ### What `XGo_Init` does not do
 
@@ -346,7 +391,7 @@ project _test.gox App github.com/goplus/xgo/test testing
 class _test.gox Case
 ```
 
-A built-in registration is active without any module declaration.
+A built-in registration is loaded into the classfile registry without any module declaration.
 
 Built-in registrations participate in file classification, lowering, and package assembly exactly as if they were loaded
 from module metadata.
@@ -356,21 +401,33 @@ from module metadata.
 The classfile loader recognizes the following module directives:
 
 ```ebnf
-ProjectDirective = "project" [ ProjectExt ExportedName ] PackagePath { PackagePath } .
-ClassDirective   = "class" { ClassDirectiveFlag } WorkExt ExportedName [ ExportedName ] .
-ImportDirective  = "import" [ ImportName ] PackagePath .
-ClassDirectiveFlag = "-embed" | "-prefix=" string_without_space .
+ProjectDirective      = "project" [ "-flat" ] [ ProjectExt ExportedName ] PackagePath { PackagePath } .
+ClassDirective        = "class" { ClassDirectiveFlag } WorkExt ExportedName [ ExportedName ] .
+ImportDirective       = "import" [ ImportName ] PackagePath .
+PackDirective         = "pack" RelativeDirectoryPath PackIndexFile .
+ClassDirectiveFlag    = "-embed" | "-prefix=" string_without_space .
+RelativeDirectoryPath = string_without_space .
+PackIndexFile         = string_without_space .
 ```
 
-Every `class` or `import` directive belongs to the most recent preceding `project` directive.
+`RelativeDirectoryPath` is one relative directory path token with no spaces.
 
-A project group consists of one `project` directive together with all `class` and `import` directives that belong to it.
+`PackIndexFile` is one plain file name token with no spaces.
 
-The first package path of a `project` directive is the framework package used to resolve any base-class symbols named by
-that project group.
+Every `class`, `import`, or `pack` directive belongs to the most recent preceding `project` directive.
 
-Any additional package paths participate in implicit framework-package export lookup but are not searched for
-base-class symbols.
+A project group consists of one `project` directive together with all `class`, `import`, and `pack` directives that
+belong to it.
+
+One framework registration is active relative to one analyzed classfile project if at least one source file in that
+project is recognized under the registration. An inactive registration does not cause project class synthesis, package
+entrypoint synthesis, or pack-document derivation.
+
+The first package path of a `project` directive is the framework package used to resolve the project base class, each
+work base class, and each work prototype type named by that project group.
+
+Any additional package paths participate in implicit framework-package export lookup but are not searched for those
+symbols.
 
 ### Extension forms and normalization
 
@@ -382,10 +439,9 @@ Both forms are part of the classfile mechanism. Neither form is a compatibility 
 
 For newly defined framework registrations, `_[class].gox` is the recommended form.
 
-This recommendation does not constrain the built-in registrations defined above.
+The built-in registrations defined above remain valid as written.
 
-This specification defines file classification and compilation semantics for both forms. It does not require auxiliary
-tools to recognize arbitrary non-`.gox` class extensions automatically.
+Auxiliary tool behavior for arbitrary non-`.gox` class extensions is implementation-defined.
 
 The textual extension token accepted by `project` and `class` directives may be written with a leading `*` and, for
 projects, may also be written with a leading `main`.
@@ -403,18 +459,27 @@ For each `project` directive:
 - If `ProjectExt` and `ExportedName` are present, the directive defines a project file kind and names the project base
   class
 - If `ProjectExt` and `ExportedName` are omitted, the directive defines no project file kind or project base class and
-  still defines the package lookup set and the project group to which subsequent `class` and `import` directives belong
+  still defines the package lookup set and the project group to which subsequent `class`, `import`, and `pack`
+  directives belong
 - When a project base class is named, the first package path is the package from which that symbol is resolved
 - A project base-class name may be written with a leading `*`, in which case the generated project class embeds a
   pointer to the named base type rather than the base type itself
 
+The `-flat` flag requires `ProjectExt` and `ExportedName` and declares the containing project group to be flat. The
+project extension of a flat project group must not be `.gox`.
+
+A flat project group has one project file kind, has no work file kinds, and must not contain a `class` directive.
+
 For each `class` directive:
-- The exported symbol names the work base class
+- The exported symbol names the work base class and is resolved from the framework package of the containing project
+  group
 - The optional final exported symbol is the work prototype type
-- If a project group declares more than one work class kind, every work class in that group must declare a prototype
-  type
+- If a project group declares more than one work file kind, every work file kind in that group must declare a work
+  prototype type
+- When a work prototype type is named, the work prototype type symbol is resolved from the framework package of the
+  containing project group
+- `-embed` causes the project class type to embed a field for each generated work class instance of that work file kind
 - `-prefix=` prepends the given string to every generated work class type name
-- `-embed` causes the project class type to embed a field for each generated work class instance of that work kind
 
 For each `import` directive:
 - The imported package becomes available to classfiles as an auto-imported package name
@@ -422,7 +487,16 @@ For each `import` directive:
 - If multiple `import` directives in the same project group resolve to the same auto-import name, the last directive
   wins
 
-## Project and work-class assembly
+For each `pack` directive:
+- The project group may declare at most one `pack` directive
+- The directory path is resolved relative to the project root directory of the analyzed classfile project
+- The directory path must not contain any `..` path component
+- The index filename determines the root configuration filename of the pack root and the child configuration filename
+  expected at each descendant directory level
+- The index filename must not contain `/` or `\`
+- The index filename must end in one of `.json`, `.yml`, or `.yaml`
+
+## Framework class assembly
 
 A test framework registration is a framework registration whose project extension has the suffix `test.gox`.
 
@@ -430,39 +504,65 @@ All other framework registrations are non-test framework registrations.
 
 ### Default project synthesis
 
-For each framework registration, a package may contain at most one explicit project classfile.
+For each active non-flat project group, a package may contain at most one explicit project classfile.
 
 It is an error for a package to contain more than one explicit project classfile for the same framework registration.
 
-If a framework registration provides a project base class but the package contains no explicit project file for that
-framework, the compiler still synthesizes a default project class type.
+If an active non-flat project group provides a project base class but the package contains no explicit project
+classfile, the compiler still synthesizes a default project class type.
 
 The synthesized project class has no source file of its own. Its type name is derived by the project type-naming rules
 described earlier.
 
-### Work-instance assembly for project `Main`
+An active flat project group must contain exactly one project classfile. A flat project group never receives a
+synthesized default project class.
 
-For every non-test framework registration that provides a project base class, the compiler generates a project method
-named `Main` on the project class type. The project base class is therefore required to provide a method named `Main`.
-The generated project method constructs work-class instances and forwards them to the embedded project base-class method
-`Main`.
+### Work instance assembly for project `Main`
+
+For every active non-test, non-flat project group that provides a project base class, the compiler generates a project
+method named `Main` on the project class type. The project base class is therefore required to provide a method named
+`Main`. The generated project method constructs work class instances and forwards them to the embedded project
+base-class method `Main`.
 
 The grouping rule is:
-- If the framework has exactly one work class kind and that `Main` parameter is variadic, all work files of that kind
-  are passed as variadic arguments
-- Otherwise, work files are grouped by their declared prototype type and passed as slices in `Main` parameter order
+- If the framework has exactly one work file kind and that `Main` parameter is variadic, all work files of that kind are
+  passed as variadic arguments
+- Otherwise, work files are grouped by their declared work prototype type and passed as slices in `Main` parameter order
 
-The project `Main` method constructs one fresh work-class instance for each work file in the package. When `-embed` is
-present on a work class declaration, the freshly created work instance is also assigned into the corresponding embedded
-field on the project instance before the project `Main` call.
+The project `Main` method constructs one fresh work class instance for each work file in the package. When `-embed` is
+present on the corresponding `class` directive, the freshly created work instance is also assigned into the
+corresponding embedded field on the project instance before the project `Main` call.
+
+### Flat project assembly for project `Main`
+
+For every active non-test flat project group, the compiler generates a project method named `Main` on the shared project
+class type.
+
+The project base class must provide a method named `Main` whose parameter list contains exactly one non-variadic
+parameter of type `func()` and whose result list is empty.
+
+If at least one project fragment exists, the compiler synthesizes one work callback method:
+
+```xgo
+func (this *T) _xgo_WorkMain()
+```
+
+The callback invokes the shadow entry of each fragment that has top-level statements in lexicographic source-file path
+order. The generated project `Main` passes the bound method value `this._xgo_WorkMain` to the embedded project
+base-class method `Main`.
+
+If no project fragment exists, no `_xgo_WorkMain` method is generated and the generated project `Main` passes `nil`.
+
+All fragment shadow entries and `_xgo_WorkMain` use the same project instance as their receiver. Project fragments do
+not construct work class instances.
 
 ## Synthesized helper methods
 
-The compiler may synthesize additional work-class methods when the declared work prototype requires them.
+The compiler may synthesize additional work class methods when the declared work prototype type requires them.
 
 ### `Classfname`
 
-If the work prototype contains a method named `Classfname`, the compiler generates:
+If the work prototype type contains a method named `Classfname`, the compiler generates:
 
 ```xgo
 func (this *T) Classfname() string
@@ -476,9 +576,9 @@ Examples:
 
 ### `Classclone`
 
-If the work prototype contains a method named `Classclone`, the compiler generates a shallow-clone method named
-`Classclone` with no parameters other than the receiver. Its result list is adopted from the prototype's `Classclone`
-declaration.
+If the work prototype type contains a method named `Classclone`, the compiler generates a shallow-clone method named
+`Classclone` with no parameters other than the receiver. Its result list is adopted from the work prototype type's
+`Classclone` declaration.
 
 The generated implementation copies `*this` by value into a temporary variable and returns the address of that temporary
 value.
@@ -491,11 +591,11 @@ exists.
 If one exists, no class-based package `main` is synthesized.
 
 If none exists, the compiler selects a class entrypoint as follows:
-1. It considers only non-test framework registrations
-2. Among framework project groups, it prefers a unique project group whose explicit project file has a shadow entry
-3. If no such group exists, it prefers a unique remaining project group, including one that is represented only by a
-   synthesized default project class
-4. If no project group is selected, it selects the unique normal classfile that has a shadow entry, if exactly one
+1. Among active non-test framework project groups, it prefers a unique project group whose explicit project classfile
+   has a shadow entry
+2. If no such group exists, it prefers a unique remaining active non-test project group, including one that is
+   represented only by a synthesized default project class
+3. If no project group is selected, it selects the unique normal classfile that has a shadow entry, if exactly one
    exists
 
 If this process selects a class type `T`, the compiler generates:
@@ -506,6 +606,42 @@ func main() { new(T).Main() }
 
 If no class type is selected, the compiler generates an empty `main` function unless automatic main generation is
 disabled in compiler configuration.
+
+## Pack roots and pack documents
+
+One active project group may derive zero or one pack document from one classfile project.
+
+If one active project group declares one `pack` directive, its pack root is the resolved directory named by that
+directive.
+
+Active project groups do not share pack roots or pack documents. Each active project group derives its own pack document
+independently from its own `pack` directive, if any.
+
+For one active project group whose `pack` directive resolves to one pack root `R` and one index filename `F`, the
+corresponding pack document is one logical object tree derived as follows:
+- `R/F` is parsed as one object value
+- each descendant directory of `R` that contains `F` contributes one child object
+- each such child object is parsed from that descendant `F` and merged into the root object at the relative directory
+  path from `R`, creating intermediate objects as needed
+- a contributing empty object remains present at its relative directory path
+- directories that do not contain `F` contribute no object of their own
+- files other than contributing `F` files are outside the standardized pack-document model
+
+If the project group declares no `pack` directive, no standardized pack document is derived for that project group.
+
+If `R/F` does not exist, if `R/F` or any contributing descendant `F` cannot be read or parsed as one object value, or if
+one merge would overwrite an existing key at the same object level, no standardized pack document is derived for that
+project group.
+
+The project files remain the source of truth. Each pack document is derived from one analyzed project state and one
+active project group.
+
+An implementation may materialize one pack document as one generated sibling file of its root configuration file named:
+- `index_pack.json` if `F` ends in `.json`
+- `index_pack.yml` if `F` ends in `.yml`
+- `index_pack.yaml` if `F` ends in `.yaml`
+
+Its enablement mechanism is implementation-defined.
 
 ## Compatibility
 
@@ -524,5 +660,5 @@ Accordingly:
   package semantics
 - Package initialization order for ordinary package variables is unchanged
 
-The classfile mechanism therefore adds a source-level lowering rule. It does not add a new runtime object model beyond
-what is produced by the lowered Go code.
+The classfile mechanism therefore adds a source-level lowering rule and preserves the ordinary runtime object model
+produced by the lowered Go code.
