@@ -1,7 +1,0 @@
-import "github.com/goplus/xgo/cl/internal/overload/conflict"
-
-var a, b conflict.Foo
-var c = a.Mul(b)
-var d = a.Mul(100)
-var e = conflict.Mul(a, b)
-var f = conflict.Mul(a, 100)

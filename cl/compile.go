@@ -1229,9 +1229,10 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 			}
 			if d.Recv != nil {
 				var ok bool
-				recv, ok = d.Recv.List[0].Type.(*ast.Ident)
+				var recvType = d.Recv.List[0].Type
+				recv, ok = recvType.(*ast.Ident)
 				if !ok {
-					ctx.handleErrorf(d.Recv.List[0].Type.Pos(), d.Recv.List[0].Type.End(), "invalid recv type %v", ctx.LoadExpr(d.Recv.List[0].Type))
+					ctx.handleErrorf(recvType.Pos(), recvType.End(), "invalid recv type %v", ctx.LoadExpr(recvType))
 					break
 				}
 				ctx.lbinames = append(ctx.lbinames, recv)
