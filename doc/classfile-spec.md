@@ -13,13 +13,17 @@ There are two kinds of classfiles:
 The following terms are used throughout this document:
 - Class extension: the normalized classfile suffix used for framework lookup, e.g., `_app.gox` and `.gsh`
 - Class file stem: the filename without the class extension
+- Project classfile: the framework file that represents the project-level class
+- Project file kind: a framework file kind declared by one `project` directive and used for project classfiles
+- Work classfile: a framework file that represents a non-project class within the same framework
+- Work file kind: a framework file kind declared by one `class` directive and used for work classfiles
 - Class type: the generated named type for a classfile
+- Base class: an embedded framework type declared by classfile metadata
+- Work prototype type: an exported type declared by classfile metadata and associated with one work file kind
+- Work surface type: an exported interface type declared by classfile metadata and associated with one work file kind
 - Field declaration block: the unique top-level `var` declaration that is interpreted as class fields rather than
   package variables
 - Shadow entry: the synthetic function created from top-level statements
-- Project classfile: the framework file that represents the project-level class
-- Work classfile: a framework file that represents a non-project class within the same framework
-- Base class: an embedded framework type declared by classfile metadata
 
 ## File classification
 
@@ -172,9 +176,9 @@ Examples:
 - `get_p_#id_app.gox` has class file stem `get_p_#id` and normalized type name `get_p_id`
 
 Framework metadata may further transform the type name:
-- A project file whose class file stem is `main`, or a framework that has no explicit project file, uses the project
-  base-class name as its default class type name. A leading `*` on the base-class name is removed
-- A non-empty work-class `-prefix=` is prepended to the normalized work-file stem
+- A project classfile whose class file stem is `main`, or a framework that has no explicit project classfile, uses the
+  name of the base type named by the project base class as its default class type name
+- A non-empty `-prefix=` on a work file kind is prepended to the normalized class file stem of a work classfile
 - If neither of the previous rules applies and the class type name would otherwise equal one of the reserved names
   `init`, `main`, `go`, `goto`, `type`, `var`, `import`, `package`, `interface`, `struct`, `const`, `func`, `map`,
   `chan`, `for`, `if`, `else`, `switch`, `case`, `select`, `defer`, `range`, `return`, `break`, `continue`,
@@ -194,7 +198,7 @@ For a framework classfile, framework-added fields precede user fields.
 
 Framework-added fields are inserted in the following order:
 - For a project classfile, the embedded project base class
-- For a project classfile, each embedded work-class field requested by the `-embed` flag, in work-class declaration
+- For a project classfile, each embedded work class field requested by the `-embed` flag, in work file kind declaration
   order and lexicographic source-file path order
 - For a work classfile, the embedded work base class
 - For a work classfile, an embedded pointer to the project class type, if a project class type exists and its field name
@@ -359,18 +363,18 @@ The classfile loader recognizes the following module directives:
 ProjectDirective = "project" [ ProjectExt ExportedName ] PackagePath { PackagePath } .
 ClassDirective   = "class" { ClassDirectiveFlag } WorkExt ExportedName [ ExportedName ] .
 ImportDirective  = "import" [ ImportName ] PackagePath .
-ClassDirectiveFlag = "-embed" | "-prefix=" string_without_space .
+ClassDirectiveFlag = "-embed" | "-prefix=" string_without_space | "-surface=" ExportedName .
 ```
 
 Every `class` or `import` directive belongs to the most recent preceding `project` directive.
 
 A project group consists of one `project` directive together with all `class` and `import` directives that belong to it.
 
-The first package path of a `project` directive is the framework package used to resolve any base-class symbols named by
-that project group.
+The first package path of a `project` directive is the framework package used to resolve the project base class, each
+work base class, each work prototype type, and each work surface type named by that project group.
 
-Any additional package paths participate in implicit framework-package export lookup but are not searched for
-base-class symbols.
+Any additional package paths participate in implicit framework-package export lookup but are not searched for those
+symbols.
 
 ### Extension forms and normalization
 
@@ -409,12 +413,20 @@ For each `project` directive:
   pointer to the named base type rather than the base type itself
 
 For each `class` directive:
-- The exported symbol names the work base class
+- The exported symbol names the work base class and is resolved from the framework package of the containing project
+  group
 - The optional final exported symbol is the work prototype type
-- If a project group declares more than one work class kind, every work class in that group must declare a prototype
-  type
+- If a project group declares more than one work file kind, every work file kind in that group must declare a work
+  prototype type
+- When a work prototype type is named, the exported symbol is resolved from the framework package of the containing
+  project group
+- `-embed` causes the project class type to embed a field for each generated work class instance of that work file kind
 - `-prefix=` prepends the given string to every generated work class type name
-- `-embed` causes the project class type to embed a field for each generated work class instance of that work kind
+- `-surface=` names the work surface type of the declared work file kind and may appear at most once in a `class`
+  directive
+- When `-surface=` is present, the named symbol must resolve to an exported interface type in the framework package of
+  the containing project group
+- Within one project group, no two work file kinds may declare the same work surface type
 
 For each `import` directive:
 - The imported package becomes available to classfiles as an auto-imported package name
@@ -422,7 +434,31 @@ For each `import` directive:
 - If multiple `import` directives in the same project group resolve to the same auto-import name, the last directive
   wins
 
-## Project and work-class assembly
+## Work surface types
+
+For a work file kind that declares `-surface=`, the named interface type is the work surface type of that work file
+kind. The work surface type defines the public semantic surface of that work file kind. It is additional classfile
+metadata associated with that work file kind.
+
+The work surface type is not a base class. It is not embedded into the generated work class type. It does not alter the
+lowered class type or its lowered methods.
+
+The work surface type does not affect:
+- File classification
+- Class type naming
+- Field layout
+- Name resolution inside class methods
+- Project `Main` assembly
+- Synthesized helper method generation
+
+For every generated work class type `T` of that work file kind, `*T` must implement the work surface type of that work
+file kind. It is an error if, for any generated work class type `T` of that work file kind, `*T` does not implement the
+work surface type of that work file kind.
+
+If no `-surface=` is declared for a work file kind, this specification defines no work surface type for that work file
+kind.
+
+## Project and work class assembly
 
 A test framework registration is a framework registration whose project extension has the suffix `test.gox`.
 
@@ -434,35 +470,35 @@ For each framework registration, a package may contain at most one explicit proj
 
 It is an error for a package to contain more than one explicit project classfile for the same framework registration.
 
-If a framework registration provides a project base class but the package contains no explicit project file for that
-framework, the compiler still synthesizes a default project class type.
+If a framework registration provides a project base class but the package contains no explicit project classfile for
+that framework, the compiler still synthesizes a default project class type.
 
 The synthesized project class has no source file of its own. Its type name is derived by the project type-naming rules
 described earlier.
 
-### Work-instance assembly for project `Main`
+### Work instance assembly for project `Main`
 
 For every non-test framework registration that provides a project base class, the compiler generates a project method
 named `Main` on the project class type. The project base class is therefore required to provide a method named `Main`.
-The generated project method constructs work-class instances and forwards them to the embedded project base-class method
+The generated project method constructs work class instances and forwards them to the embedded project base-class method
 `Main`.
 
 The grouping rule is:
-- If the framework has exactly one work class kind and that `Main` parameter is variadic, all work files of that kind
-  are passed as variadic arguments
-- Otherwise, work files are grouped by their declared prototype type and passed as slices in `Main` parameter order
+- If the framework has exactly one work file kind and that `Main` parameter is variadic, all work files of that kind are
+  passed as variadic arguments
+- Otherwise, work files are grouped by their declared work prototype type and passed as slices in `Main` parameter order
 
-The project `Main` method constructs one fresh work-class instance for each work file in the package. When `-embed` is
-present on a work class declaration, the freshly created work instance is also assigned into the corresponding embedded
-field on the project instance before the project `Main` call.
+The project `Main` method constructs one fresh work class instance for each work file in the package. When `-embed` is
+present on the corresponding `class` directive, the freshly created work instance is also assigned into the
+corresponding embedded field on the project instance before the project `Main` call.
 
 ## Synthesized helper methods
 
-The compiler may synthesize additional work-class methods when the declared work prototype requires them.
+The compiler may synthesize additional work class methods when the declared work prototype type requires them.
 
 ### `Classfname`
 
-If the work prototype contains a method named `Classfname`, the compiler generates:
+If the work prototype type contains a method named `Classfname`, the compiler generates:
 
 ```xgo
 func (this *T) Classfname() string
@@ -476,9 +512,9 @@ Examples:
 
 ### `Classclone`
 
-If the work prototype contains a method named `Classclone`, the compiler generates a shallow-clone method named
-`Classclone` with no parameters other than the receiver. Its result list is adopted from the prototype's `Classclone`
-declaration.
+If the work prototype type contains a method named `Classclone`, the compiler generates a shallow-clone method named
+`Classclone` with no parameters other than the receiver. Its result list is adopted from the work prototype type's
+`Classclone` declaration.
 
 The generated implementation copies `*this` by value into a temporary variable and returns the address of that temporary
 value.
@@ -492,7 +528,7 @@ If one exists, no class-based package `main` is synthesized.
 
 If none exists, the compiler selects a class entrypoint as follows:
 1. It considers only non-test framework registrations
-2. Among framework project groups, it prefers a unique project group whose explicit project file has a shadow entry
+2. Among framework project groups, it prefers a unique project group whose explicit project classfile has a shadow entry
 3. If no such group exists, it prefers a unique remaining project group, including one that is represented only by a
    synthesized default project class
 4. If no project group is selected, it selects the unique normal classfile that has a shadow entry, if exactly one
