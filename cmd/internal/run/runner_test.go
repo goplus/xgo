@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/goplus/mod/modfile"
 	"github.com/goplus/xgo/x/xgoprojs"
 )
 
@@ -49,16 +50,6 @@ func TestResolveProjectDir(t *testing.T) {
 	}
 }
 
-func TestResolveProjectPackageDirRejectsPattern(t *testing.T) {
-	_, err := resolveProjectPackageDir(".", "example.com/app/...")
-	if err == nil {
-		t.Fatal("resolveProjectPackageDir() error = nil, want error")
-	}
-	if !strings.Contains(err.Error(), "/...") {
-		t.Fatalf("unexpected error: %v", err)
-	}
-}
-
 func TestReadCommandRunnerFromGopMod(t *testing.T) {
 	projectDir := t.TempDir()
 	writeFile(t, filepath.Join(projectDir, "gop.mod"), `xgo 1.6.0
@@ -66,13 +57,14 @@ func TestReadCommandRunnerFromGopMod(t *testing.T) {
 project main.spx Game github.com/example/app
 runner example.com/runner/cmd/pcrun v1.2.3
 `)
+	writeFile(t, filepath.Join(projectDir, "main.spx"), "")
 
-	runner, err := readCommandRunner(projectDir)
+	runner, err := loadProjectRunner(&xgoprojs.DirProj{Dir: projectDir}, projectDir)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if runner == nil {
-		t.Fatal("readCommandRunner() returned nil")
+		t.Fatal("loadProjectRunner() returned nil")
 	}
 	if runner.Path != "example.com/runner/cmd/pcrun" || runner.Version != "v1.2.3" {
 		t.Fatalf("unexpected runner: %+v", runner)
@@ -91,12 +83,12 @@ runner example.com/runner/cmd/pcrun
 		t.Fatal(err)
 	}
 
-	runner, err := readCommandRunner(projectDir)
+	runner, err := loadProjectRunner(&xgoprojs.DirProj{Dir: projectDir}, projectDir)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if runner != nil {
-		t.Fatalf("readCommandRunner() = %+v, want nil", runner)
+		t.Fatalf("loadProjectRunner() = %+v, want nil", runner)
 	}
 }
 
@@ -106,34 +98,42 @@ func TestReadCommandRunnerAbsent(t *testing.T) {
 
 project main.spx Game github.com/example/app
 `)
+	writeFile(t, filepath.Join(projectDir, "main.spx"), "")
 
-	runner, err := readCommandRunner(projectDir)
+	runner, err := loadProjectRunner(&xgoprojs.DirProj{Dir: projectDir}, projectDir)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if runner != nil {
-		t.Fatalf("readCommandRunner() = %+v, want nil", runner)
+		t.Fatalf("loadProjectRunner() = %+v, want nil", runner)
 	}
 }
 
-func TestLookupModulePackagePrefersModule(t *testing.T) {
+func TestLookupPackageDirPrefersModule(t *testing.T) {
 	root := t.TempDir()
 	writeFile(t, filepath.Join(root, "go.mod"), "module example.com/app\n\ngo 1.21\n")
 	writeFile(t, filepath.Join(root, "cmd", "runner", "main.go"), "package main\nfunc main() {}\n")
 
-	pkg, err := lookupModulePackage(root, "example.com/app/cmd/runner")
+	directory, err := lookupPackageDir(root, "example.com/app/cmd/runner")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if pkg == nil {
-		t.Fatal("lookupModulePackage() should resolve local module")
-	}
-	if pkg.Dir != filepath.Join(root, "cmd", "runner") {
-		t.Fatalf("lookupModulePackage() dir = %q", pkg.Dir)
+	if directory != filepath.Join(root, "cmd", "runner") {
+		t.Fatalf("lookupPackageDir() dir = %q", directory)
 	}
 }
 
-func TestLookupModulePackagePrefersReplace(t *testing.T) {
+func TestLookupPackageDirPropagatesLoadError(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, "go.mod"), "module example.com/app\n\nrequire (\n")
+
+	_, err := lookupPackageDir(root, "example.com/app")
+	if err == nil {
+		t.Fatal("lookupPackageDir() error = nil, want error")
+	}
+}
+
+func TestLookupPackageDirPrefersReplace(t *testing.T) {
 	root := t.TempDir()
 	runnerRoot := filepath.Join(root, "runner")
 	appRoot := filepath.Join(root, "app")
@@ -149,15 +149,12 @@ require example.com/runner v0.0.0
 replace example.com/runner => ../runner
 `)
 
-	pkg, err := lookupModulePackage(appRoot, "example.com/runner/cmd/pcrun")
+	directory, err := lookupPackageDir(appRoot, "example.com/runner/cmd/pcrun")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if pkg == nil {
-		t.Fatal("lookupModulePackage() should resolve local replace")
-	}
-	if pkg.Dir != filepath.Join(runnerRoot, "cmd", "pcrun") {
-		t.Fatalf("lookupModulePackage() dir = %q", pkg.Dir)
+	if directory != filepath.Join(runnerRoot, "cmd", "pcrun") {
+		t.Fatalf("lookupPackageDir() dir = %q", directory)
 	}
 }
 
@@ -168,17 +165,36 @@ func TestReadCommandRunnerRejectsPathVersionSyntax(t *testing.T) {
 project main.spx Game github.com/example/app
 runner example.com/runner/cmd/pcrun@latest
 `)
+	writeFile(t, filepath.Join(projectDir, "main.spx"), "")
 
-	_, err := readCommandRunner(projectDir)
+	_, err := loadProjectRunner(&xgoprojs.DirProj{Dir: projectDir}, projectDir)
 	if err == nil {
-		t.Fatal("readCommandRunner() error = nil, want error")
+		t.Fatal("loadProjectRunner() error = nil, want error")
 	}
-	if !strings.Contains(err.Error(), "must not include @version") {
+	if !strings.Contains(err.Error(), "invalid runner path") {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
 
-func TestInstallTempRunnerBinaryUsesExplicitVersionQuery(t *testing.T) {
+func TestReadCommandRunnerRejectsInvalidImportPath(t *testing.T) {
+	projectDir := t.TempDir()
+	writeFile(t, filepath.Join(projectDir, "gop.mod"), `xgo 1.6.0
+
+project main.spx Game github.com/example/app
+runner "bad path"
+`)
+	writeFile(t, filepath.Join(projectDir, "main.spx"), "")
+
+	_, err := loadProjectRunner(&xgoprojs.DirProj{Dir: projectDir}, projectDir)
+	if err == nil {
+		t.Fatal("loadProjectRunner() error = nil, want error")
+	}
+	if !strings.Contains(err.Error(), "invalid runner path") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestInstallRunnerUsesExplicitVersionQuery(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("shell-based fake go test")
 	}
@@ -212,7 +228,7 @@ exit 1
 	t.Setenv("FAKE_GO_INSTALL_LOG", installLog)
 	t.Setenv("PATH", fakeGoDir+string(os.PathListSeparator)+os.Getenv("PATH"))
 
-	binaryPath, cleanup, err := installTempRunnerBinary("example.com/runner/cmd/pcrun", "v1.2.3")
+	binaryPath, cleanup, err := installRunnerBinary(&modfile.Runner{Path: "example.com/runner/cmd/pcrun", Version: "v1.2.3"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -241,7 +257,7 @@ exit 1
 	}
 }
 
-func TestInstallTempRunnerBinaryUsesLatestQuery(t *testing.T) {
+func TestInstallRunnerUsesLatestQuery(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("shell-based fake go test")
 	}
@@ -275,7 +291,7 @@ exit 1
 	t.Setenv("FAKE_GO_INSTALL_LOG", installLog)
 	t.Setenv("PATH", fakeGoDir+string(os.PathListSeparator)+os.Getenv("PATH"))
 
-	binaryPath, cleanup, err := installTempRunnerBinary("example.com/runner/cmd/pcrun", "latest")
+	binaryPath, cleanup, err := installRunnerBinary(&modfile.Runner{Path: "example.com/runner/cmd/pcrun", Version: "latest"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -304,96 +320,57 @@ exit 1
 	}
 }
 
-func TestBuildLocalRunnerBinaryRebuildsEveryTime(t *testing.T) {
-	sourceDir := filepath.Join(t.TempDir(), "runner")
-	writeFile(t, filepath.Join(sourceDir, "go.mod"), "module example.com/runner\n\ngo 1.21\n")
-	writeFile(t, filepath.Join(sourceDir, "main.go"), `package main
-
-import "os"
-
-func main() {
-	_ = os.WriteFile(os.Args[1], []byte("v1"), 0644)
-}
-`)
-
-	binary1, cleanup1, err := buildLocalRunnerBinary(sourceDir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer cleanup1()
-	writeFile(t, filepath.Join(sourceDir, "main.go"), `package main
-
-import "os"
-
-func main() {
-	_ = os.WriteFile(os.Args[1], []byte("v2"), 0644)
-}
-`)
-	binary2, cleanup2, err := buildLocalRunnerBinary(sourceDir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer cleanup2()
-	if binary1 == binary2 {
-		t.Fatal("local runner should not reuse cached binary path")
+func TestRunWithConfiguredRunner(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("shell-based fake go test")
 	}
 
+	projectDir := t.TempDir()
 	outputFile := filepath.Join(t.TempDir(), "runner.out")
-	cmd := exec.Command(binary2, outputFile)
-	if out, err := cmd.CombinedOutput(); err != nil {
-		t.Fatalf("run rebuilt local runner: %v\n%s", err, out)
-	}
-	data, err := os.ReadFile(outputFile)
-	if err != nil {
+	fakeGoDir := filepath.Join(t.TempDir(), "bin")
+	if err := os.MkdirAll(fakeGoDir, 0755); err != nil {
 		t.Fatal(err)
 	}
-	if string(data) != "v2" {
-		t.Fatalf("rebuilt local runner output = %q, want v2", data)
-	}
-}
-
-func TestRunWithCommandRunner(t *testing.T) {
-	root := t.TempDir()
-	runnerRoot := filepath.Join(root, "runner")
-	projectDir := filepath.Join(root, "project")
-	outputFile := filepath.Join(root, "runner.out")
-
-	writeFile(t, filepath.Join(runnerRoot, "go.mod"), "module example.com/runner\n\ngo 1.21\n")
-	writeFile(t, filepath.Join(runnerRoot, "cmd", "pcrun", "main.go"), `package main
-
-import (
-	"os"
-	"strings"
-)
-
-func main() {
-	data := os.Args[1] + "\n" + strings.Join(os.Args[2:], "|")
-	if err := os.WriteFile(os.Getenv("TEST_RUNNER_OUTPUT"), []byte(data), 0644); err != nil {
-		panic(err)
-	}
-}
+	writeFile(t, filepath.Join(fakeGoDir, "go"), `#!/bin/sh
+set -eu
+cmd="$1"
+shift
+case "$cmd" in
+install)
+	cat >"$GOBIN/pcrun" <<'EOF'
+#!/bin/sh
+set -eu
+{
+	printf '%s\n' "$1"
+	shift
+	printf '%s' "$*"
+} >"$TEST_RUNNER_OUTPUT"
+EOF
+	chmod +x "$GOBIN/pcrun"
+	exit 0
+	;;
+esac
+echo "unexpected go command: $cmd $*" >&2
+exit 1
 `)
-	writeFile(t, filepath.Join(projectDir, "go.mod"), `module example.com/app
-
-go 1.21
-
-require example.com/runner v0.0.0
-
-replace example.com/runner => ../runner
-`)
+	if err := os.Chmod(filepath.Join(fakeGoDir, "go"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", fakeGoDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	t.Setenv("TEST_RUNNER_OUTPUT", outputFile)
 	writeFile(t, filepath.Join(projectDir, "gop.mod"), `xgo 1.6.0
 
 project main.spx Game github.com/example/app
 runner example.com/runner/cmd/pcrun
 `)
+	writeFile(t, filepath.Join(projectDir, "main.spx"), "")
 
-	t.Setenv("TEST_RUNNER_OUTPUT", outputFile)
-	handled, err := tryRunWithCommandRunner(&xgoprojs.DirProj{Dir: projectDir}, []string{"alpha", "beta"}, ".")
+	handled, err := runWithConfiguredRunner(&xgoprojs.DirProj{Dir: projectDir}, []string{"alpha", "beta"}, ".")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !handled {
-		t.Fatal("tryRunWithCommandRunner() = false, want true")
+		t.Fatal("runWithConfiguredRunner() = false, want true")
 	}
 
 	data, err := os.ReadFile(outputFile)
@@ -401,32 +378,65 @@ runner example.com/runner/cmd/pcrun
 		t.Fatal(err)
 	}
 	got := string(data)
-	want := projectDir + "\nalpha|beta"
+	want := projectDir + "\nalpha beta"
 	if got != want {
 		t.Fatalf("runner output = %q, want %q", got, want)
 	}
 }
 
-func TestBuildRunnerExecutableRejectsNonMainPackage(t *testing.T) {
-	sourceDir := t.TempDir()
-	writeFile(t, filepath.Join(sourceDir, "go.mod"), "module example.com/runner\n\ngo 1.21\n")
-	writeFile(t, filepath.Join(sourceDir, "runner.go"), "package helper\n")
+func TestReadCommandRunnerSelectsMatchingProjectForFiles(t *testing.T) {
+	projectDir := t.TempDir()
+	alphaFile := filepath.Join(projectDir, "main.alpha")
+	betaFile := filepath.Join(projectDir, "main.beta")
+	writeFile(t, filepath.Join(projectDir, "gop.mod"), `xgo 1.6.0
 
-	err := buildRunnerExecutable(sourceDir, filepath.Join(t.TempDir(), "runner"+runnerBinaryExt()))
-	if err == nil {
-		t.Fatal("buildRunnerExecutable() error = nil, want error")
+project main.alpha App github.com/example/alpha
+runner example.com/runner/cmd/alpha
+
+project main.beta App github.com/example/beta
+runner example.com/runner/cmd/beta
+`)
+	writeFile(t, alphaFile, "")
+	writeFile(t, betaFile, "")
+
+	runner, err := loadProjectRunner(&xgoprojs.FilesProj{Files: []string{betaFile}}, projectDir)
+	if err != nil {
+		t.Fatal(err)
 	}
-	if !strings.Contains(err.Error(), "not a main package") {
+	if runner == nil || runner.Path != "example.com/runner/cmd/beta" {
+		t.Fatalf("loadProjectRunner() = %+v, want beta runner", runner)
+	}
+}
+
+func TestReadCommandRunnerRejectsAmbiguousDirectoryProject(t *testing.T) {
+	projectDir := t.TempDir()
+	writeFile(t, filepath.Join(projectDir, "gop.mod"), `xgo 1.6.0
+
+project main.alpha App github.com/example/alpha
+runner example.com/runner/cmd/alpha
+
+project main.beta App github.com/example/beta
+runner example.com/runner/cmd/beta
+`)
+	writeFile(t, filepath.Join(projectDir, "main.alpha"), "")
+	writeFile(t, filepath.Join(projectDir, "main.beta"), "")
+
+	_, err := loadProjectRunner(&xgoprojs.DirProj{Dir: projectDir}, projectDir)
+	if err == nil {
+		t.Fatal("loadProjectRunner() error = nil, want error")
+	}
+	if !strings.Contains(err.Error(), "multiple projects") {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
 
-func TestRunnerBinaryExt(t *testing.T) {
-	if runtime.GOOS == "windows" && runnerBinaryExt() != ".exe" {
-		t.Fatal("windows runner binary must end with .exe")
+func TestRunnerBinaryFilename(t *testing.T) {
+	name := runnerBinaryFilename("example.com/runner/cmd/pcrun")
+	if runtime.GOOS == "windows" && name != "pcrun.exe" {
+		t.Fatalf("windows runner binary = %q, want pcrun.exe", name)
 	}
-	if runtime.GOOS != "windows" && runnerBinaryExt() != "" {
-		t.Fatal("non-windows runner binary should not have extension")
+	if runtime.GOOS != "windows" && name != "pcrun" {
+		t.Fatalf("non-windows runner binary = %q, want pcrun", name)
 	}
 }
 

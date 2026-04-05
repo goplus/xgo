@@ -79,7 +79,7 @@ func runCmd(cmd *base.Command, args []string) {
 		panic("TODO: profile not impl")
 	}
 
-	if handled, err := tryRunWithCommandRunner(proj, args, "."); err != nil {
+	if handled, err := runWithConfiguredRunner(proj, args, "."); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	} else if handled {

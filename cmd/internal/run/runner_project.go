@@ -1,26 +1,26 @@
 package run
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/goplus/mod/modcache"
-	"github.com/goplus/mod/modfetch"
 	"github.com/goplus/mod/modfile"
-	"github.com/goplus/mod/xgomod"
 	"github.com/goplus/xgo/x/xgoprojs"
+	"golang.org/x/mod/module"
 )
 
 func resolveProjectDir(proj xgoprojs.Proj, workDir string) (string, error) {
 	switch v := proj.(type) {
 	case *xgoprojs.DirProj:
-		return absolutePath(workDir, v.Dir)
+		return resolvePath(workDir, v.Dir)
 	case *xgoprojs.FilesProj:
 		return resolveFilesProjectDir(workDir, v.Files)
 	case *xgoprojs.PkgPathProj:
-		return resolveProjectPackageDir(workDir, v.Path)
+		return resolvePackageProjectDir(workDir, v.Path)
 	default:
 		return "", fmt.Errorf("unsupported project type %T", proj)
 	}
@@ -30,10 +30,10 @@ func resolveFilesProjectDir(workDir string, files []string) (string, error) {
 	if len(files) == 0 {
 		return "", fmt.Errorf("no files in project")
 	}
-	return absolutePath(workDir, filepath.Dir(files[0]))
+	return resolvePath(workDir, filepath.Dir(files[0]))
 }
 
-func absolutePath(workDir, target string) (string, error) {
+func resolvePath(workDir, target string) (string, error) {
 	if filepath.IsAbs(target) {
 		return filepath.Clean(target), nil
 	}
@@ -43,61 +43,20 @@ func absolutePath(workDir, target string) (string, error) {
 	return filepath.Abs(filepath.Join(workDir, target))
 }
 
-func resolveProjectPackageDir(workDir, pkgPath string) (string, error) {
-	if strings.HasSuffix(pkgPath, "/...") {
-		return "", fmt.Errorf("project path %q cannot use /... with command runner", pkgPath)
-	}
-	pkgPath, version := splitPackageSpec(pkgPath)
-	workDir = normalizeWorkDir(workDir)
-
-	if dir, ok, err := resolveLocalPackageDir(workDir, pkgPath); err != nil {
-		return "", err
-	} else if ok {
-		return dir, nil
-	}
-	return resolveDownloadedPackageDir(pkgPath, version)
-}
-
-func normalizeWorkDir(workDir string) string {
+func resolvePackageProjectDir(workDir, pkgPath string) (string, error) {
+	pkgPath, version, _ := strings.Cut(pkgPath, "@")
 	if workDir == "" {
-		return "."
+		workDir = "."
 	}
-	return workDir
-}
-
-func resolveLocalPackageDir(workDir, pkgPath string) (string, bool, error) {
-	pkg, err := lookupModulePackage(workDir, pkgPath)
-	if err != nil {
-		return "", false, err
-	}
-	if pkg == nil {
-		return "", false, nil
-	}
-	return pkg.Dir, true, nil
-}
-
-func resolveDownloadedPackageDir(pkgPath, version string) (string, error) {
-	spec := packageSpec(pkgPath, version)
-	modVer, relPath, err := modfetch.GetPkg(spec, "")
-	if err != nil {
+	if packageDirectory, err := lookupPackageDir(workDir, pkgPath); err != nil {
 		return "", err
+	} else if packageDirectory != "" {
+		return packageDirectory, nil
 	}
-	modDir, err := modcache.Path(modVer)
-	if err != nil {
-		return "", err
-	}
-	dir := modDir
-	if relPath != "" {
-		dir = filepath.Join(modDir, relPath)
-	}
-	return filepath.Abs(dir)
+	return downloadPackageDir(pkgPath, version)
 }
 
-func readCommandRunner(projectDir string) (*modfile.Runner, error) {
-	return readRunnerFromGopMod(projectDir)
-}
-
-func readRunnerFromGopMod(projectDir string) (*modfile.Runner, error) {
+func loadProjectRunner(proj xgoprojs.Proj, projectDir string) (*modfile.Runner, error) {
 	gopModPath, data, err := readProjectGopMod(projectDir)
 	if err != nil {
 		return nil, err
@@ -110,69 +69,83 @@ func readRunnerFromGopMod(projectDir string) (*modfile.Runner, error) {
 	if err != nil {
 		return nil, err
 	}
-	if len(parsed.Projects) == 0 {
+	project, err := selectTargetProject(parsed.Projects, proj, projectDir)
+	if err != nil {
+		return nil, err
+	}
+	if project == nil || project.Runner == nil {
 		return nil, nil
 	}
-	runner := parsed.Projects[0].Runner
-	if err := validateRunnerSpec(runner); err != nil {
-		return nil, err
+	runner := project.Runner
+	if err := module.CheckImportPath(runner.Path); err != nil {
+		return nil, fmt.Errorf("invalid runner path %q: %w", runner.Path, err)
 	}
 	return runner, nil
 }
 
-func validateRunnerSpec(runner *modfile.Runner) error {
-	if runner == nil {
-		return nil
+func selectTargetProject(projects []*modfile.Project, proj xgoprojs.Proj, projectDir string) (*modfile.Project, error) {
+	switch len(projects) {
+	case 0:
+		return nil, nil
+	case 1:
+		return projects[0], nil
 	}
-	if strings.HasSuffix(runner.Path, "/...") {
-		return fmt.Errorf("runner path %q cannot use /... pattern", runner.Path)
+
+	targetFilenames, err := collectTargetFilenames(proj, projectDir)
+	if err != nil {
+		return nil, err
 	}
-	if strings.Contains(runner.Path, "@") {
-		basePath, _ := splitPackageSpec(runner.Path)
-		return fmt.Errorf("runner path %q must not include @version; use `runner %s <version>`", runner.Path, basePath)
+
+	gopModPath := filepath.Join(projectDir, "gop.mod")
+	var matched *modfile.Project
+	for _, filename := range targetFilenames {
+		ext := modfile.ClassExt(filename)
+		for _, project := range projects {
+			if ext == project.Ext && project.IsProj(ext, filename) {
+				if matched != nil && matched != project {
+					return nil, fmt.Errorf("multiple projects in %s match run target", gopModPath)
+				}
+				matched = project
+			}
+		}
 	}
-	return nil
+	return matched, nil
+}
+
+func collectTargetFilenames(proj xgoprojs.Proj, projectDir string) ([]string, error) {
+	switch v := proj.(type) {
+	case *xgoprojs.FilesProj:
+		filenames := make([]string, 0, len(v.Files))
+		for _, file := range v.Files {
+			filenames = append(filenames, filepath.Base(file))
+		}
+		return filenames, nil
+	case *xgoprojs.DirProj, *xgoprojs.PkgPathProj:
+		entries, err := os.ReadDir(projectDir)
+		if err != nil {
+			return nil, err
+		}
+		files := make([]string, 0, len(entries))
+		for _, entry := range entries {
+			if entry.IsDir() {
+				continue
+			}
+			files = append(files, entry.Name())
+		}
+		return files, nil
+	default:
+		return nil, fmt.Errorf("unsupported project type %T", proj)
+	}
 }
 
 func readProjectGopMod(projectDir string) (string, []byte, error) {
 	gopModPath := filepath.Join(projectDir, "gop.mod")
 	data, err := os.ReadFile(gopModPath)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, fs.ErrNotExist) {
 			return gopModPath, nil, nil
 		}
 		return "", nil, err
 	}
 	return gopModPath, data, nil
-}
-
-func lookupModulePackage(workDir, pkgPath string) (*xgomod.Package, error) {
-	mod, err := xgomod.Load(workDir)
-	if err != nil {
-		return nil, nil
-	}
-	pkg, err := mod.Lookup(pkgPath)
-	if err != nil {
-		return nil, nil
-	}
-	dir, err := filepath.Abs(pkg.Dir)
-	if err != nil {
-		return nil, err
-	}
-	pkg.Dir = dir
-	return pkg, nil
-}
-
-func packageSpec(pkgPath, version string) string {
-	if version == "" {
-		version = "latest"
-	}
-	return pkgPath + "@" + version
-}
-
-func splitPackageSpec(pkgPath string) (string, string) {
-	if pos := strings.IndexByte(pkgPath, '@'); pos > 0 {
-		return pkgPath[:pos], pkgPath[pos+1:]
-	}
-	return pkgPath, ""
 }
