@@ -1,7 +1,7 @@
 //go:build !genjs
 
 /*
- * Copyright (c) 2022 The XGo Authors (xgo.dev). All rights reserved.
+ * Copyright (c) 2026 The XGo Authors (xgo.dev). All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,30 +16,18 @@
  * limitations under the License.
  */
 
-package cl_test
+package cltest
 
 import (
 	"testing"
 
-	"github.com/goplus/xgo/cl/cltest"
+	"github.com/goplus/gogen"
 )
 
-func TestTestspx(t *testing.T) {
-	cltest.SpxFromDir(t, "", "./_testspx")
+// -----------------------------------------------------------------------------
+
+func testGenJS(t *testing.T, pkg *gogen.Package, dir string, exp any) {
+	// noop
 }
 
-func TestTestjs(t *testing.T) {
-	cltest.FromDirEx(t, "", "./_testjs", true)
-}
-
-func TestTestgop(t *testing.T) {
-	cltest.FromDir(t, "", "./_testgop")
-}
-
-func TestTestc(t *testing.T) {
-	cltest.FromDir(t, "", "./_testc")
-}
-
-func TestTestpy(t *testing.T) {
-	cltest.FromDir(t, "", "./_testpy")
-}
+// -----------------------------------------------------------------------------

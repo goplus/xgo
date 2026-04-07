@@ -26,6 +26,7 @@ import (
 	"testing"
 
 	"github.com/goplus/gogen"
+	"github.com/goplus/gogen/target"
 	"github.com/goplus/mod"
 	"github.com/goplus/mod/env"
 	"github.com/goplus/mod/modfile"
@@ -152,6 +153,12 @@ func Mixed(t *testing.T, pkgname, gocode, gopcode, expected string, outline ...b
 func DoFS(
 	t *testing.T, conf *cl.Config,
 	fs parser.FileSystem, dir string, filter func(fs.FileInfo) bool, pkgname string, exp any) {
+	DoFSEx(t, conf, fs, dir, filter, pkgname, exp, nil)
+}
+
+func DoFSEx(
+	t *testing.T, conf *cl.Config,
+	fs parser.FileSystem, dir string, filter func(fs.FileInfo) bool, pkgname string, exp, expJS any) {
 	cl.SetDisableRecover(true)
 	defer cl.SetDisableRecover(false)
 
@@ -169,17 +176,28 @@ func DoFS(
 	if err != nil {
 		t.Fatal("NewPackage:", err)
 	}
+	testGenGo(t, pkg, dir, exp)
+	if expJS != nil {
+		testGenJS(t, pkg, dir, expJS)
+	}
+}
+
+func testGenGo(t *testing.T, pkg *gogen.Package, dir string, exp any) {
 	var b bytes.Buffer
-	err = pkg.WriteTo(&b)
+	err := pkg.WriteTo(&b)
 	if err != nil {
 		t.Fatal("gogen.WriteTo failed:", err)
 	}
+	testDiff(t, dir, "/result.txt", &b, exp)
+}
+
+func testDiff(t *testing.T, dir string, outfname string, b *bytes.Buffer, exp any) {
 	if expected, ok := exp.(string); ok {
 		result := b.String()
 		if result != expected {
 			t.Fatalf("\nResult:\n%s\nExpected:\n%s\n", result, expected)
 		}
-	} else if test.Diff(t, dir+"/result.txt", b.Bytes(), exp.([]byte)) {
+	} else if test.Diff(t, dir+outfname, b.Bytes(), exp.([]byte)) {
 		t.Fatal(dir, ": unexpect result")
 	}
 }
@@ -187,6 +205,14 @@ func DoFS(
 // -----------------------------------------------------------------------------
 
 func FromDir(t *testing.T, sel, relDir string) {
+	FromDirEx(t, sel, relDir, false)
+}
+
+func FromDirEx(t *testing.T, sel, relDir string, genJS bool) {
+	if genJS != (target.Kind == target.JS) {
+		// ignore if not genJS and target is JS, or genJS and target is not JS
+		return
+	}
 	dir, err := os.Getwd()
 	if err != nil {
 		t.Fatal("Getwd failed:", err)
@@ -202,20 +228,24 @@ func FromDir(t *testing.T, sel, relDir string) {
 			continue
 		}
 		t.Run(name, func(t *testing.T) {
-			testFrom(t, dir+"/"+name, sel)
+			testFrom(t, dir+"/"+name, sel, genJS)
 		})
 	}
 }
 
-func testFrom(t *testing.T, pkgDir, sel string) {
+func testFrom(t *testing.T, pkgDir, sel string, genJS bool) {
 	if sel != "" && !strings.Contains(pkgDir, sel) {
 		return
 	}
 	log.Println("Parsing", pkgDir)
 	out := pkgDir + "/out.go"
-	b, _ := os.ReadFile(out)
+	exp, _ := os.ReadFile(out)
 	filter := func(fi fs.FileInfo) bool {
 		return fi.Name() == "in.xgo"
+	}
+	var expJS any
+	if genJS {
+		expJS, _ = os.ReadFile(pkgDir + "/out.js")
 	}
 	conf := Conf
 	goMod := pkgDir + "/go.mod"
@@ -230,7 +260,7 @@ func testFrom(t *testing.T, pkgDir, sel string) {
 		confCopy.RelativeBase = XGoRoot
 		conf = &confCopy
 	}
-	DoFS(t, conf, fsx.Local, pkgDir, filter, "main", b)
+	DoFSEx(t, conf, fsx.Local, pkgDir, filter, "main", exp, expJS)
 }
 
 // -----------------------------------------------------------------------------
