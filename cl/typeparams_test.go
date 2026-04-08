@@ -1,3 +1,5 @@
+//go:build !genjs
+
 /*
  * Copyright (c) 2022 The XGo Authors (xgo.dev). All rights reserved.
  *

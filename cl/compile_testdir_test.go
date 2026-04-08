@@ -17,13 +17,23 @@
 package cl_test
 
 import (
+	"runtime"
 	"testing"
 
+	"github.com/goplus/gogen/target"
 	"github.com/goplus/xgo/cl/cltest"
 )
 
 func TestTestspx(t *testing.T) {
-	cltest.SpxFromDir(t, "", "./_testspx")
+	if target.Kind == target.Go {
+		cltest.SpxFromDir(t, "", "./_testspx")
+	}
+}
+
+func TestTestjs(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		cltest.FromDirEx(t, "", "./_testjs", false, true)
+	}
 }
 
 func TestTestgop(t *testing.T) {

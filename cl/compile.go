@@ -19,7 +19,6 @@ package cl
 
 import (
 	"fmt"
-	goast "go/ast"
 	gotoken "go/token"
 	"go/types"
 	"log"
@@ -29,6 +28,7 @@ import (
 	"strings"
 
 	"github.com/goplus/gogen"
+	"github.com/goplus/gogen/target"
 	"github.com/goplus/mod/modfile"
 	"github.com/goplus/xgo/ast"
 	"github.com/goplus/xgo/ast/fromgo"
@@ -526,12 +526,13 @@ func embeddedFieldCast(o *types.Struct, tn *types.Named, pv *gogen.Element, visi
 			}
 			if ftn != nil {
 				if ftn == tn {
-					pv.Val = &goast.SelectorExpr{
+					pv.Val = &target.SelectorExpr{
 						X:   pv.Val,
-						Sel: goast.NewIdent(fld.Name()),
+						Sel: &target.Ident{Name: fld.Name()},
 					}
 					if !ptr {
-						pv.Val = &goast.UnaryExpr{
+						// TODO(xsw): check this for genjs
+						pv.Val = &target.UnaryExpr{
 							Op: gotoken.AND,
 							X:  pv.Val,
 						}

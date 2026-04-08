@@ -17,7 +17,6 @@
 package cl
 
 import (
-	goast "go/ast"
 	"go/constant"
 	gotoken "go/token"
 	"go/types"
@@ -28,6 +27,7 @@ import (
 	"strings"
 
 	"github.com/goplus/gogen"
+	"github.com/goplus/gogen/target"
 	"github.com/goplus/mod/modfile"
 	"github.com/goplus/xgo/ast"
 	"github.com/goplus/xgo/token"
@@ -76,7 +76,7 @@ type classProject struct {
 	game       gogen.Ref    // Game (project base class)
 	works      []*workClass // work classes grouped by extension
 	scheds     []string
-	schedStmts []goast.Stmt // nil or len(scheds) == 2 (delayload)
+	schedStmts []target.Stmt // nil or len(scheds) == 2 (delayload)
 	pkgImps    []gogen.PkgRef
 	pkgPaths   []string
 	autoimps   map[string]pkgImp // auto-import statement in gox.mod
@@ -184,15 +184,15 @@ func (p *classProject) hasMain() bool {
 	return p.hasMain_
 }
 
-func (p *classProject) getScheds(cb *gogen.CodeBuilder) []goast.Stmt {
+func (p *classProject) getScheds(cb *gogen.CodeBuilder) []target.Stmt {
 	if p == nil || !p.hasScheds {
 		return nil
 	}
 	if p.schedStmts == nil {
-		p.schedStmts = make([]goast.Stmt, 2)
+		p.schedStmts = make([]target.Stmt, 2)
 		for i, v := range p.scheds {
 			fn := cb.Val(classPkgLookup(p.pkgImps, v)).Call(0).InternalStack().Pop().Val
-			p.schedStmts[i] = &goast.ExprStmt{X: fn}
+			p.schedStmts[i] = &target.ExprStmt{X: fn}
 		}
 		if len(p.scheds) < 2 {
 			p.schedStmts[1] = p.schedStmts[0]
@@ -420,7 +420,7 @@ func getStringConst(pkg gogen.PkgRef, name string) string {
 func setBodyHandler(ctx *blockCtx) {
 	if proj := ctx.proj; proj != nil { // in an XGo class file
 		if scheds := proj.getScheds(ctx.cb); scheds != nil {
-			ctx.cb.SetBodyHandler(func(body *goast.BlockStmt, kind int) {
+			ctx.cb.SetBodyHandler(func(body *target.BlockStmt, kind int) {
 				idx := 0
 				if len(body.List) == 0 {
 					idx = 1
