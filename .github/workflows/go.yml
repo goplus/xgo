@@ -48,7 +48,9 @@ jobs:
         go-version: ${{ matrix.go }}
 
     - name: Run testcases
-      run: go test -v -coverprofile="coverage.txt" -covermode=atomic ./...
+      run: |
+        go test -v -coverprofile="coverage.txt" -covermode=atomic ./...
+        cd cl; go test -tags=genjs -v .
 
     - name: Codecov
       uses: codecov/codecov-action@v6

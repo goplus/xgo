@@ -1,5 +1,3 @@
-//go:build !genjs
-
 /*
  * Copyright (c) 2022 The XGo Authors (xgo.dev). All rights reserved.
  *
@@ -21,15 +19,18 @@ package cl_test
 import (
 	"testing"
 
+	"github.com/goplus/gogen/target"
 	"github.com/goplus/xgo/cl/cltest"
 )
 
 func TestTestspx(t *testing.T) {
-	cltest.SpxFromDir(t, "", "./_testspx")
+	if target.Kind == target.Go {
+		cltest.SpxFromDir(t, "", "./_testspx")
+	}
 }
 
 func TestTestjs(t *testing.T) {
-	cltest.FromDirEx(t, "", "./_testjs", true)
+	cltest.FromDirEx(t, "", "./_testjs", false, true)
 }
 
 func TestTestgop(t *testing.T) {

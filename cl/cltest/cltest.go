@@ -176,7 +176,9 @@ func DoFSEx(
 	if err != nil {
 		t.Fatal("NewPackage:", err)
 	}
-	testGenGo(t, pkg, dir, exp)
+	if exp != nil {
+		testGenGo(t, pkg, dir, exp)
+	}
 	if expJS != nil {
 		testGenJS(t, pkg, dir, expJS)
 	}
@@ -195,20 +197,20 @@ func testDiff(t *testing.T, dir string, outfname string, b *bytes.Buffer, exp an
 	if expected, ok := exp.(string); ok {
 		result := b.String()
 		if result != expected {
-			t.Fatalf("\nResult:\n%s\nExpected:\n%s\n", result, expected)
+			t.Errorf("\nResult:\n%s\nExpected:\n%s\n", result, expected)
 		}
 	} else if test.Diff(t, dir+outfname, b.Bytes(), exp.([]byte)) {
-		t.Fatal(dir, ": unexpect result")
+		t.Error(dir, ": unexpect result")
 	}
 }
 
 // -----------------------------------------------------------------------------
 
 func FromDir(t *testing.T, sel, relDir string) {
-	FromDirEx(t, sel, relDir, false)
+	FromDirEx(t, sel, relDir, true, false)
 }
 
-func FromDirEx(t *testing.T, sel, relDir string, genJS bool) {
+func FromDirEx(t *testing.T, sel, relDir string, genGo, genJS bool) {
 	if genJS != (target.Kind == target.JS) {
 		// ignore if not genJS and target is JS, or genJS and target is not JS
 		return
@@ -228,22 +230,23 @@ func FromDirEx(t *testing.T, sel, relDir string, genJS bool) {
 			continue
 		}
 		t.Run(name, func(t *testing.T) {
-			testFrom(t, dir+"/"+name, sel, genJS)
+			testFrom(t, dir+"/"+name, sel, genGo, genJS)
 		})
 	}
 }
 
-func testFrom(t *testing.T, pkgDir, sel string, genJS bool) {
+func testFrom(t *testing.T, pkgDir, sel string, genGo, genJS bool) {
 	if sel != "" && !strings.Contains(pkgDir, sel) {
 		return
 	}
 	log.Println("Parsing", pkgDir)
-	out := pkgDir + "/out.go"
-	exp, _ := os.ReadFile(out)
 	filter := func(fi fs.FileInfo) bool {
 		return fi.Name() == "in.xgo"
 	}
-	var expJS any
+	var exp, expJS any
+	if genGo {
+		exp, _ = os.ReadFile(pkgDir + "/out.go")
+	}
 	if genJS {
 		expJS, _ = os.ReadFile(pkgDir + "/out.js")
 	}
