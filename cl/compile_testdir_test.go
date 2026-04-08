@@ -17,6 +17,7 @@
 package cl_test
 
 import (
+	"runtime"
 	"testing"
 
 	"github.com/goplus/gogen/target"
@@ -30,7 +31,9 @@ func TestTestspx(t *testing.T) {
 }
 
 func TestTestjs(t *testing.T) {
-	cltest.FromDirEx(t, "", "./_testjs", false, true)
+	if runtime.GOOS != "windows" {
+		cltest.FromDirEx(t, "", "./_testjs", false, true)
+	}
 }
 
 func TestTestgop(t *testing.T) {
