@@ -1,8 +1,6 @@
 module github.com/goplus/xgo
 
-go 1.24.0
-
-toolchain go1.24.2
+go 1.25.0
 
 require (
 	github.com/fsnotify/fsnotify v1.9.0
@@ -12,12 +10,12 @@ require (
 	github.com/goplus/lib v0.3.1
 	github.com/goplus/mod v0.20.1
 	github.com/qiniu/x v1.17.0
-	golang.org/x/net v0.50.0
+	golang.org/x/net v0.53.0
 )
 
 require (
 	golang.org/x/mod v0.20.0 // indirect
-	golang.org/x/sys v0.41.0 // indirect
+	golang.org/x/sys v0.43.0 // indirect
 )
 
 retract v1.1.12
