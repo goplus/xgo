@@ -1452,6 +1452,23 @@ var c []byte = make([]byte, 0, 2)
 `)
 }
 
+func TestNewExpr(t *testing.T) {
+	gopClTest(t, `
+a := new(42)
+b := new("hello")
+echo *a, *b
+`, `package main
+
+import "fmt"
+
+func main() {
+	a := new(42)
+	b := new("hello")
+	fmt.Println(*a, *b)
+}
+`)
+}
+
 func TestVarDecl(t *testing.T) {
 	gopClTest(t, `
 var a int

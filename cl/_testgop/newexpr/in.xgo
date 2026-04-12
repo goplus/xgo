@@ -1,0 +1,3 @@
+a := new(42)
+b := new("hello")
+echo *a, *b
