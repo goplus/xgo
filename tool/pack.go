@@ -306,7 +306,7 @@ func marshalConfig(obj map[string]any, format configFormat) ([]byte, error) {
 	case ".yml", ".yaml":
 		return yaml.Marshal(obj)
 	default:
-		return nil, fmt.Errorf("unsupported format: %s", format.ext)
+		return nil, fmt.Errorf("pack: unsupported format: %s", format.ext)
 	}
 }
 
