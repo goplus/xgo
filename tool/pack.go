@@ -147,7 +147,7 @@ func detectConfigIn(dir string) (*configEntry, error) {
 			if found != nil {
 				return nil, fmt.Errorf("pack: directory %s contains multiple config files: %s and %s",
 					dir, found.format.source, f.source)
-			found = &configEntry{dir: dir, format: f}
+			}
 			found = &configEntry{dir: dir, format: f}
 		}
 	}
