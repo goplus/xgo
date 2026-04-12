@@ -44,7 +44,7 @@ func New(input any, doc html.NodeSet) Result {
 		url = URL(input)
 	}
 	if doc.ok {
-		fn := doc.**.dl@($class == "py function").one
+		fn := doc.**.dl@isClass("py function").one
 		decl := fn.firstElementChild@dt.text
 		pos := decl.indexByte('(')
 		if pos > 0 {

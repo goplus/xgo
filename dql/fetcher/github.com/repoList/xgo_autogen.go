@@ -196,7 +196,7 @@ func New(input interface{}, doc html.NodeSet) Result {
 //line dql/fetcher/github.com/repoList/repoList.xgo:66:1
 		doc.XGo_Any("div").XGo_Enum()(func(self html.NodeSet) bool {
 //line dql/fetcher/github.com/repoList/repoList.xgo:66:1
-			if self.XGo_Attr__0("class") == "paginate-container" {
+			if self.IsClass("paginate-container") {
 //line dql/fetcher/github.com/repoList/repoList.xgo:66:1
 				if
 //line dql/fetcher/github.com/repoList/repoList.xgo:66:1

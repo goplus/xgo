@@ -39,7 +39,7 @@ func New(input interface{}, doc html.NodeSet) Result {
 //line dql/fetcher/pytorch.org/fndoc/fndoc.xgo:47:1
 			doc.XGo_Any("dl").XGo_Enum()(func(self html.NodeSet) bool {
 //line dql/fetcher/pytorch.org/fndoc/fndoc.xgo:47:1
-				if self.XGo_Attr__0("class") == "py function" {
+				if self.IsClass("py function") {
 //line dql/fetcher/pytorch.org/fndoc/fndoc.xgo:47:1
 					if
 //line dql/fetcher/pytorch.org/fndoc/fndoc.xgo:47:1

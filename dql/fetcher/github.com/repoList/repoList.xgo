@@ -63,7 +63,7 @@ func New(input any, doc html.NodeSet) Result {
 	user := input.(string)
 	divRepos := doc.**.div@($id == "user-repositories-list").one
 	repos := [newRepo(x) for x in divRepos.ul.li]
-	divPaginate := doc.**.div@($class == "paginate-container").one
+	divPaginate := doc.**.div@isClass("paginate-container").one
 	next := divPaginate.**.a@(self.text == "Next").$href
 	return {user, repos, next}
 }
