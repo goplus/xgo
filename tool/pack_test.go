@@ -17,10 +17,12 @@
 package tool
 
 import (
+	"bytes"
 	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
+	"testing/fstest"
 )
 
 // writeJSON is a test helper that writes obj as JSON to dir/filename.
@@ -473,5 +475,185 @@ func TestPackFormatMismatch(t *testing.T) {
 	want := "pack: format mismatch: items/sword/index.yaml uses .yaml but pack root index.json uses .json"
 	if err.Error() != want {
 		t.Fatalf("err.Error() = %q, want %q", err.Error(), want)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// PackProject tests (fs.ReadDirFS-based)
+// ---------------------------------------------------------------------------
+
+func TestPackProjectBasicSPXLayout(t *testing.T) {
+	fsys := fstest.MapFS{
+		"assets/index.json":                 {Data: []byte(`{"zorder":["Cat","Balloon"],"map":{"width":480,"height":360}}`)},
+		"assets/sprites/Cat/index.json":     {Data: []byte(`{"x":0,"y":0,"size":100}`)},
+		"assets/sprites/Balloon/index.json": {Data: []byte(`{"x":100,"y":50,"size":80}`)},
+		"assets/sounds/bgm/index.json":      {Data: []byte(`{"path":"bgm.mp3","volume":80}`)},
+		"assets/sprites/Cat/cat.png":        {Data: []byte("fake-png")},
+		"assets/sounds/bgm/bgm.mp3":         {Data: []byte("fake-mp3")},
+	}
+
+	result, err := PackProject(fsys, "assets", "index.json")
+	if err != nil {
+		t.Fatal("PackProject failed:", err)
+	}
+
+	var obj map[string]any
+	if err := json.Unmarshal(result, &obj); err != nil {
+		t.Fatal("unmarshal result:", err)
+	}
+
+	// Root fields preserved.
+	if _, ok := obj["zorder"]; !ok {
+		t.Error("missing root field 'zorder'")
+	}
+	if _, ok := obj["map"]; !ok {
+		t.Error("missing root field 'map'")
+	}
+
+	// Sprites merged.
+	sprites, ok := obj["sprites"].(map[string]any)
+	if !ok {
+		t.Fatal("missing or invalid 'sprites' key")
+	}
+	cat, ok := sprites["Cat"].(map[string]any)
+	if !ok {
+		t.Fatal("sprites.Cat is not an object")
+	}
+	if cat["size"] != float64(100) {
+		t.Errorf("sprites.Cat.size = %v, want 100", cat["size"])
+	}
+	if _, ok := sprites["Balloon"]; !ok {
+		t.Error("missing sprites.Balloon")
+	}
+
+	// Sounds merged.
+	sounds, ok := obj["sounds"].(map[string]any)
+	if !ok {
+		t.Fatal("missing or invalid 'sounds' key")
+	}
+	bgm, ok := sounds["bgm"].(map[string]any)
+	if !ok {
+		t.Fatal("sounds.bgm is not an object")
+	}
+	if bgm["volume"] != float64(80) {
+		t.Errorf("sounds.bgm.volume = %v, want 80", bgm["volume"])
+	}
+}
+
+func TestPackProjectYAML(t *testing.T) {
+	fsys := fstest.MapFS{
+		"index.yaml":             {Data: []byte("title: game\n")},
+		"items/sword/index.yaml": {Data: []byte("damage: 10\n")},
+	}
+
+	result, err := PackProject(fsys, ".", "index.yaml")
+	if err != nil {
+		t.Fatal("PackProject failed:", err)
+	}
+	if len(result) == 0 {
+		t.Fatal("empty result")
+	}
+}
+
+func TestPackProjectEmptySubtree(t *testing.T) {
+	fsys := fstest.MapFS{
+		"index.json":      {Data: []byte(`{"title":"only-root"}`)},
+		"images/logo.png": {Data: []byte("fake-png")},
+	}
+
+	result, err := PackProject(fsys, ".", "index.json")
+	if err != nil {
+		t.Fatal("PackProject failed:", err)
+	}
+
+	var obj map[string]any
+	if err := json.Unmarshal(result, &obj); err != nil {
+		t.Fatal("unmarshal:", err)
+	}
+	if obj["title"] != "only-root" {
+		t.Errorf("title = %v, want only-root", obj["title"])
+	}
+	// No extra keys should appear.
+	if _, ok := obj["images"]; ok {
+		t.Error("unexpected key 'images'")
+	}
+}
+
+func TestPackProjectKeyCollision(t *testing.T) {
+	fsys := fstest.MapFS{
+		"index.json":             {Data: []byte(`{"sprites":"not-an-object"}`)},
+		"sprites/Cat/index.json": {Data: []byte(`{"x":0}`)},
+	}
+
+	_, err := PackProject(fsys, ".", "index.json")
+	if err == nil {
+		t.Fatal("expected collision error, got nil")
+	}
+}
+
+func TestPackProjectUnparseableFile(t *testing.T) {
+	fsys := fstest.MapFS{
+		"index.json":         {Data: []byte(`{"ok":true}`)},
+		"items/a/index.json": {Data: []byte(`{bad json}`)},
+	}
+
+	_, err := PackProject(fsys, ".", "index.json")
+	if err == nil {
+		t.Fatal("expected parse error, got nil")
+	}
+}
+
+func TestPackProjectMissingRootConfig(t *testing.T) {
+	fsys := fstest.MapFS{
+		"other.txt": {Data: []byte("hello")},
+	}
+
+	_, err := PackProject(fsys, ".", "index.json")
+	if err == nil {
+		t.Fatal("expected error for missing root config, got nil")
+	}
+}
+
+func TestPackProjectUnsupportedFormat(t *testing.T) {
+	fsys := fstest.MapFS{
+		"index.toml": {Data: []byte("[title]\nname = \"test\"")},
+	}
+
+	_, err := PackProject(fsys, ".", "index.toml")
+	if err == nil {
+		t.Fatal("expected unsupported format error, got nil")
+	}
+}
+
+func TestPackProjectDeterminism(t *testing.T) {
+	fsys := fstest.MapFS{
+		"assets/index.json":                 {Data: []byte(`{"zorder":["Cat","Balloon"]}`)},
+		"assets/sprites/Cat/index.json":     {Data: []byte(`{"x":0,"y":0}`)},
+		"assets/sprites/Balloon/index.json": {Data: []byte(`{"x":100,"y":50}`)},
+		"assets/sounds/bgm/index.json":      {Data: []byte(`{"volume":80}`)},
+	}
+
+	first, err := PackProject(fsys, "assets", "index.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := PackProject(fsys, "assets", "index.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(first, second) {
+		t.Error("PackProject output is not deterministic")
+	}
+}
+
+func TestPackProjectFormatMismatch(t *testing.T) {
+	fsys := fstest.MapFS{
+		"index.json":             {Data: []byte(`{"title":"game"}`)},
+		"items/sword/index.yaml": {Data: []byte("damage: 10\n")},
+	}
+
+	_, err := PackProject(fsys, ".", "index.json")
+	if err == nil {
+		t.Fatal("expected format mismatch error, got nil")
 	}
 }
