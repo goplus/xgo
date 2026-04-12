@@ -30,7 +30,7 @@ func New(input interface{}, doc html.NodeSet) Result {
 //line dql/fetcher/github.com/issueTask/issueTask.xgo:39:1
 		doc.XGo_Any("ul").XGo_Enum()(func(self html.NodeSet) bool {
 //line dql/fetcher/github.com/issueTask/issueTask.xgo:39:1
-			if self.XGo_Attr__0("class") == "contains-task-list" {
+			if self.IsClass("contains-task-list") {
 //line dql/fetcher/github.com/issueTask/issueTask.xgo:39:1
 				if
 //line dql/fetcher/github.com/issueTask/issueTask.xgo:39:1
