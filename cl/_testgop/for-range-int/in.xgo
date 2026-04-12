@@ -1,0 +1,7 @@
+for i := range 10 {
+    echo i
+}
+
+for range 5 {
+    echo "Hi"
+}

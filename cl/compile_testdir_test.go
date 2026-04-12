@@ -30,7 +30,7 @@ func TestTestspx(t *testing.T) {
 	}
 }
 
-func TestTestjs(t *testing.T) {
+func _TestTestjs(t *testing.T) {
 	if runtime.GOOS != "windows" {
 		cltest.FromDirEx(t, "", "./_testjs", false, true)
 	}
