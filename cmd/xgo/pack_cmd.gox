@@ -14,13 +14,13 @@
  */
 
 import (
-    "os"
+	"os"
 
 	"github.com/goplus/xgo/tool"
 )
 
 var (
-    TestMode bool `flag:"test, short: t, usage: verify that every index_pack file already exists and that its content matches what xgo pack would produce"`
+	TestMode bool
 )
 
 use "pack [flags] [directory]"
@@ -31,22 +31,22 @@ long `xgo pack merges a project's scattered index configuration files (index.jso
 `
 
 run args => {
-    dir := "."
+	dir := "."
 	switch len(args) {
-    case 0:
-    case 1:
-        dir = args[0]
-    default:
-        help
-        return
-    }
-    flags := tool.PackFlagPrompt
-    if TestMode {
-        flags |= tool.PackFlagTest
-    }
-    err := tool.pack(dir, flags)
-    if err != nil {
+	case 0:
+	case 1:
+		dir = args[0]
+	default:
+		help
+		return
+	}
+	flags := tool.PackFlagPrompt
+	if TestMode {
+		flags |= tool.PackFlagTest
+	}
+	err := tool.pack(dir, flags)
+	if err != nil {
 		fprintln os.Stderr, err
-        os.exit 1
-    }
+		os.exit 1
+	}
 }
