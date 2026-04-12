@@ -169,14 +169,14 @@ func groupByPackRoot(configs []configEntry, root string) ([]packGroup, error) {
 	for _, cfg := range configs {
 		placed := false
 		for i := range groups {
-			root := groups[i].root.dir
-			if isSubdirectory(root, cfg.dir) {
+			groupRoot := groups[i].root.dir
+			if isSubdirectory(groupRoot, cfg.dir) {
 				format := groups[i].root.format
 				if cfg.format != format {
 					return nil, fmt.Errorf(
 						"pack: format mismatch: %s uses %s but pack root %s uses %s",
 						relPath(root, filepath.Join(cfg.dir, configFormats[cfg.format].source)), configFormats[cfg.format].ext,
-						relPath(root, filepath.Join(root, configFormats[format].source)), configFormats[format].ext,
+						relPath(root, filepath.Join(groupRoot, configFormats[format].source)), configFormats[format].ext,
 					)
 				}
 				groups[i].children = append(groups[i].children, cfg)
