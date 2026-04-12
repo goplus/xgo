@@ -1,0 +1,52 @@
+/*
+ * Copyright (c) 2025 The XGo Authors (xgo.dev). All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and limitations under the License.
+ */
+
+import (
+    "os"
+
+	"github.com/goplus/xgo/tool"
+)
+
+var (
+    TestMode bool `flag:"test, short: t, usage: verify that every index_pack file already exists and that its content matches what xgo pack would produce"`
+)
+
+use "pack [flags] [directory]"
+
+short "Merge project's scattered configuration files into a single index_pack file"
+
+long `xgo pack merges a project's scattered index configuration files (index.json, index.yml or index.yaml) into a single index_pack file (index_pack.json, index_pack.yml or index_pack.yaml), eliminating the I/O overhead of loading many small files at runtime — especially beneficial for web-deployed environments.
+`
+
+run args => {
+    dir := "."
+	switch len(args) {
+    case 0:
+    case 1:
+        dir = args[0]
+    default:
+        help
+        return
+    }
+    flags := tool.PackFlagPrompt
+    if TestMode {
+        flags |= tool.PackFlagTest
+    }
+    err := tool.pack(dir, flags)
+    if err != nil {
+		fprintln os.Stderr, err
+        os.exit 1
+    }
+}
