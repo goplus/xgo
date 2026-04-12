@@ -8,7 +8,7 @@ require (
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/goccy/go-yaml v1.19.2
 	github.com/goplus/cobra v1.9.15 //xgo:class
-	github.com/goplus/gogen v1.23.0-pre.1
+	github.com/goplus/gogen v1.23.0-pre.1.0.20260412010401-4a19ee3656e0
 	github.com/goplus/lib v0.3.1
 	github.com/goplus/mod v0.20.1
 	github.com/qiniu/x v1.17.0
@@ -16,6 +16,8 @@ require (
 )
 
 require (
+	github.com/xushiwei/markdown v0.1.0 // indirect
+	github.com/yuin/goldmark v1.7.8 // indirect
 	golang.org/x/mod v0.20.0 // indirect
 	golang.org/x/sys v0.41.0 // indirect
 )

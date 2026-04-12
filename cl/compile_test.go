@@ -2078,6 +2078,29 @@ func main() {
 `)
 }
 
+func TestRangeStmtInt(t *testing.T) {
+	gopClTest(t, `
+for i := range 10 {
+	println(i)
+}
+for range 5 {
+	println("Hi")
+}
+`, `package main
+
+import "fmt"
+
+func main() {
+	for i := range 10 {
+		fmt.Println(i)
+	}
+	for range 5 {
+		fmt.Println("Hi")
+	}
+}
+`)
+}
+
 func TestRangeStmtUDT(t *testing.T) {
 	gopClTest(t, `
 type foo struct {
