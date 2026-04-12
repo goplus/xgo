@@ -45,16 +45,23 @@ type configFormat struct {
 	ext    string // file extension, e.g. ".json"
 }
 
-var configFormats = []configFormat{
-	{"index.json", "index_pack.json", ".json"},
-	{"index.yml", "index_pack.yml", ".yml"},
-	{"index.yaml", "index_pack.yaml", ".yaml"},
+const (
+	indexJSON = iota
+	indexYML
+	indexYAML
+	indexFormatMax
+)
+
+var configFormats = [...]configFormat{
+	indexJSON: {"index.json", "index_pack.json", ".json"},
+	indexYML:  {"index.yml", "index_pack.yml", ".yml"},
+	indexYAML: {"index.yaml", "index_pack.yaml", ".yaml"},
 }
 
 // configEntry records a directory that contains a configuration file.
 type configEntry struct {
-	dir    string       // absolute directory path
-	format configFormat // format of the config file found
+	dir    string // absolute directory path
+	format int    // indexJSON, indexYML, or indexYAML
 }
 
 // packGroup represents a pack root and its child configuration entries.
@@ -141,14 +148,15 @@ func discoverConfigs(root string) ([]configEntry, error) {
 // more than one is found.
 func detectConfigIn(dir, root string) (*configEntry, error) {
 	var found *configEntry
-	for _, f := range configFormats {
-		path := filepath.Join(dir, f.source)
+	for format := range indexFormatMax {
+		source := configFormats[format].source
+		path := filepath.Join(dir, source)
 		if _, err := os.Stat(path); err == nil {
 			if found != nil {
 				return nil, fmt.Errorf("pack: directory %s contains multiple config files: %s and %s",
-					relPath(root, dir), found.format.source, f.source)
+					relPath(root, dir), configFormats[found.format].source, source)
 			}
-			found = &configEntry{dir: dir, format: f}
+			found = &configEntry{dir: dir, format: format}
 		}
 	}
 	return found, nil
@@ -166,12 +174,14 @@ func groupByPackRoot(configs []configEntry, root string) ([]packGroup, error) {
 	for _, cfg := range configs {
 		placed := false
 		for i := range groups {
-			if isSubdirectory(groups[i].root.dir, cfg.dir) {
-				if cfg.format.ext != groups[i].root.format.ext {
+			root := groups[i].root.dir
+			if isSubdirectory(root, cfg.dir) {
+				format := groups[i].root.format
+				if cfg.format != format {
 					return nil, fmt.Errorf(
 						"pack: format mismatch: %s uses %s but pack root %s uses %s",
-						relPath(root, filepath.Join(cfg.dir, cfg.format.source)), cfg.format.ext,
-						relPath(root, filepath.Join(groups[i].root.dir, groups[i].root.format.source)), groups[i].root.format.ext,
+						relPath(root, filepath.Join(cfg.dir, configFormats[cfg.format].source)), configFormats[cfg.format].ext,
+						relPath(root, filepath.Join(root, configFormats[format].source)), configFormats[format].ext,
 					)
 				}
 				groups[i].children = append(groups[i].children, cfg)
@@ -206,14 +216,14 @@ func relPath(root, path string) string {
 // processPack merges children into a pack root and writes (or verifies)
 // the packed output file.
 func processPack(g packGroup, flags PackFlags, root string) error {
-	rootFile := filepath.Join(g.root.dir, g.root.format.source)
+	rootFile := filepath.Join(g.root.dir, configFormats[g.root.format].source)
 	rootObj, err := parseConfigFile(rootFile, root)
 	if err != nil {
 		return err
 	}
 
 	for _, child := range g.children {
-		childFile := filepath.Join(child.dir, child.format.source)
+		childFile := filepath.Join(child.dir, configFormats[child.format].source)
 		childObj, err := parseConfigFile(childFile, root)
 		if err != nil {
 			return err
@@ -230,7 +240,7 @@ func processPack(g packGroup, flags PackFlags, root string) error {
 		}
 	}
 
-	packFile := filepath.Join(g.root.dir, g.root.format.packed)
+	packFile := filepath.Join(g.root.dir, configFormats[g.root.format].packed)
 	packed, err := marshalConfig(rootObj, g.root.format)
 	if err != nil {
 		return fmt.Errorf("pack: marshaling %s: %w", relPath(root, packFile), err)
@@ -305,18 +315,18 @@ func parseConfigFile(path, root string) (map[string]any, error) {
 
 // marshalConfig serializes obj back to the given format. JSON output uses
 // tab indentation and a trailing newline.
-func marshalConfig(obj map[string]any, format configFormat) ([]byte, error) {
-	switch format.ext {
-	case ".json":
+func marshalConfig(obj map[string]any, format int) ([]byte, error) {
+	switch format {
+	case indexJSON:
 		data, err := json.MarshalIndent(obj, "", "\t")
 		if err != nil {
 			return nil, err
 		}
 		return append(data, '\n'), nil
-	case ".yml", ".yaml":
+	case indexYML, indexYAML:
 		return yaml.Marshal(obj)
 	default:
-		return nil, fmt.Errorf("pack: unsupported format: %s", format.ext)
+		return nil, fmt.Errorf("pack: unsupported format: %s", configFormats[format].ext)
 	}
 }
 
