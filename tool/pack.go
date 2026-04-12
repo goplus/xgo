@@ -106,6 +106,9 @@ func PackProject(
 	// Read and parse the root configuration file.
 	rootPath := joinFSPath(dir, indexFile)
 	isJSON := strings.HasSuffix(indexFile, ".json")
+	if !isJSON && !strings.HasSuffix(indexFile, ".yml") && !strings.HasSuffix(indexFile, ".yaml") {
+		return nil, fmt.Errorf("pack: unsupported index file format: %s", indexFile)
+	}
 	rootObj, err := readConfigFS(fsys, rootPath, isJSON, false)
 	if err != nil {
 		return nil, err
