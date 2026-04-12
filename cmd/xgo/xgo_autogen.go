@@ -21,8 +21,10 @@ import (
 	"github.com/goplus/xgo/cmd/internal/test"
 	"github.com/goplus/xgo/cmd/internal/watch"
 	env1 "github.com/goplus/xgo/env"
+	"github.com/goplus/xgo/tool"
 	"github.com/qiniu/x/log"
 	"github.com/qiniu/x/stringutil"
+	"os"
 	"runtime"
 )
 
@@ -83,6 +85,11 @@ type Cmd_mod_tidy struct {
 	xcmd.Command
 	*App
 }
+type Cmd_pack struct {
+	xcmd.Command
+	*App
+	TestMode bool `flag:"test, short: t, usage: verify that every index_pack file already exists and that its content matches what xgo pack would produce"`
+}
 type Cmd_run struct {
 	xcmd.Command
 	*App
@@ -126,12 +133,13 @@ func (this *App) Main() {
 	_xgo_obj10 := &Cmd_mod_download{App: this}
 	_xgo_obj11 := &Cmd_mod_init{App: this}
 	_xgo_obj12 := &Cmd_mod_tidy{App: this}
-	_xgo_obj13 := &Cmd_run{App: this}
-	_xgo_obj14 := &Cmd_serve{App: this}
-	_xgo_obj15 := &Cmd_test{App: this}
-	_xgo_obj16 := &Cmd_version{App: this}
-	_xgo_obj17 := &Cmd_watch{App: this}
-	xcmd.XGot_App_Main(this, _xgo_obj0, _xgo_obj1, _xgo_obj2, _xgo_obj3, _xgo_obj4, _xgo_obj5, _xgo_obj6, _xgo_obj7, _xgo_obj8, _xgo_obj9, _xgo_obj10, _xgo_obj11, _xgo_obj12, _xgo_obj13, _xgo_obj14, _xgo_obj15, _xgo_obj16, _xgo_obj17)
+	_xgo_obj13 := &Cmd_pack{App: this}
+	_xgo_obj14 := &Cmd_run{App: this}
+	_xgo_obj15 := &Cmd_serve{App: this}
+	_xgo_obj16 := &Cmd_test{App: this}
+	_xgo_obj17 := &Cmd_version{App: this}
+	_xgo_obj18 := &Cmd_watch{App: this}
+	xcmd.XGot_App_Main(this, _xgo_obj0, _xgo_obj1, _xgo_obj2, _xgo_obj3, _xgo_obj4, _xgo_obj5, _xgo_obj6, _xgo_obj7, _xgo_obj8, _xgo_obj9, _xgo_obj10, _xgo_obj11, _xgo_obj12, _xgo_obj13, _xgo_obj14, _xgo_obj15, _xgo_obj16, _xgo_obj17, _xgo_obj18)
 }
 //line cmd/xgo/bug_cmd.gox:20
 func (this *Cmd_bug) Main(_xgo_arg0 string) {
@@ -378,6 +386,56 @@ func (this *Cmd_mod_tidy) Main(_xgo_arg0 string) {
 }
 func (this *Cmd_mod_tidy) Classfname() string {
 	return "mod_tidy"
+}
+//line cmd/xgo/pack_cmd.gox:26
+func (this *Cmd_pack) Main(_xgo_arg0 string) {
+	this.Command.Main(_xgo_arg0)
+//line cmd/xgo/pack_cmd.gox:26:1
+	this.Use("pack [flags] [directory]")
+//line cmd/xgo/pack_cmd.gox:28:1
+	this.Short("Merge project's scattered configuration files into a single index_pack file")
+//line cmd/xgo/pack_cmd.gox:30:1
+	this.Long(`xgo pack merges a project's scattered index configuration files (index.json, index.yml or index.yaml) into a single index_pack file (index_pack.json, index_pack.yml or index_pack.yaml), eliminating the I/O overhead of loading many small files at runtime — especially beneficial for web-deployed environments.
+`)
+//line cmd/xgo/pack_cmd.gox:33:1
+	this.Run__1(func(args []string) {
+//line cmd/xgo/pack_cmd.gox:34:1
+		dir := "."
+//line cmd/xgo/pack_cmd.gox:35:1
+		switch len(args) {
+//line cmd/xgo/pack_cmd.gox:36:1
+		case 0:
+//line cmd/xgo/pack_cmd.gox:37:1
+		case 1:
+//line cmd/xgo/pack_cmd.gox:38:1
+			dir = args[0]
+//line cmd/xgo/pack_cmd.gox:39:1
+		default:
+//line cmd/xgo/pack_cmd.gox:40:1
+			this.Help()
+//line cmd/xgo/pack_cmd.gox:41:1
+			return
+		}
+//line cmd/xgo/pack_cmd.gox:43:1
+		flags := tool.PackFlagPrompt
+//line cmd/xgo/pack_cmd.gox:44:1
+		if this.TestMode {
+//line cmd/xgo/pack_cmd.gox:45:1
+			flags |= tool.PackFlagTest
+		}
+//line cmd/xgo/pack_cmd.gox:47:1
+		err := tool.Pack(dir, flags)
+//line cmd/xgo/pack_cmd.gox:48:1
+		if err != nil {
+//line cmd/xgo/pack_cmd.gox:49:1
+			fmt.Fprintln(os.Stderr, err)
+//line cmd/xgo/pack_cmd.gox:50:1
+			os.Exit(1)
+		}
+	})
+}
+func (this *Cmd_pack) Classfname() string {
+	return "pack"
 }
 //line cmd/xgo/run_cmd.gox:20
 func (this *Cmd_run) Main(_xgo_arg0 string) {
