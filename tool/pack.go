@@ -111,6 +111,78 @@ func Pack(dir string, flags PackFlags) error {
 
 // -----------------------------------------------------------------------------
 
+// PackProject merges all indexFile configuration files found under dir into a
+// single packed document and returns its serialised content.
+//
+// fsys is the filesystem to read from (may be a ZIP-backed fs.ReadDirFS).
+// dir is the root directory within fsys that contains the root configuration file.
+// indexFile is the filename of the root configuration file (e.g. "index.json").
+//
+// The returned []byte is the fully-merged configuration in the same format as
+// indexFile (JSON, YAML, or YAML with .yml extension). The caller is responsible
+// for writing or caching the result; PackProject never writes to any filesystem.
+func PackProject(
+	fsys fs.ReadDirFS,
+	dir string,
+	indexFile string,
+) (indexPackContent []byte, err error) {
+	format, err := formatFromFilename(indexFile)
+	if err != nil {
+		return nil, err
+	}
+
+	// Read and parse the root configuration file.
+	rootPath := joinFSPath(dir, indexFile)
+	rootObj, err := readConfigFS(fsys, rootPath, dir, format)
+	if err != nil {
+		return nil, err
+	}
+
+	// Recursively discover and merge child configuration files.
+	if err := mergeChildren(fsys, dir, dir, indexFile, format, rootObj); err != nil {
+		return nil, err
+	}
+
+	packed, err := marshalConfig(rootObj, format)
+	if err != nil {
+		return nil, fmt.Errorf("pack: marshaling output: %w", err)
+	}
+	return packed, nil
+}
+
+// mergeChildren recursively reads subdirectories of current within fsys using
+// ReadDir, and merges any indexFile found into rootObj at the path relative to
+// rootDir.
+func mergeChildren(fsys fs.ReadDirFS, current, rootDir, indexFile string, format int, rootObj map[string]any) error {
+	entries, err := fsys.ReadDir(current)
+	if err != nil {
+		return fmt.Errorf("pack: reading directory %s: %w", fsRelPath(rootDir, current), err)
+	}
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		childDir := joinFSPath(current, entry.Name())
+		childFile := joinFSPath(childDir, indexFile)
+		if _, err := fs.Stat(fsys, childFile); err == nil {
+			childObj, err := readConfigFS(fsys, childFile, rootDir, format)
+			if err != nil {
+				return err
+			}
+			segments := strings.Split(fsRelPath(rootDir, childDir), "/")
+			if err := mergeAtPath(rootObj, segments, childObj, fsRelPath(rootDir, childFile)); err != nil {
+				return err
+			}
+		}
+		if err := mergeChildren(fsys, childDir, rootDir, indexFile, format, rootObj); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// -----------------------------------------------------------------------------
+
 // discoverConfigs walks the directory tree and returns every directory
 // that contains a configuration file (index.json, index.yml, or index.yaml).
 // It reports a fatal error if any directory contains more than one format.
@@ -214,36 +286,15 @@ func processPack(g packGroup, flags PackFlags, root string) error {
 	if (flags & PackFlagPrompt) != 0 {
 		fmt.Fprintln(os.Stderr, "Pack", relPath(root, g.root.dir), "...")
 	}
-	rootFile := filepath.Join(g.root.dir, configFormats[g.root.format].source)
-	rootObj, err := parseConfigFile(rootFile, root, g.root.format)
+
+	fsys := os.DirFS(g.root.dir).(fs.ReadDirFS)
+	indexFile := configFormats[g.root.format].source
+	packed, err := PackProject(fsys, ".", indexFile)
 	if err != nil {
 		return err
 	}
 
-	for _, child := range g.children {
-		childFile := filepath.Join(child.dir, configFormats[child.format].source)
-		childObj, err := parseConfigFile(childFile, root, child.format)
-		if err != nil {
-			return err
-		}
-
-		rel, err := filepath.Rel(g.root.dir, child.dir)
-		if err != nil {
-			return fmt.Errorf("pack: computing relative path: %w", err)
-		}
-		segments := strings.Split(filepath.ToSlash(rel), "/")
-
-		if err := mergeAtPath(rootObj, segments, childObj, relPath(root, childFile)); err != nil {
-			return err
-		}
-	}
-
 	packFile := filepath.Join(g.root.dir, configFormats[g.root.format].packed)
-	packed, err := marshalConfig(rootObj, g.root.format)
-	if err != nil {
-		return fmt.Errorf("pack: marshaling %s: %w", relPath(root, packFile), err)
-	}
-
 	if flags&PackFlagTest != 0 {
 		return verifyPackFile(packFile, root, packed)
 	}
@@ -285,29 +336,6 @@ func mergeAtPath(root map[string]any, segments []string, child map[string]any, c
 
 // -----------------------------------------------------------------------------
 
-// parseConfigFile reads and parses a configuration file (JSON or YAML)
-// into a map[string]any.
-func parseConfigFile(path, root string, format int) (map[string]any, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("pack: reading %s: %w", relPath(root, path), err)
-	}
-	var obj map[string]any
-	if format == indexJSON {
-		if err := json.Unmarshal(data, &obj); err != nil {
-			return nil, fmt.Errorf("pack: parsing %s: %w", relPath(root, path), err)
-		}
-	} else {
-		if err := yaml.Unmarshal(data, &obj); err != nil {
-			return nil, fmt.Errorf("pack: parsing %s: %w", relPath(root, path), err)
-		}
-	}
-	if obj == nil {
-		obj = make(map[string]any)
-	}
-	return obj, nil
-}
-
 // marshalConfig serializes obj back to the given format. JSON output uses
 // tab indentation and a trailing newline.
 func marshalConfig(obj map[string]any, format int) ([]byte, error) {
@@ -339,4 +367,55 @@ func verifyPackFile(path, root string, expected []byte) error {
 		return fmt.Errorf("pack -t: out of date: %s", relPath(root, path))
 	}
 	return nil
+}
+
+// -----------------------------------------------------------------------------
+
+// formatFromFilename returns the format index for the given config filename.
+func formatFromFilename(indexFile string) (int, error) {
+	for i := range indexFormatMax {
+		if configFormats[i].source == indexFile {
+			return i, nil
+		}
+	}
+	return 0, fmt.Errorf("pack: unsupported config file: %s (expected index.json, index.yml, or index.yaml)", indexFile)
+}
+
+// readConfigFS reads and parses a configuration file from an fs.FS.
+func readConfigFS(fsys fs.FS, filePath, baseDir string, format int) (map[string]any, error) {
+	data, err := fs.ReadFile(fsys, filePath)
+	if err != nil {
+		return nil, fmt.Errorf("pack: reading %s: %w", fsRelPath(baseDir, filePath), err)
+	}
+	var obj map[string]any
+	if format == indexJSON {
+		if err := json.Unmarshal(data, &obj); err != nil {
+			return nil, fmt.Errorf("pack: parsing %s: %w", fsRelPath(baseDir, filePath), err)
+		}
+	} else {
+		if err := yaml.Unmarshal(data, &obj); err != nil {
+			return nil, fmt.Errorf("pack: parsing %s: %w", fsRelPath(baseDir, filePath), err)
+		}
+	}
+	if obj == nil {
+		obj = make(map[string]any)
+	}
+	return obj, nil
+}
+
+// joinFSPath joins a directory and filename using forward slashes,
+// as required by fs.FS path conventions.
+func joinFSPath(dir, name string) string {
+	if dir == "." {
+		return name
+	}
+	return dir + "/" + name
+}
+
+// fsRelPath returns target relative to base using forward-slash separators.
+func fsRelPath(base, target string) string {
+	if base == "." {
+		return target
+	}
+	return strings.TrimPrefix(target, base+"/")
 }
