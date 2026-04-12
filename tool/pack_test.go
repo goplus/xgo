@@ -652,8 +652,20 @@ func TestPackProjectFormatMismatch(t *testing.T) {
 		"items/sword/index.yaml": {Data: []byte("damage: 10\n")},
 	}
 
-	_, err := PackProject(fsys, ".", "index.json")
-	if err == nil {
-		t.Fatal("expected format mismatch error, got nil")
+	result, err := PackProject(fsys, ".", "index.json")
+	if err != nil {
+		t.Fatal("PackProject failed:", err)
+	}
+
+	var obj map[string]any
+	if err := json.Unmarshal(result, &obj); err != nil {
+		t.Fatal("unmarshal:", err)
+	}
+	if obj["title"] != "game" {
+		t.Errorf("title = %v, want game", obj["title"])
+	}
+	// items/sword/index.yaml should be ignored (different format).
+	if _, ok := obj["items"]; ok {
+		t.Error("unexpected key 'items' — mismatched format should be ignored")
 	}
 }

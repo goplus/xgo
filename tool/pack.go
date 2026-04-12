@@ -111,7 +111,7 @@ func Pack(dir string, flags PackFlags) error {
 
 // -----------------------------------------------------------------------------
 
-// PackProject merges all index.* configuration files found under dir into a
+// PackProject merges all indexFile configuration files found under dir into a
 // single packed document and returns its serialised content.
 //
 // fsys is the filesystem to read from (may be a ZIP-backed fs.ReadDirFS).
@@ -121,9 +121,6 @@ func Pack(dir string, flags PackFlags) error {
 // The returned []byte is the fully-merged configuration in the same format as
 // indexFile (JSON, YAML, or YAML with .yml extension). The caller is responsible
 // for writing or caching the result; PackProject never writes to any filesystem.
-//
-// Errors are returned for all fatal conditions: multiple index.* files in one
-// directory, unparseable files, key collisions, etc.
 func PackProject(
 	fsys fs.ReadDirFS,
 	dir string,
@@ -141,53 +138,9 @@ func PackProject(
 		return nil, err
 	}
 
-	// Discover and merge child configuration files.
-	type childInfo struct {
-		relDir string // relative path from dir to the child directory
-		fsPath string // path within fsys to the child config file
-	}
-	var children []childInfo
-
-	walkErr := fs.WalkDir(fsys, dir, func(p string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if !d.IsDir() || p == dir {
-			return nil
-		}
-		childFormat, found, err := detectConfigInFS(fsys, p, dir)
-		if err != nil {
-			return err
-		}
-		if !found {
-			return nil
-		}
-		if childFormat != format {
-			return fmt.Errorf(
-				"pack: format mismatch: %s uses %s but pack root %s uses %s",
-				fsRelPath(dir, joinFSPath(p, configFormats[childFormat].source)), configFormats[childFormat].ext,
-				fsRelPath(dir, joinFSPath(dir, indexFile)), configFormats[format].ext,
-			)
-		}
-		children = append(children, childInfo{
-			relDir: fsRelPath(dir, p),
-			fsPath: joinFSPath(p, configFormats[format].source),
-		})
-		return nil
-	})
-	if walkErr != nil {
-		return nil, fmt.Errorf("pack: walking directory tree: %w", walkErr)
-	}
-
-	for _, child := range children {
-		childObj, err := readConfigFS(fsys, child.fsPath, dir, format)
-		if err != nil {
-			return nil, err
-		}
-		segments := strings.Split(child.relDir, "/")
-		if err := mergeAtPath(rootObj, segments, childObj, fsRelPath(dir, child.fsPath)); err != nil {
-			return nil, err
-		}
+	// Recursively discover and merge child configuration files.
+	if err := mergeChildren(fsys, dir, dir, indexFile, format, rootObj); err != nil {
+		return nil, err
 	}
 
 	packed, err := marshalConfig(rootObj, format)
@@ -195,6 +148,37 @@ func PackProject(
 		return nil, fmt.Errorf("pack: marshaling output: %w", err)
 	}
 	return packed, nil
+}
+
+// mergeChildren recursively reads subdirectories of current within fsys using
+// ReadDir, and merges any indexFile found into rootObj at the path relative to
+// rootDir.
+func mergeChildren(fsys fs.ReadDirFS, current, rootDir, indexFile string, format int, rootObj map[string]any) error {
+	entries, err := fsys.ReadDir(current)
+	if err != nil {
+		return fmt.Errorf("pack: reading directory %s: %w", fsRelPath(rootDir, current), err)
+	}
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		childDir := joinFSPath(current, entry.Name())
+		childFile := joinFSPath(childDir, indexFile)
+		if _, err := fs.Stat(fsys, childFile); err == nil {
+			childObj, err := readConfigFS(fsys, childFile, rootDir, format)
+			if err != nil {
+				return err
+			}
+			segments := strings.Split(fsRelPath(rootDir, childDir), "/")
+			if err := mergeAtPath(rootObj, segments, childObj, fsRelPath(rootDir, childFile)); err != nil {
+				return err
+			}
+		}
+		if err := mergeChildren(fsys, childDir, rootDir, indexFile, format, rootObj); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // -----------------------------------------------------------------------------
@@ -417,26 +401,6 @@ func readConfigFS(fsys fs.FS, filePath, baseDir string, format int) (map[string]
 		obj = make(map[string]any)
 	}
 	return obj, nil
-}
-
-// detectConfigInFS checks whether dirPath within fsys contains exactly one
-// recognized configuration file. Returns the format index and true if found.
-func detectConfigInFS(fsys fs.FS, dirPath, rootDir string) (int, bool, error) {
-	found := -1
-	for i := range indexFormatMax {
-		p := joinFSPath(dirPath, configFormats[i].source)
-		if _, err := fs.Stat(fsys, p); err == nil {
-			if found >= 0 {
-				return 0, false, fmt.Errorf("pack: directory %s contains multiple config files: %s and %s",
-					fsRelPath(rootDir, dirPath), configFormats[found].source, configFormats[i].source)
-			}
-			found = i
-		}
-	}
-	if found < 0 {
-		return 0, false, nil
-	}
-	return found, true, nil
 }
 
 // joinFSPath joins a directory and filename using forward slashes,
