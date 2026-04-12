@@ -19,7 +19,7 @@ XGo reads your project's `go.mod` and inspects every `require` entry for an `//x
 ```
 require (
     github.com/goplus/spx/v2 v2.0.0 //xgo:class
-    github.com/goplus/yap v0.8.0     //xgo:class
+    github.com/goplus/yap v0.8.0 //xgo:class
 )
 ```
  
