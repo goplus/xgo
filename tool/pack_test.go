@@ -94,7 +94,7 @@ func TestPackBasicSPXLayout(t *testing.T) {
 	root := t.TempDir()
 	setupSPXLayout(t, root)
 
-	if err := Pack(root, 0); err != nil {
+	if err := Pack(root, PackFlagPrompt); err != nil {
 		t.Fatal("Pack failed:", err)
 	}
 
