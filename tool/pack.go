@@ -27,6 +27,7 @@ import (
 	"strings"
 
 	"github.com/goccy/go-yaml"
+	"github.com/qiniu/x/errors"
 )
 
 // PackFlags controls the behavior of Pack.
@@ -36,6 +37,7 @@ const (
 	// PackFlagTest enables test mode: verify that all index_pack.* files
 	// exist and match what Pack would produce, without writing any files.
 	PackFlagTest PackFlags = 1 << iota
+	PackFlagPrompt
 )
 
 // configFormat describes a supported configuration file format.
@@ -98,20 +100,13 @@ func Pack(dir string, flags PackFlags) error {
 		return err
 	}
 
-	var errs []string
+	var errs errors.List
 	for _, g := range groups {
 		if err := processPack(g, flags, dir); err != nil {
-			if flags&PackFlagTest != 0 {
-				errs = append(errs, err.Error())
-				continue
-			}
-			return err
+			errs.Add(err)
 		}
 	}
-	if len(errs) > 0 {
-		return fmt.Errorf("pack -t: verification failed:\n%s", strings.Join(errs, "\n"))
-	}
-	return nil
+	return errs.ToError()
 }
 
 // -----------------------------------------------------------------------------
@@ -216,15 +211,18 @@ func relPath(root, path string) string {
 // processPack merges children into a pack root and writes (or verifies)
 // the packed output file.
 func processPack(g packGroup, flags PackFlags, root string) error {
+	if (flags & PackFlagPrompt) != 0 {
+		fmt.Fprintln(os.Stderr, "Pack", relPath(root, g.root.dir), "...")
+	}
 	rootFile := filepath.Join(g.root.dir, configFormats[g.root.format].source)
-	rootObj, err := parseConfigFile(rootFile, root)
+	rootObj, err := parseConfigFile(rootFile, root, g.root.format)
 	if err != nil {
 		return err
 	}
 
 	for _, child := range g.children {
 		childFile := filepath.Join(child.dir, configFormats[child.format].source)
-		childObj, err := parseConfigFile(childFile, root)
+		childObj, err := parseConfigFile(childFile, root, child.format)
 		if err != nil {
 			return err
 		}
@@ -289,26 +287,20 @@ func mergeAtPath(root map[string]any, segments []string, child map[string]any, c
 
 // parseConfigFile reads and parses a configuration file (JSON or YAML)
 // into a map[string]any.
-func parseConfigFile(path, root string) (map[string]any, error) {
+func parseConfigFile(path, root string, format int) (map[string]any, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("pack: reading %s: %w", relPath(root, path), err)
 	}
 	var obj map[string]any
-	switch ext := filepath.Ext(path); ext {
-	case ".json":
+	if format == indexJSON {
 		if err := json.Unmarshal(data, &obj); err != nil {
 			return nil, fmt.Errorf("pack: parsing %s: %w", relPath(root, path), err)
 		}
-	case ".yml", ".yaml":
+	} else {
 		if err := yaml.Unmarshal(data, &obj); err != nil {
 			return nil, fmt.Errorf("pack: parsing %s: %w", relPath(root, path), err)
 		}
-	default:
-		return nil, fmt.Errorf("pack: unsupported config format %q in %s", ext, relPath(root, path))
-	}
-	if obj == nil {
-		obj = make(map[string]any)
 	}
 	return obj, nil
 }
