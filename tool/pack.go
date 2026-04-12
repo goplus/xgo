@@ -86,14 +86,14 @@ func Pack(dir string, flags PackFlags) error {
 		return nil
 	}
 
-	groups, err := groupByPackRoot(configs)
+	groups, err := groupByPackRoot(configs, dir)
 	if err != nil {
 		return err
 	}
 
 	var errs []string
 	for _, g := range groups {
-		if err := processPack(g, flags); err != nil {
+		if err := processPack(g, flags, dir); err != nil {
 			if flags&PackFlagTest != 0 {
 				errs = append(errs, err.Error())
 				continue
@@ -121,7 +121,7 @@ func discoverConfigs(root string) ([]configEntry, error) {
 		if !d.IsDir() {
 			return nil
 		}
-		entry, err := detectConfigIn(path)
+		entry, err := detectConfigIn(path, root)
 		if err != nil {
 			return err
 		}
@@ -139,14 +139,14 @@ func discoverConfigs(root string) ([]configEntry, error) {
 // detectConfigIn checks whether dir contains exactly one of the recognized
 // configuration files. Returns nil if none is found; returns an error if
 // more than one is found.
-func detectConfigIn(dir string) (*configEntry, error) {
+func detectConfigIn(dir, root string) (*configEntry, error) {
 	var found *configEntry
 	for _, f := range configFormats {
 		path := filepath.Join(dir, f.source)
 		if _, err := os.Stat(path); err == nil {
 			if found != nil {
 				return nil, fmt.Errorf("pack: directory %s contains multiple config files: %s and %s",
-					dir, found.format.source, f.source)
+					relPath(root, dir), found.format.source, f.source)
 			}
 			found = &configEntry{dir: dir, format: f}
 		}
@@ -157,7 +157,7 @@ func detectConfigIn(dir string) (*configEntry, error) {
 // groupByPackRoot partitions config entries into pack groups. A config entry
 // is a pack root if no ancestor directory (that also has a config file) exists
 // in the list. All other entries become children of the nearest ancestor root.
-func groupByPackRoot(configs []configEntry) ([]packGroup, error) {
+func groupByPackRoot(configs []configEntry, root string) ([]packGroup, error) {
 	sort.Slice(configs, func(i, j int) bool {
 		return configs[i].dir < configs[j].dir
 	})
@@ -170,8 +170,8 @@ func groupByPackRoot(configs []configEntry) ([]packGroup, error) {
 				if cfg.format.ext != groups[i].root.format.ext {
 					return nil, fmt.Errorf(
 						"pack: format mismatch: %s uses %s but pack root %s uses %s",
-						filepath.Join(cfg.dir, cfg.format.source), cfg.format.ext,
-						filepath.Join(groups[i].root.dir, groups[i].root.format.source), groups[i].root.format.ext,
+						relPath(root, filepath.Join(cfg.dir, cfg.format.source)), cfg.format.ext,
+						relPath(root, filepath.Join(groups[i].root.dir, groups[i].root.format.source)), groups[i].root.format.ext,
 					)
 				}
 				groups[i].children = append(groups[i].children, cfg)
@@ -191,20 +191,30 @@ func isSubdirectory(parent, child string) bool {
 	return strings.HasPrefix(child, parent+string(filepath.Separator))
 }
 
+// relPath returns path relative to root for use in error messages.
+// Falls back to the absolute path if the relative path cannot be computed.
+func relPath(root, path string) string {
+	rel, err := filepath.Rel(root, path)
+	if err != nil {
+		return path
+	}
+	return rel
+}
+
 // -----------------------------------------------------------------------------
 
 // processPack merges children into a pack root and writes (or verifies)
 // the packed output file.
-func processPack(g packGroup, flags PackFlags) error {
+func processPack(g packGroup, flags PackFlags, root string) error {
 	rootFile := filepath.Join(g.root.dir, g.root.format.source)
-	rootObj, err := parseConfigFile(rootFile)
+	rootObj, err := parseConfigFile(rootFile, root)
 	if err != nil {
 		return err
 	}
 
 	for _, child := range g.children {
 		childFile := filepath.Join(child.dir, child.format.source)
-		childObj, err := parseConfigFile(childFile)
+		childObj, err := parseConfigFile(childFile, root)
 		if err != nil {
 			return err
 		}
@@ -215,7 +225,7 @@ func processPack(g packGroup, flags PackFlags) error {
 		}
 		segments := strings.Split(filepath.ToSlash(rel), "/")
 
-		if err := mergeAtPath(rootObj, segments, childObj, childFile); err != nil {
+		if err := mergeAtPath(rootObj, segments, childObj, relPath(root, childFile)); err != nil {
 			return err
 		}
 	}
@@ -223,11 +233,11 @@ func processPack(g packGroup, flags PackFlags) error {
 	packFile := filepath.Join(g.root.dir, g.root.format.packed)
 	packed, err := marshalConfig(rootObj, g.root.format)
 	if err != nil {
-		return fmt.Errorf("pack: marshaling %s: %w", packFile, err)
+		return fmt.Errorf("pack: marshaling %s: %w", relPath(root, packFile), err)
 	}
 
 	if flags&PackFlagTest != 0 {
-		return verifyPackFile(packFile, packed)
+		return verifyPackFile(packFile, root, packed)
 	}
 	return os.WriteFile(packFile, packed, 0644)
 }
@@ -269,23 +279,23 @@ func mergeAtPath(root map[string]any, segments []string, child map[string]any, c
 
 // parseConfigFile reads and parses a configuration file (JSON or YAML)
 // into a map[string]any.
-func parseConfigFile(path string) (map[string]any, error) {
+func parseConfigFile(path, root string) (map[string]any, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("pack: reading %s: %w", path, err)
+		return nil, fmt.Errorf("pack: reading %s: %w", relPath(root, path), err)
 	}
 	var obj map[string]any
 	switch ext := filepath.Ext(path); ext {
 	case ".json":
 		if err := json.Unmarshal(data, &obj); err != nil {
-			return nil, fmt.Errorf("pack: parsing %s: %w", path, err)
+			return nil, fmt.Errorf("pack: parsing %s: %w", relPath(root, path), err)
 		}
 	case ".yml", ".yaml":
 		if err := yaml.Unmarshal(data, &obj); err != nil {
-			return nil, fmt.Errorf("pack: parsing %s: %w", path, err)
+			return nil, fmt.Errorf("pack: parsing %s: %w", relPath(root, path), err)
 		}
 	default:
-		return nil, fmt.Errorf("pack: unsupported config format %q in %s", ext, path)
+		return nil, fmt.Errorf("pack: unsupported config format %q in %s", ext, relPath(root, path))
 	}
 	if obj == nil {
 		obj = make(map[string]any)
@@ -312,16 +322,16 @@ func marshalConfig(obj map[string]any, format configFormat) ([]byte, error) {
 
 // verifyPackFile checks that the file at path exists and its content matches
 // expected exactly.
-func verifyPackFile(path string, expected []byte) error {
+func verifyPackFile(path, root string, expected []byte) error {
 	existing, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return fmt.Errorf("pack -t: missing: %s", path)
+			return fmt.Errorf("pack -t: missing: %s", relPath(root, path))
 		}
-		return fmt.Errorf("pack -t: reading %s: %w", path, err)
+		return fmt.Errorf("pack -t: reading %s: %w", relPath(root, path), err)
 	}
 	if !bytes.Equal(existing, expected) {
-		return fmt.Errorf("pack -t: out of date: %s", path)
+		return fmt.Errorf("pack -t: out of date: %s", relPath(root, path))
 	}
 	return nil
 }

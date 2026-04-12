@@ -201,6 +201,10 @@ func TestPackMultipleConfigFormats(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for multiple config formats, got nil")
 	}
+	want := "pack: walking directory tree: pack: directory . contains multiple config files: index.json and index.yaml"
+	if err.Error() != want {
+		t.Fatalf("err.Error() = %q, want %q", err.Error(), want)
+	}
 }
 
 func TestPackCollisionDetection(t *testing.T) {
@@ -220,6 +224,10 @@ func TestPackCollisionDetection(t *testing.T) {
 	err := Pack(root, 0)
 	if err == nil {
 		t.Fatal("expected collision error, got nil")
+	}
+	want := `pack: collision: key "sprites" at path "sprites" is not an object (introduced by directory structure, conflicts with sprites/Cat/index.json)`
+	if err.Error() != want {
+		t.Fatalf("err.Error() = %q, want %q", err.Error(), want)
 	}
 }
 
@@ -244,6 +252,10 @@ func TestPackKeyCollisionAtLeaf(t *testing.T) {
 	err := Pack(root, 0)
 	if err == nil {
 		t.Fatal("expected collision error at leaf, got nil")
+	}
+	want := `pack: collision: key "foo" already exists at path "items/foo" (introduced by items/foo/index.json)`
+	if err.Error() != want {
+		t.Fatalf("err.Error() = %q, want %q", err.Error(), want)
 	}
 }
 
@@ -457,5 +469,9 @@ func TestPackFormatMismatch(t *testing.T) {
 	err := Pack(root, 0)
 	if err == nil {
 		t.Fatal("expected format mismatch error, got nil")
+	}
+	want := "pack: format mismatch: items/sword/index.yaml uses .yaml but pack root index.json uses .json"
+	if err.Error() != want {
+		t.Fatalf("err.Error() = %q, want %q", err.Error(), want)
 	}
 }
