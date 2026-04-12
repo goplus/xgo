@@ -302,6 +302,9 @@ func parseConfigFile(path, root string, format int) (map[string]any, error) {
 			return nil, fmt.Errorf("pack: parsing %s: %w", relPath(root, path), err)
 		}
 	}
+	if obj == nil {
+		obj = make(map[string]any)
+	}
 	return obj, nil
 }
 
