@@ -36,7 +36,7 @@ type Result struct {
 // New extracts issue tasks from the given document and returns the Result.
 func New(input any, doc html.NodeSet) Result {
 	issue := input.(string)
-	taskList := doc.**.ul@($class == "contains-task-list").one
+	taskList := doc.**.ul@isClass("contains-task-list").one
 	tasks := [Task{li.text, li.firstElementChild.hasAttr("checked")} for li in taskList.li]
 	return {issue, tasks}
 }
