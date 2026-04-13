@@ -30,15 +30,19 @@ import (
 
 // -----------------------------------------------------------------------------
 
-func GopstyleSource(src []byte, filename ...string) (ret []byte, err error) {
+func XGoStyleSource(src []byte, class bool, filename ...string) (ret []byte, err error) {
 	var fname string
 	if filename != nil {
 		fname = filename[0]
 	}
 	fset := token.NewFileSet()
+	mode := parser.ParseComments
+	if class {
+		mode |= parser.ParseXGoClass
+	}
 	var f *ast.File
-	if f, err = parser.ParseFile(fset, fname, src, parser.ParseComments); err == nil {
-		Gopstyle(f)
+	if f, err = parser.ParseFile(fset, fname, src, mode); err == nil {
+		XGoStyle(f)
 		var buf bytes.Buffer
 		if err = format.Node(&buf, fset, f); err == nil {
 			ret = buf.Bytes()
@@ -47,9 +51,14 @@ func GopstyleSource(src []byte, filename ...string) (ret []byte, err error) {
 	return
 }
 
+// Deprecated: Use XGoStyleSource instead.
+func GopstyleSource(src []byte, filename ...string) (ret []byte, err error) {
+	return XGoStyleSource(src, false, filename...)
+}
+
 // -----------------------------------------------------------------------------
 
-func Gopstyle(file *ast.File) {
+func XGoStyle(file *ast.File) {
 	if identEqual(file.Name, "main") {
 		file.NoPkgDecl = true
 	}
@@ -67,6 +76,11 @@ func Gopstyle(file *ast.File) {
 		}
 	}
 	formatFile(file)
+}
+
+// Deprecated: Use XGoStyle instead.
+func Gopstyle(file *ast.File) {
+	XGoStyle(file)
 }
 
 func findFuncDecl(decls []ast.Decl, name string) (int, *ast.FuncDecl) {
