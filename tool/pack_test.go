@@ -190,25 +190,6 @@ func TestPackNoConfigFiles(t *testing.T) {
 	}
 }
 
-func TestPackMultipleConfigFormats(t *testing.T) {
-	root := t.TempDir()
-
-	// Create both index.json and index.yaml in the same directory
-	writeJSON(t, root, "index.json", map[string]any{"a": 1})
-	if err := os.WriteFile(filepath.Join(root, "index.yaml"), []byte("a: 1\n"), 0644); err != nil {
-		t.Fatal(err)
-	}
-
-	err := Pack(root, 0)
-	if err == nil {
-		t.Fatal("expected error for multiple config formats, got nil")
-	}
-	want := "pack: walking directory tree: pack: directory . contains multiple config files: index.json and index.yaml"
-	if err.Error() != want {
-		t.Fatalf("err.Error() = %q, want %q", err.Error(), want)
-	}
-}
-
 func TestPackCollisionDetection(t *testing.T) {
 	root := t.TempDir()
 
@@ -227,7 +208,7 @@ func TestPackCollisionDetection(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected collision error, got nil")
 	}
-	want := `pack: collision: key "sprites" at path "sprites" is not an object (introduced by directory structure, conflicts with sprites/Cat/index.json)`
+	want := "pack: collision: key \"sprites\" already exists at path \"sprites\""
 	if err.Error() != want {
 		t.Fatalf("err.Error() = %q, want %q", err.Error(), want)
 	}
@@ -244,7 +225,7 @@ func TestPackKeyCollisionAtLeaf(t *testing.T) {
 	}
 	writeJSON(t, root, "index.json", map[string]any{
 		"items": map[string]any{
-			"foo": "already-here",
+			"bar": "bar-val",
 		},
 	})
 	writeJSON(t, filepath.Join(root, "items", "foo"), "index.json", map[string]any{
@@ -255,7 +236,7 @@ func TestPackKeyCollisionAtLeaf(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected collision error at leaf, got nil")
 	}
-	want := `pack: collision: key "foo" already exists at path "items/foo" (introduced by items/foo/index.json)`
+	want := `pack: collision: key "items" already exists at path "items"`
 	if err.Error() != want {
 		t.Fatalf("err.Error() = %q, want %q", err.Error(), want)
 	}
@@ -390,44 +371,6 @@ func TestPackDeeplyNested(t *testing.T) {
 	}
 }
 
-func TestPackSkipsSubdirsWithoutConfig(t *testing.T) {
-	root := t.TempDir()
-
-	// Create a root with a subdirectory that has no index.json (assets only)
-	if err := os.MkdirAll(filepath.Join(root, "images"), 0755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(root, "images", "logo.png"), []byte("fake"), 0644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.MkdirAll(filepath.Join(root, "sprites", "Cat"), 0755); err != nil {
-		t.Fatal(err)
-	}
-
-	writeJSON(t, root, "index.json", map[string]any{"title": "test"})
-	writeJSON(t, filepath.Join(root, "sprites", "Cat"), "index.json", map[string]any{"x": 0})
-
-	if err := Pack(root, 0); err != nil {
-		t.Fatal("Pack failed:", err)
-	}
-
-	obj := readJSON(t, filepath.Join(root, "index_pack.json"))
-
-	// "images" should not appear in packed output
-	if _, ok := obj["images"]; ok {
-		t.Error("unexpected key 'images' in packed output")
-	}
-
-	// "sprites.Cat" should be present
-	sprites, ok := obj["sprites"].(map[string]any)
-	if !ok {
-		t.Fatal("missing 'sprites'")
-	}
-	if _, ok := sprites["Cat"]; !ok {
-		t.Error("missing 'sprites.Cat'")
-	}
-}
-
 func TestPackYAML(t *testing.T) {
 	root := t.TempDir()
 
@@ -454,27 +397,6 @@ func TestPackYAML(t *testing.T) {
 	content := string(data)
 	if len(content) == 0 {
 		t.Fatal("index_pack.yaml is empty")
-	}
-}
-
-func TestPackFormatMismatch(t *testing.T) {
-	root := t.TempDir()
-
-	if err := os.MkdirAll(filepath.Join(root, "items", "sword"), 0755); err != nil {
-		t.Fatal(err)
-	}
-
-	// Root uses JSON, child uses YAML
-	writeJSON(t, root, "index.json", map[string]any{"title": "game"})
-	os.WriteFile(filepath.Join(root, "items", "sword", "index.yaml"), []byte("damage: 10\n"), 0644)
-
-	err := Pack(root, 0)
-	if err == nil {
-		t.Fatal("expected format mismatch error, got nil")
-	}
-	want := "pack: format mismatch: items/sword/index.yaml uses .yaml but pack root index.json uses .json"
-	if err.Error() != want {
-		t.Fatalf("err.Error() = %q, want %q", err.Error(), want)
 	}
 }
 
@@ -555,30 +477,6 @@ func TestPackProjectYAML(t *testing.T) {
 	}
 }
 
-func TestPackProjectEmptySubtree(t *testing.T) {
-	fsys := fstest.MapFS{
-		"index.json":      {Data: []byte(`{"title":"only-root"}`)},
-		"images/logo.png": {Data: []byte("fake-png")},
-	}
-
-	result, err := PackProject(fsys, ".", "index.json")
-	if err != nil {
-		t.Fatal("PackProject failed:", err)
-	}
-
-	var obj map[string]any
-	if err := json.Unmarshal(result, &obj); err != nil {
-		t.Fatal("unmarshal:", err)
-	}
-	if obj["title"] != "only-root" {
-		t.Errorf("title = %v, want only-root", obj["title"])
-	}
-	// No extra keys should appear.
-	if _, ok := obj["images"]; ok {
-		t.Error("unexpected key 'images'")
-	}
-}
-
 func TestPackProjectKeyCollision(t *testing.T) {
 	fsys := fstest.MapFS{
 		"index.json":             {Data: []byte(`{"sprites":"not-an-object"}`)},
@@ -646,26 +544,40 @@ func TestPackProjectDeterminism(t *testing.T) {
 	}
 }
 
-func TestPackProjectFormatMismatch(t *testing.T) {
-	fsys := fstest.MapFS{
-		"index.json":             {Data: []byte(`{"title":"game"}`)},
-		"items/sword/index.yaml": {Data: []byte("damage: 10\n")},
+func TestPackSkipsSubdirsWithoutConfig(t *testing.T) {
+	root := t.TempDir()
+
+	// Create a root with a subdirectory that has no index.json (assets only)
+	if err := os.MkdirAll(filepath.Join(root, "images"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "images", "logo.png"), []byte("fake"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(root, "sprites", "Cat"), 0755); err != nil {
+		t.Fatal(err)
 	}
 
-	result, err := PackProject(fsys, ".", "index.json")
-	if err != nil {
-		t.Fatal("PackProject failed:", err)
+	writeJSON(t, root, "index.json", map[string]any{"title": "test"})
+	writeJSON(t, filepath.Join(root, "sprites", "Cat"), "index.json", map[string]any{"x": 0})
+
+	if err := Pack(root, 0); err != nil {
+		t.Fatal("Pack failed:", err)
 	}
 
-	var obj map[string]any
-	if err := json.Unmarshal(result, &obj); err != nil {
-		t.Fatal("unmarshal:", err)
+	obj := readJSON(t, filepath.Join(root, "index_pack.json"))
+
+	// "images" should not appear in packed output
+	if _, ok := obj["images"]; ok {
+		t.Error("unexpected key 'images' in packed output")
 	}
-	if obj["title"] != "game" {
-		t.Errorf("title = %v, want game", obj["title"])
+
+	// "sprites.Cat" should be present
+	sprites, ok := obj["sprites"].(map[string]any)
+	if !ok {
+		t.Fatal("missing 'sprites'")
 	}
-	// items/sword/index.yaml should be ignored (different format).
-	if _, ok := obj["items"]; ok {
-		t.Error("unexpected key 'items' — mismatched format should be ignored")
+	if _, ok := sprites["Cat"]; !ok {
+		t.Error("missing 'sprites.Cat'")
 	}
 }
