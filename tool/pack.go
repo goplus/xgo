@@ -33,7 +33,6 @@ import (
 type configFormat struct {
 	indexFile string // source filename, e.g. "index.json"
 	packFile  string // packed output filename, e.g. "index_pack.json"
-	ext       string // file extension, e.g. ".json"
 }
 
 const (
@@ -44,9 +43,9 @@ const (
 )
 
 var configFormats = [...]configFormat{
-	indexJSON: {"index.json", "index_pack.json", ".json"},
-	indexYML:  {"index.yml", "index_pack.yml", ".yml"},
-	indexYAML: {"index.yaml", "index_pack.yaml", ".yaml"},
+	indexJSON: {"index.json", "index_pack.json"},
+	indexYML:  {"index.yml", "index_pack.yml"},
+	indexYAML: {"index.yaml", "index_pack.yaml"},
 }
 
 // -----------------------------------------------------------------------------
