@@ -208,7 +208,7 @@ func TestPackCollisionDetection(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected collision error, got nil")
 	}
-	want := "pack: collision: key \"sprites\" already exists at path \"sprites\" (introduced by sprites/index.json)"
+	want := "pack: collision: key \"sprites\" already exists at path \"sprites\""
 	if err.Error() != want {
 		t.Fatalf("err.Error() = %q, want %q", err.Error(), want)
 	}
@@ -236,7 +236,7 @@ func TestPackKeyCollisionAtLeaf(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected collision error at leaf, got nil")
 	}
-	want := `pack: collision: key "items" already exists at path "items" (introduced by items/index.json)`
+	want := `pack: collision: key "items" already exists at path "items"`
 	if err.Error() != want {
 		t.Fatalf("err.Error() = %q, want %q", err.Error(), want)
 	}
@@ -541,5 +541,43 @@ func TestPackProjectDeterminism(t *testing.T) {
 	}
 	if !bytes.Equal(first, second) {
 		t.Error("PackProject output is not deterministic")
+	}
+}
+
+func TestPackSkipsSubdirsWithoutConfig(t *testing.T) {
+	root := t.TempDir()
+
+	// Create a root with a subdirectory that has no index.json (assets only)
+	if err := os.MkdirAll(filepath.Join(root, "images"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "images", "logo.png"), []byte("fake"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(root, "sprites", "Cat"), 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	writeJSON(t, root, "index.json", map[string]any{"title": "test"})
+	writeJSON(t, filepath.Join(root, "sprites", "Cat"), "index.json", map[string]any{"x": 0})
+
+	if err := Pack(root, 0); err != nil {
+		t.Fatal("Pack failed:", err)
+	}
+
+	obj := readJSON(t, filepath.Join(root, "index_pack.json"))
+
+	// "images" should not appear in packed output
+	if _, ok := obj["images"]; ok {
+		t.Error("unexpected key 'images' in packed output")
+	}
+
+	// "sprites.Cat" should be present
+	sprites, ok := obj["sprites"].(map[string]any)
+	if !ok {
+		t.Fatal("missing 'sprites'")
+	}
+	if _, ok := sprites["Cat"]; !ok {
+		t.Error("missing 'sprites.Cat'")
 	}
 }

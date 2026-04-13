@@ -142,15 +142,17 @@ func mergeChildren(fsys fs.ReadDirFS, current, indexFile string, obj map[string]
 		if err != nil {
 			return err
 		}
-		if _, ok := obj[fname]; ok {
-			return fmt.Errorf(
-				"pack: collision: key %q already exists at path %q (introduced by %s)",
-				fname, childDir, childFile,
-			)
-		}
-		obj[fname] = childObj
 		if err := mergeChildren(fsys, childDir, indexFile, childObj, isJSON); err != nil {
 			return err
+		}
+		if len(childObj) > 0 {
+			if _, ok := obj[fname]; ok {
+				return fmt.Errorf(
+					"pack: collision: key %q already exists at path %q",
+					fname, childDir,
+				)
+			}
+			obj[fname] = childObj
 		}
 	}
 	return nil
@@ -231,8 +233,6 @@ func processPack(proj projectEntry, flags PackFlags, root string) error {
 
 // -----------------------------------------------------------------------------
 
-// marshalConfig serializes obj back to the given format. JSON output uses
-// tab indentation and a trailing newline.
 func marshalConfig(obj map[string]any, isJSON bool) ([]byte, error) {
 	if isJSON {
 		return json.MarshalIndent(obj, "", "\t")
