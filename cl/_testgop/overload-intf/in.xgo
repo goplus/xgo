@@ -2,4 +2,7 @@ import "github.com/goplus/xgo/cl/internal/overload/intf"
 
 func f(sp intf.Sprite) {
     sp.glide 10, 20, 10ms
+    sp.turnTo 90
+    sp.turnTo "Kai"
+    sp.quote "Hi"
 }
