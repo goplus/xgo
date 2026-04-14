@@ -622,6 +622,13 @@ func toInterfaceType(ctx *blockCtx, v *ast.InterfaceType) types.Type {
 	return intf
 }
 
+// pendingTypeInstantiation records an unchecked outline-mode type instantiation.
+type pendingTypeInstantiation struct {
+	original   types.Type
+	arguments  []types.Type
+	expression ast.Expr
+}
+
 func instantiate(ctx *blockCtx, exprX ast.Expr, indices ...ast.Expr) (types.Type, error) {
 	ctx.inInst++
 	defer func() {
@@ -636,11 +643,73 @@ func instantiate(ctx *blockCtx, exprX ast.Expr, indices ...ast.Expr) (types.Type
 	for i, index := range indices {
 		idx[i] = toType(ctx, index)
 	}
-	typ := ctx.pkg.Instantiate(x, idx, exprX)
+	var typ types.Type
+	if ctx.outline {
+		typ = ctx.instantiateOutlineType(x, idx, exprX)
+	} else {
+		typ = ctx.pkg.Instantiate(x, idx, exprX)
+	}
 	if rec := ctx.recorder(); rec != nil {
 		rec.instantiate(exprX, x, typ)
 	}
 	return typ, nil
+}
+
+// instantiateOutlineType instantiates a generic type without immediately
+// checking constraints that may depend on later declarations.
+func (p *blockCtx) instantiateOutlineType(orig types.Type, args []types.Type, expr ast.Expr) types.Type {
+	if named, ok := orig.(*types.Named); ok {
+		p.loadNamed(p.pkg, named)
+	}
+	tparams := typeParamsOf(orig)
+	if tparams == nil {
+		return p.pkg.Instantiate(orig, args, expr)
+	}
+	if len(args) != tparams.Len() {
+		p.handleErrorf(
+			expr.Pos(),
+			expr.End(),
+			"got %d type arguments but %s has %d type parameters",
+			len(args),
+			orig,
+			tparams.Len(),
+		)
+		return types.Typ[types.Invalid]
+	}
+	typ, _ := types.Instantiate(p.instContext, orig, args, false)
+	p.pendingInsts = append(p.pendingInsts, pendingTypeInstantiation{
+		original:   orig,
+		arguments:  args,
+		expression: expr,
+	})
+	return typ
+}
+
+// validateTypeInstantiations checks deferred outline-mode type constraints.
+func (p *pkgCtx) validateTypeInstantiations() {
+	if len(p.errs) != 0 {
+		return
+	}
+	for _, inst := range p.pendingInsts {
+		if _, err := types.Instantiate(p.instContext, inst.original, inst.arguments, true); err != nil {
+			p.handleErrorf(inst.expression.Pos(), inst.expression.End(), "%v", err)
+		}
+	}
+}
+
+// typeParamsOf returns the type parameters of an uninstantiated generic type.
+func typeParamsOf(typ types.Type) *types.TypeParamList {
+	switch t := typ.(type) {
+	case *types.Named:
+		if t.TypeArgs() == nil {
+			return t.TypeParams()
+		}
+	case *types.Alias:
+		if t.TypeArgs() == nil {
+			return t.TypeParams()
+		}
+	}
+	return nil
 }
 
 func tryIndexType(ctx *blockCtx, v *ast.IndexExpr) (types.Type, error) {

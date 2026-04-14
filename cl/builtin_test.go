@@ -19,8 +19,12 @@
 package cl
 
 import (
+	goast "go/ast"
+	goparser "go/parser"
 	"go/types"
 	"log"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/goplus/gogen"
@@ -83,10 +87,66 @@ func TestConvKwargs2(t *testing.T) {
 }
 
 func TestLoadExpr(t *testing.T) {
-	var ni nodeInterp
-	if v := ni.LoadExpr(&ast.Ident{Name: "x"}); v != "" {
-		t.Fatal("LoadExpr:", v)
+	t.Run("NoPosition", func(t *testing.T) {
+		var ni nodeInterp
+		if got := ni.LoadExpr(&ast.Ident{Name: "x"}); got != "" {
+			t.Fatalf("unexpected expression: %q", got)
+		}
+	})
+
+	t.Run("GoFileWithLineDirective", func(t *testing.T) {
+		dir := t.TempDir()
+		path := filepath.Join(dir, "source.go")
+		fset, expr := parseTestGoExpr(t, path, "package p\n\n//line virtual.go:10\nvar value = alpha + beta\n")
+		ni := nodeInterp{fset: fset, codes: make(map[string][]byte)}
+		if got := ni.LoadExpr(expr); got != "alpha + beta" {
+			t.Fatalf("unexpected expression: %q", got)
+		}
+	})
+
+	t.Run("ChangedGoFile", func(t *testing.T) {
+		dir := t.TempDir()
+		path := filepath.Join(dir, "source.go")
+		fset, expr := parseTestGoExpr(t, path, "package p\n\nvar value = alpha + beta\n")
+		if err := os.WriteFile(path, []byte("package p\n"), 0o644); err != nil {
+			t.Fatalf("WriteFile(%q) failed: %v", path, err)
+		}
+
+		ni := nodeInterp{fset: fset, codes: make(map[string][]byte)}
+		if got := ni.LoadExpr(expr); got != "" {
+			t.Fatalf("unexpected expression: %q", got)
+		}
+	})
+
+	t.Run("MissingGoFile", func(t *testing.T) {
+		dir := t.TempDir()
+		path := filepath.Join(dir, "source.go")
+		fset, expr := parseTestGoExpr(t, path, "package p\n\nvar value = alpha + beta\n")
+		if err := os.Remove(path); err != nil {
+			t.Fatalf("Remove(%q) failed: %v", path, err)
+		}
+
+		ni := nodeInterp{fset: fset, codes: make(map[string][]byte)}
+		if got := ni.LoadExpr(expr); got != "" {
+			t.Fatalf("unexpected expression: %q", got)
+		}
+	})
+}
+
+func parseTestGoExpr(t *testing.T, path, source string) (*token.FileSet, goast.Expr) {
+	t.Helper()
+
+	if err := os.WriteFile(path, []byte(source), 0o644); err != nil {
+		t.Fatalf("WriteFile(%q) failed: %v", path, err)
 	}
+	fset := token.NewFileSet()
+	file, err := goparser.ParseFile(fset, path, nil, 0)
+	if err != nil {
+		t.Fatalf("ParseFile(%q) failed: %v", path, err)
+	}
+	decl := file.Decls[0].(*goast.GenDecl)
+	spec := decl.Specs[0].(*goast.ValueSpec)
+	return fset, spec.Values[0]
 }
 
 func TestProjFile(t *testing.T) {

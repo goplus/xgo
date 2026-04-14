@@ -20,14 +20,18 @@ package cl_test
 
 import (
 	"go/scanner"
+	"go/types"
 	"os"
+	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/goplus/xgo/cl"
 	"github.com/goplus/xgo/cl/cltest"
 	"github.com/goplus/xgo/parser"
 	"github.com/goplus/xgo/parser/fsx/memfs"
+	"github.com/goplus/xgo/token"
 )
 
 func TestTypeParams(t *testing.T) {
@@ -50,6 +54,161 @@ func main() {
 	v.foo()
 }
 `)
+}
+
+func TestTypeParamsOutline(t *testing.T) {
+	t.Run("RecursiveInstantiation", func(t *testing.T) {
+		pkg, err := loadOutlinePackage(t, `package project
+
+type StageShape = map[string]any
+
+type StageItemHandlers[T any] struct {
+	Sprite func(StageShape) (T, error)
+}
+
+type SpriteConfig struct {
+	Handlers StageItemHandlers[*SpriteConfig]
+}
+
+func AppendStageItems[T any](items []T, shape StageShape, handlers StageItemHandlers[T]) ([]T, error) {
+	return items, nil
+}
+
+func (c *SpriteConfig) CloneHandlers() StageItemHandlers[*SpriteConfig] {
+	return c.Handlers
+}
+`)
+		if err != nil {
+			t.Fatalf("NewPackage failed: %v", err)
+		}
+
+		spriteConfigObj, ok := pkg.Scope().Lookup("SpriteConfig").(*types.TypeName)
+		if !ok {
+			t.Fatal("SpriteConfig type not found in package scope")
+		}
+		spriteConfig, ok := spriteConfigObj.Type().(*types.Named)
+		if !ok {
+			t.Fatalf("unexpected SpriteConfig type: %T", spriteConfigObj.Type())
+		}
+		fields, ok := spriteConfig.Underlying().(*types.Struct)
+		if !ok {
+			t.Fatalf("unexpected SpriteConfig underlying type: %T", spriteConfig.Underlying())
+		}
+		handlers, ok := fields.Field(0).Type().(*types.Named)
+		if !ok || handlers.Obj().Name() != "StageItemHandlers" {
+			t.Fatalf("unexpected Handlers field type: %v", fields.Field(0).Type())
+		}
+		if args := handlers.TypeArgs(); args.Len() != 1 || !types.Identical(args.At(0), types.NewPointer(spriteConfig)) {
+			t.Fatalf("unexpected StageItemHandlers type arguments: %v", handlers.TypeArgs())
+		}
+	})
+
+	for _, tt := range []struct {
+		name      string
+		source    string
+		fragments []string
+	}{
+		{
+			name: "ConstraintViolation",
+			source: `package project
+
+type Box[T ~int] struct{}
+
+type Invalid = Box[string]
+`,
+			fragments: []string{"string does not satisfy", "~int"},
+		},
+		{
+			name: "AliasConstraintViolation",
+			source: `package project
+
+type Box[T ~int] struct{}
+
+type Alias[T ~int] = Box[T]
+
+type Invalid = Alias[string]
+`,
+			fragments: []string{"string does not satisfy", "~int"},
+		},
+		{
+			name: "FunctionConstraintViolation",
+			source: `package project
+
+func Identity[T ~int](value T) T {
+	return value
+}
+
+var Invalid = Identity[string]
+`,
+			fragments: []string{"string does not satisfy", "~int"},
+		},
+		{
+			name: "TypeArgumentCount",
+			source: `package project
+
+type Pair[T, U any] struct{}
+
+type Invalid = Pair[int]
+`,
+			fragments: []string{"got 1 type arguments", "has 2 type parameters"},
+		},
+		{
+			name: "NonGenericType",
+			source: `package project
+
+type Plain int
+
+type Invalid = Plain[int]
+`,
+			fragments: []string{"Plain is not a generic type"},
+		},
+		{
+			name: "BasicType",
+			source: `package project
+
+type Invalid = int[string]
+`,
+			fragments: []string{"int is not a generic type"},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			requireOutlineError(t, tt.source, tt.fragments...)
+		})
+	}
+}
+
+func loadOutlinePackage(t *testing.T, source string) (*types.Package, error) {
+	t.Helper()
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "project.go")
+	if err := os.WriteFile(path, []byte(source), 0o644); err != nil {
+		t.Fatalf("WriteFile(%q) failed: %v", path, err)
+	}
+	fset := token.NewFileSet()
+	pkgs, err := parser.ParseDirEx(fset, dir, parser.Config{})
+	if err != nil {
+		t.Fatalf("ParseDirEx(%q) failed: %v", dir, err)
+	}
+	pkg, err := cl.NewPackage("example.com/project", pkgs["project"], &cl.Config{Fset: fset, Outline: true})
+	if err != nil {
+		return nil, err
+	}
+	return pkg.Types, nil
+}
+
+func requireOutlineError(t *testing.T, source string, fragments ...string) {
+	t.Helper()
+
+	_, err := loadOutlinePackage(t, source)
+	if err == nil {
+		t.Fatal("expected NewPackage to fail")
+	}
+	for _, fragment := range fragments {
+		if !strings.Contains(err.Error(), fragment) {
+			t.Fatalf("expected error to contain %q, got %v", fragment, err)
+		}
+	}
 }
 
 func TestTypeParamsFunc(t *testing.T) {
