@@ -22,6 +22,7 @@ import (
 	gotoken "go/token"
 	"go/types"
 	"log"
+	"os"
 	"reflect"
 	"sort"
 	"strconv"
@@ -210,6 +211,7 @@ type Config struct {
 type nodeInterp struct {
 	fset       *token.FileSet
 	files      map[string]*ast.File
+	codes      map[string][]byte
 	relBaseDir string
 }
 
@@ -232,9 +234,17 @@ func (p *nodeInterp) LoadExpr(node ast.Node) string {
 		return ""
 	}
 	pos := p.fset.Position(start)
-	f := p.files[pos.Filename]
 	n := int(node.End() - start)
-	return string(f.Code[pos.Offset : pos.Offset+n])
+	code := p.codes[pos.Filename]
+	if code == nil {
+		src, err := os.ReadFile(pos.Filename)
+		if err != nil {
+			return ""
+		}
+		code = src
+		p.codes[pos.Filename] = code
+	}
+	return string(code[pos.Offset : pos.Offset+n])
 }
 
 func (p *nodeInterp) ProjFile() *ast.File {
@@ -360,6 +370,7 @@ type pkgCtx struct {
 
 	goxMainClass string
 	goxMain      int32 // normal gox files with main func
+	outline      bool
 }
 
 type pkgImp struct {
@@ -577,7 +588,13 @@ func NewPackage(pkgPath string, pkg *ast.Package, conf *Config) (p *gogen.Packag
 	fset := conf.Fset
 	files := pkg.Files
 	interp := &nodeInterp{
-		fset: fset, files: files, relBaseDir: relBaseDir,
+		fset:       fset,
+		files:      files,
+		codes:      make(map[string][]byte, len(pkg.Files)),
+		relBaseDir: relBaseDir,
+	}
+	for filename, f := range files {
+		interp.codes[filename] = f.Code
 	}
 	ctx := &pkgCtx{
 		fset:       fset,
@@ -587,6 +604,7 @@ func NewPackage(pkgPath string, pkg *ast.Package, conf *Config) (p *gogen.Packag
 		overpos:    make(map[string]token.Pos),
 		syms:       make(map[string]loader),
 		generics:   make(map[string]bool),
+		outline:    conf.Outline,
 	}
 	confGox := &gogen.Config{
 		Types:           conf.Types,
