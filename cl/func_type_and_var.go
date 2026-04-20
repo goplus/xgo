@@ -46,7 +46,7 @@ func toRecv(ctx *blockCtx, recv *ast.FieldList) *types.Var {
 	if star {
 		t = types.NewPointer(t)
 	}
-	ret := ctx.pkg.NewParam(v.Pos(), name, t)
+	ret := ctx.pkg.NewRecv(v.Pos(), name, t)
 	if rec := ctx.recorder(); rec != nil {
 		dRecv := recv.List[0]
 		if names := dRecv.Names; len(names) == 1 {
@@ -76,7 +76,7 @@ func toResults(ctx *blockCtx, in *ast.FieldList) *types.Tuple {
 	n := len(flds)
 	args := make([]*types.Var, 0, n)
 	for _, fld := range flds {
-		args = toParam(ctx, fld, args)
+		args = toResult(ctx, fld, args)
 	}
 	return types.NewTuple(args...)
 }
@@ -103,6 +103,22 @@ func toParam(ctx *blockCtx, fld *ast.Field, args []*gogen.Param) []*gogen.Param 
 	}
 	for _, name := range fld.Names {
 		param := pkg.NewParamEx(name.Pos(), name.Name, typ, isOptional)
+		args = append(args, param)
+		if rec := ctx.recorder(); rec != nil {
+			rec.Def(name, param)
+		}
+	}
+	return args
+}
+
+func toResult(ctx *blockCtx, fld *ast.Field, args []*gogen.Param) []*gogen.Param {
+	typ := toType(ctx, fld.Type)
+	pkg := ctx.pkg
+	if len(fld.Names) == 0 {
+		return append(args, pkg.NewResult(fld.Pos(), "", typ))
+	}
+	for _, name := range fld.Names {
+		param := pkg.NewResult(name.Pos(), name.Name, typ)
 		args = append(args, param)
 		if rec := ctx.recorder(); rec != nil {
 			rec.Def(name, param)
