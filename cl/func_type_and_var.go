@@ -557,7 +557,17 @@ func instantiate(ctx *blockCtx, exprX ast.Expr, indices ...ast.Expr) types.Type 
 	for i, index := range indices {
 		idx[i] = toType(ctx, index)
 	}
-	typ := ctx.pkg.Instantiate(x, idx, exprX)
+	var typ types.Type
+	if ctx.outline {
+		var err error
+		typ, err = types.Instantiate(nil, x, idx, false)
+		if err != nil {
+			ctx.handleErrorf(exprX.Pos(), exprX.End(), "%v", err)
+			return types.Typ[types.Invalid]
+		}
+	} else {
+		typ = ctx.pkg.Instantiate(x, idx, exprX)
+	}
 	if rec := ctx.recorder(); rec != nil {
 		rec.instantiate(exprX, x, typ)
 	}
