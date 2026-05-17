@@ -268,7 +268,7 @@ onMsg "2", => {
 
 We call `onStart` and `onMsg` to listen events. `onStart` is called when the program is started. And `onMsg` is called when someone calls `broadcast` to broadcast a message.
 
-When the program starts, Kai says `Where do you come from?`, and then broadcasts the message `1`. Who will recieve this message? Let's see codes in [Jaime.spx](https://github.com/goplus/spx/blob/v1/tutorial/01-Weather/Jaime.spx):
+When the program starts, Kai says `Where do you come from?`, and then broadcasts the message `1`. Who will receive this message? Let's see codes in [Jaime.spx](https://github.com/goplus/spx/blob/v1/tutorial/01-Weather/Jaime.spx):
 
 ```coffee
 onMsg "1", => {
@@ -277,7 +277,7 @@ onMsg "1", => {
 }
 ```
 
-Yes, Jaime recieves the message `1` and says `I come from England.`. Then he broadcasts the message `2`. Kai recieves it and says `What's the climate like in your country?`.
+Yes, Jaime receives the message `1` and says `I come from England.`. Then he broadcasts the message `2`. Kai receives it and says `What's the climate like in your country?`.
 
 The following procedures are very similar. In this way you can implement dialogues between multiple actors.
 
