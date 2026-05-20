@@ -1992,7 +1992,7 @@ func compileComprehensionExpr(ctx *blockCtx, lhs int, v *ast.ComprehensionExpr) 
 	kind := comprehensionKind(v)
 	pkg, cb := ctx.pkg, ctx.cb
 	var results *types.Tuple
-	var ret *gogen.Param
+	var ret *types.Var
 	if v.Elt == nil {
 		boolean := pkg.NewParam(token.NoPos, nameOk, types.Typ[types.Bool])
 		results = types.NewTuple(boolean)
@@ -2111,10 +2111,11 @@ func compileErrWrapExpr(ctx *blockCtx, lhs int, v *ast.ErrWrapExpr, inFlags int)
 
 	var ret []*types.Var
 	if n > 0 {
+		pkgTypes := pkg.Types
 		i, retName := 0, nameRet
-		ret = make([]*gogen.Param, n)
+		ret = make([]*types.Var, n)
 		for {
-			ret[i] = pkg.NewAutoParam(retName)
+			ret[i] = types.NewParam(token.NoPos, pkgTypes, retName, results.At(i).Type())
 			i++
 			if i >= n {
 				break
