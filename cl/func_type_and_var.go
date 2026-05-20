@@ -94,7 +94,7 @@ func toParams(ctx *blockCtx, flds []*ast.Field) (typ *types.Tuple, variadic bool
 	return types.NewTuple(args...), ok
 }
 
-func toParam(ctx *blockCtx, fld *ast.Field, args []*gogen.Param) []*gogen.Param {
+func toParam(ctx *blockCtx, fld *ast.Field, args []*types.Var) []*types.Var {
 	typ := toType(ctx, fld.Type)
 	pkg := ctx.pkg
 	isOptional := fld.Optional.IsValid()
