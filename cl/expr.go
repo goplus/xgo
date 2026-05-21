@@ -1991,24 +1991,23 @@ func compileComprehensionExpr(ctx *blockCtx, lhs int, v *ast.ComprehensionExpr) 
 	)
 	kind := comprehensionKind(v)
 	pkg, cb := ctx.pkg, ctx.cb
+	pkgTypes := pkg.Types
 	var results *types.Tuple
 	var ret *types.Var
 	if v.Elt == nil {
-		boolean := pkg.NewParam(token.NoPos, nameOk, types.Typ[types.Bool])
+		boolean := types.NewParam(token.NoPos, pkgTypes, nameOk, types.Typ[types.Bool])
 		results = types.NewTuple(boolean)
 	} else {
-		ret = pkg.NewAutoParam(nameRet)
+		// use tyInvalid as unbounded return type
+		ret = types.NewParam(token.NoPos, pkgTypes, nameRet, types.Typ[types.Invalid])
 		if kind == comprehensionSelect && lhs == 2 {
-			boolean := pkg.NewParam(token.NoPos, nameOk, types.Typ[types.Bool])
+			boolean := types.NewParam(token.NoPos, pkgTypes, nameOk, types.Typ[types.Bool])
 			results = types.NewTuple(ret, boolean)
 		} else {
 			results = types.NewTuple(ret)
 		}
 	}
 	cb.NewClosure(nil, results, false).BodyStart(pkg)
-	if kind == comprehensionMap {
-		cb.VarRef(ret).ZeroLit(ret.Type()).Assign(1)
-	}
 	end := 0
 	for i := len(v.Fors) - 1; i >= 0; i-- {
 		names := make([]string, 0, 2)
@@ -2040,21 +2039,30 @@ func compileComprehensionExpr(ctx *blockCtx, lhs int, v *ast.ComprehensionExpr) 
 		}
 		end++
 	}
+	stk := cb.InternalStack()
 	switch kind {
 	case comprehensionList:
 		// _xgo_ret = append(_xgo_ret, elt)
+		compileExpr(ctx, 1, v.Elt)
+		e := stk.Pop()
+		*ret = *types.NewVar(token.NoPos, pkgTypes, nameRet, types.NewSlice(e.Type))
 		cb.VarRef(ret)
 		cb.Val(pkg.Builtin().Ref("append"))
 		cb.Val(ret)
-		compileExpr(ctx, 1, v.Elt)
+		stk.Push(e)
 		cb.Call(2).Assign(1)
 	case comprehensionMap:
 		// _xgo_ret[key] = val
-		cb.Val(ret)
 		kv := v.Elt.(*ast.KeyValueExpr)
 		compileExpr(ctx, 1, kv.Key)
-		cb.IndexRef(1)
+		key := stk.Pop()
 		compileExpr(ctx, 1, kv.Value)
+		val := stk.Pop()
+		*ret = *types.NewVar(token.NoPos, pkgTypes, nameRet, types.NewMap(key.Type, val.Type))
+		cb.Val(ret)
+		stk.Push(key)
+		cb.IndexRef(1)
+		stk.Push(val)
 		cb.Assign(1)
 	default:
 		if v.Elt == nil {
@@ -2064,6 +2072,8 @@ func compileComprehensionExpr(ctx *blockCtx, lhs int, v *ast.ComprehensionExpr) 
 		} else {
 			// return elt, true
 			compileExpr(ctx, 1, v.Elt)
+			e := stk.Get(-1)
+			*ret = *types.NewVar(token.NoPos, pkgTypes, nameRet, e.Type)
 			n := 1
 			if lhs == 2 {
 				cb.Val(true)
@@ -2074,6 +2084,9 @@ func compileComprehensionExpr(ctx *blockCtx, lhs int, v *ast.ComprehensionExpr) 
 	}
 	for i := 0; i < end; i++ {
 		cb.End()
+	}
+	if kind == comprehensionMap {
+		cb.VarRef(ret).MapLit(ret.Type(), 0, v).Assign(1).MoveLastStmtTo(0)
 	}
 	cb.Return(0).End().Call(0)
 }
