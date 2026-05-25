@@ -688,7 +688,7 @@ func makeMainSig(recv *types.Var, f *types.Func) *types.Signature {
 func genClassfname(ctx *blockCtx, c *classFile) {
 	pkg := ctx.pkg
 	recv := toRecv(ctx, ctx.classRecv)
-	ret := types.NewTuple(pkg.NewParam(token.NoPos, "", types.Typ[types.String]))
+	ret := types.NewTuple(pkg.NewParam(token.NoPos, "", types.Typ[types.String], false))
 	pkg.NewFunc(recv, "Classfname", nil, ret, false).BodyStart(pkg).
 		Val(c.clsfile).Return(1).
 		End()

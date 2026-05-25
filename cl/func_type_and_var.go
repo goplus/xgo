@@ -46,7 +46,7 @@ func toRecv(ctx *blockCtx, recv *ast.FieldList) *types.Var {
 	if star {
 		t = types.NewPointer(t)
 	}
-	ret := ctx.pkg.NewParam(v.Pos(), name, t)
+	ret := ctx.pkg.NewParam(v.Pos(), name, t, false)
 	if rec := ctx.recorder(); rec != nil {
 		dRecv := recv.List[0]
 		if names := dRecv.Names; len(names) == 1 {
@@ -99,10 +99,10 @@ func toParam(ctx *blockCtx, fld *ast.Field, args []*types.Var) []*types.Var {
 	pkg := ctx.pkg
 	isOptional := fld.Optional.IsValid()
 	if len(fld.Names) == 0 {
-		return append(args, pkg.NewParamEx(fld.Pos(), "", typ, isOptional))
+		return append(args, pkg.NewParam(fld.Pos(), "", typ, isOptional))
 	}
 	for _, name := range fld.Names {
-		param := pkg.NewParamEx(name.Pos(), name.Name, typ, isOptional)
+		param := pkg.NewParam(name.Pos(), name.Name, typ, isOptional)
 		args = append(args, param)
 		if rec := ctx.recorder(); rec != nil {
 			rec.Def(name, param)
