@@ -1396,7 +1396,7 @@ func makeLambdaParams(ctx *blockCtx, pos, end token.Pos, lhs []*ast.Ident, in *t
 	}
 	params := make([]*types.Var, n)
 	for i, name := range lhs {
-		param := pkg.NewParam(name.Pos(), name.Name, in.At(i).Type())
+		param := pkg.NewParam(name.Pos(), name.Name, in.At(i).Type(), false)
 		params[i] = param
 		if rec := ctx.recorder(); rec != nil {
 			rec.Def(name, param)
@@ -1412,7 +1412,7 @@ func makeLambdaResults(pkg *gogen.Package, out *types.Tuple) *types.Tuple {
 	}
 	results := make([]*types.Var, nout)
 	for i := 0; i < nout; i++ {
-		results[i] = pkg.NewParam(token.NoPos, "", out.At(i).Type())
+		results[i] = pkg.NewParam(token.NoPos, "", out.At(i).Type(), false)
 	}
 	return types.NewTuple(results...)
 }
@@ -1655,11 +1655,11 @@ func sigRetFunc(pkg *gogen.Package, isList bool) *types.Signature {
 }
 
 func anyParam(pkg *gogen.Package) *types.Var {
-	return pkg.NewParam(token.NoPos, "", gogen.TyEmptyInterface)
+	return pkg.NewParam(token.NoPos, "", gogen.TyEmptyInterface, false)
 }
 
 func anySliceParam(pkg *gogen.Package) *types.Var {
-	return pkg.NewParam(token.NoPos, "", types.NewSlice(gogen.TyEmptyInterface))
+	return pkg.NewParam(token.NoPos, "", types.NewSlice(gogen.TyEmptyInterface), false)
 }
 
 const (
