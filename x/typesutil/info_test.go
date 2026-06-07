@@ -650,7 +650,7 @@ println sum
 008:  3:39 | i                   *ast.Ident                     | var     : int | variable
 009:  3:39 | i % 2               *ast.BinaryExpr                | value   : int | value
 010:  3:39 | i%2 == 1            *ast.BinaryExpr                | value   : untyped bool | value
-011:  3:39 | i%2 == 1 && x > 3   *ast.BinaryExpr                | value   : untyped bool | value
+011:  3:39 | i%2 == 1 && x > 3   *ast.BinaryExpr                | value   : bool | value
 012:  3:41 | 2                   *ast.BasicLit                  | value   : untyped int = 2 | constant
 013:  3:46 | 1                   *ast.BasicLit                  | value   : untyped int = 1 | constant
 014:  3:51 | x                   *ast.Ident                     | var     : int | variable

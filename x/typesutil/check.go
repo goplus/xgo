@@ -267,8 +267,6 @@ func convErr(fset *token.FileSet, e error) (ret Error, ok bool) {
 		ret.Msg = v.Message("")
 	case *gogen.ImportError:
 		ret.Pos, ret.End, ret.Msg = v.Pos, v.End, v.Err.Error()
-	case *gogen.BoundTypeError:
-		ret.Pos, ret.End, ret.Msg = v.Pos, v.End, v.Error()
 	default:
 		return
 	}
