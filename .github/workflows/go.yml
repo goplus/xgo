@@ -53,7 +53,7 @@ jobs:
         cd cl; go test -tags=genjs -v .
 
     - name: Codecov
-      uses: codecov/codecov-action@v6
+      uses: codecov/codecov-action@v7
       with:
         slug: goplus/xgo
 
