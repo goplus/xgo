@@ -27,11 +27,13 @@ var mainVersionFile = "env/version.go"
 
 func checkPathExist(path string, isDir bool) bool {
 	stat, err := os.Stat(path)
-	isExists := !os.IsNotExist(err)
-	if isDir {
-		return isExists && stat.IsDir()
+	if err != nil {
+		return false
 	}
-	return isExists && !stat.IsDir()
+	if isDir {
+		return stat.IsDir()
+	}
+	return !stat.IsDir()
 }
 
 func trimRight(s string) string {
