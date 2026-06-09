@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"strings"
 	"testing"
 
 	"github.com/goplus/xgo/ast"
@@ -896,45 +895,137 @@ func foo() {
 }
 
 func TestCommentedNodesInEventHandler(t *testing.T) {
-	const input = `onStart => {
-	play "recording2"
-	show
-}
-`
-
-	fset := token.NewFileSet()
-	f, err := parser.ParseFile(fset, "main.gox", input, parser.ParseComments|parser.ParseXGoClass)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if f.ShadowEntry == nil || f.ShadowEntry.Body == nil {
-		t.Fatal("missing shadow entry body")
-	}
-
-	if len(f.ShadowEntry.Body.List) == 0 {
-		t.Fatal("shadow entry has no statements")
-	}
-	eventStmt, ok := f.ShadowEntry.Body.List[0].(*ast.ExprStmt)
-	if !ok {
-		t.Fatalf("first shadow entry stmt is %T, want *ast.ExprStmt", f.ShadowEntry.Body.List[0])
-	}
-
-	const todoText = "// TODO(sb2xbp): 'onStart' is not supported in spx"
-	commentedStmts := map[ast.Stmt]*ast.CommentGroup{
-		eventStmt: {
-			List: []*ast.Comment{{Slash: eventStmt.Pos(), Text: todoText}},
+	commentedStmts := map[ast.Stmt]*ast.CommentGroup{}
+	handler := &ast.LambdaExpr2{
+		Body: &ast.BlockStmt{
+			List: []ast.Stmt{
+				&ast.ExprStmt{X: &ast.CallExpr{
+					Fun:        &ast.Ident{Name: "play"},
+					NoParenEnd: 1,
+					Args: []ast.Expr{
+						&ast.BasicLit{Kind: token.STRING, Value: `"recording2"`},
+					},
+				}},
+				&ast.ExprStmt{X: &ast.Ident{Name: "show"}},
+			},
 		},
+	}
+	eventStmt := &ast.ExprStmt{X: &ast.CallExpr{
+		Fun:        &ast.Ident{Name: "onStart"},
+		NoParenEnd: 1,
+		Args:       []ast.Expr{handler},
+	}}
+	funcDecl := &ast.FuncDecl{
+		Name: &ast.Ident{Name: "main"},
+		Body: &ast.BlockStmt{List: []ast.Stmt{eventStmt}},
+	}
+	f := &ast.File{
+		Name:        &ast.Ident{Name: "main"},
+		Decls:       []ast.Decl{funcDecl},
+		ShadowEntry: funcDecl,
+		NoPkgDecl:   true,
+	}
+	const todoText = "// TODO(sb2xbp): 'onStart' is not supported in spx"
+	commentedStmts[eventStmt] = &ast.CommentGroup{
+		List: []*ast.Comment{{Text: todoText}},
 	}
 
 	var buf bytes.Buffer
-	node := &CommentedNodes{Node: f, CommentedStmts: commentedStmts}
-	if err := Fprint(&buf, fset, node); err != nil {
+	if err := Fprint(&buf, token.NewFileSet(), &CommentedNodes{Node: f, CommentedStmts: commentedStmts}); err != nil {
 		t.Fatal(err)
 	}
 
 	got := buf.String()
-	want := todoText + "\nonStart =>"
-	if !strings.Contains(got, want) {
-		t.Fatalf("output does not contain expected sequence:\nwant contains: %q\ngot:\n%s", want, got)
+	want := `// TODO(sb2xbp): 'onStart' is not supported in spx
+onStart => {
+	play "recording2"
+	show
+}
+`
+	if got != want {
+		t.Fatalf("got:\n%s\nwant:\n%s", got, want)
+	}
+}
+
+func TestCommentedNodesKeepsTrailingBlankLineComments(t *testing.T) {
+	commentedStmts := map[ast.Stmt]*ast.CommentGroup{}
+	newLineComment := func(text string) *NewlineStmt {
+		stmt := &NewlineStmt{}
+		commentedStmts[stmt] = &ast.CommentGroup{
+			List: []*ast.Comment{{Text: "\n" + text}},
+		}
+		return stmt
+	}
+	cmdStmt := func(name string, arg string) ast.Stmt {
+		return &ast.ExprStmt{X: &ast.CallExpr{
+			Fun:        &ast.Ident{Name: name},
+			NoParenEnd: 1,
+			Args: []ast.Expr{
+				&ast.BasicLit{Kind: token.STRING, Value: arg},
+			},
+		}}
+	}
+
+	handler := &ast.LambdaExpr2{
+		Body: &ast.BlockStmt{
+			List: []ast.Stmt{
+				&ast.ExprStmt{X: &ast.Ident{Name: "show"}},
+				cmdStmt("setCostume", `"costume1"`),
+				newLineComment("// FIXME(sb2xbp): 'text2speech_speakAndWait' needs implementation"),
+				cmdStmt("setCostume", `"costume2"`),
+				newLineComment("// FIXME(sb2xbp): 'text2speech_speakAndWait' needs implementation"),
+				cmdStmt("setCostume", `"costume3"`),
+				newLineComment("// FIXME(sb2xbp): 'text2speech_speakAndWait' needs implementation"),
+				cmdStmt("setCostume", `"costume5"`),
+				newLineComment("// FIXME(sb2xbp): 'text2speech_speakAndWait' needs implementation"),
+				cmdStmt("setCostume", `"costume4"`),
+				newLineComment("// FIXME(sb2xbp): 'text2speech_speakAndWait' needs implementation"),
+				newLineComment("// FIXME(sb2xbp): 'text2speech_setLanguage' needs implementation"),
+				newLineComment("// FIXME(sb2xbp): 'text2speech_speakAndWait' needs implementation"),
+			},
+		},
+	}
+	eventStmt := &ast.ExprStmt{X: &ast.CallExpr{
+		Fun:        &ast.Ident{Name: "onStart"},
+		NoParenEnd: 1,
+		Args:       []ast.Expr{handler},
+	}}
+	funcDecl := &ast.FuncDecl{
+		Name: &ast.Ident{Name: "main"},
+		Body: &ast.BlockStmt{List: []ast.Stmt{eventStmt}},
+	}
+	f := &ast.File{
+		Name:        &ast.Ident{Name: "main"},
+		Decls:       []ast.Decl{funcDecl},
+		ShadowEntry: funcDecl,
+		NoPkgDecl:   true,
+	}
+
+	var buf bytes.Buffer
+	if err := Fprint(&buf, token.NewFileSet(), &CommentedNodes{Node: f, CommentedStmts: commentedStmts}); err != nil {
+		t.Fatal(err)
+	}
+
+	got := buf.String()
+	want := `onStart => {
+	show
+	setCostume "costume1"
+// FIXME(sb2xbp): 'text2speech_speakAndWait' needs implementation
+	setCostume "costume2"
+// FIXME(sb2xbp): 'text2speech_speakAndWait' needs implementation
+	setCostume "costume3"
+// FIXME(sb2xbp): 'text2speech_speakAndWait' needs implementation
+	setCostume "costume5"
+// FIXME(sb2xbp): 'text2speech_speakAndWait' needs implementation
+	setCostume "costume4"
+// FIXME(sb2xbp): 'text2speech_speakAndWait' needs implementation
+	
+// FIXME(sb2xbp): 'text2speech_setLanguage' needs implementation
+	
+// FIXME(sb2xbp): 'text2speech_speakAndWait' needs implementation
+}
+`
+	if got != want {
+		t.Fatalf("got:\n%s\nwant:\n%s", got, want)
 	}
 }
