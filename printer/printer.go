@@ -165,7 +165,10 @@ func (p *printer) nextComment() {
 // before the next position in the source code and printing it does
 // not introduce implicit semicolons.
 func (p *printer) commentBefore(next token.Position) bool {
-	return p.commentOffset < next.Offset && (!p.impliedSemi || !p.commentNewline)
+	// For synthetic comments attached via CommentedStmts, the comment offset may
+	// be exactly the same as the statement's first token offset. Treat it as a
+	// leading comment to preserve expected placement.
+	return p.commentOffset != infinity && p.commentOffset <= next.Offset && (!p.impliedSemi || !p.commentNewline)
 }
 
 // commentSizeBefore returns the estimated size of the
