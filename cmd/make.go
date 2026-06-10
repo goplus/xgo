@@ -35,11 +35,13 @@ import (
 
 func checkPathExist(path string, isDir bool) bool {
 	stat, err := os.Lstat(path) // Note: os.Lstat() will not follow the symbolic link.
-	isExists := !os.IsNotExist(err)
-	if isDir {
-		return isExists && stat.IsDir()
+	if err != nil {
+		return false
 	}
-	return isExists && !stat.IsDir()
+	if isDir {
+		return stat.IsDir()
+	}
+	return !stat.IsDir()
 }
 
 func trimRight(s string) string {
