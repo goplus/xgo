@@ -662,7 +662,8 @@ func (f *File) End() token.Pos {
 
 // -----------------------------------------------------------------------------
 
-// EnumTypeDecl node represents an enum type declaration:
+// EnumType node represents an enum type expression used as the Type field
+// of a TypeSpec:
 //
 //	type XXX const (
 //	    XXXEnum1 = expr1
@@ -670,25 +671,28 @@ func (f *File) End() token.Pos {
 //	    ...
 //	)
 //
-// It declares XXX as a new named type and simultaneously declares
-// XXXEnum1, XXXEnum2, ... as named constants of type XXX. The underlying
-// type of XXX is inferred from the constant expressions.
-type EnumTypeDecl struct {
-	Doc    *CommentGroup // associated documentation; or nil
-	Type   token.Pos     // position of "type" keyword
-	Name   *Ident        // enum type name
-	Const  token.Pos     // position of "const" keyword
-	Lparen token.Pos     // position of "("
-	Specs  []*ValueSpec  // constant specs; len >= 0
-	Rparen token.Pos     // position of ")"
+// The TypeSpec's Name holds XXX; EnumType holds the `const (...)` part.
+type EnumType struct {
+	Const  token.Pos    // position of "const" keyword
+	Lparen token.Pos    // position of '(', if any
+	Specs  []Spec       // constant specs; len >= 0
+	Rparen token.Pos    // position of ')', if any
 }
 
 // Pos returns position of first character belonging to the node.
-func (d *EnumTypeDecl) Pos() token.Pos { return d.Type }
+func (t *EnumType) Pos() token.Pos { return t.Const }
 
 // End returns position of first character immediately after the node.
-func (d *EnumTypeDecl) End() token.Pos { return d.Rparen + 1 }
+func (t *EnumType) End() token.Pos {
+	if t.Rparen != token.NoPos {
+		return t.Rparen + 1
+	}
+	if n := len(t.Specs); n > 0 {
+		return t.Specs[n-1].End()
+	}
+	return t.Const + 5 // len("const")
+}
 
-func (*EnumTypeDecl) declNode() {}
+func (*EnumType) exprNode() {}
 
 // -----------------------------------------------------------------------------

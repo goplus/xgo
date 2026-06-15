@@ -131,3 +131,13 @@ When adding new syntax to XGo, you must determine whether it belongs in the Mini
   - Ensure all code examples in documentation are runnable and correct
   - Verify documentation accurately reflects implemented behavior
   - Check that TOC links work correctly
+
+### Coverage Policy
+
+**Unit test coverage must never decrease.** Before submitting a PR:
+
+1. Measure coverage for affected packages: `go test -coverprofile=coverage.out ./pkg/...`
+2. Compare with the base branch coverage using `go tool cover -func=coverage.out`
+3. Any PR that reduces statement coverage in any affected package is rejected
+4. New code paths must be covered by new or existing tests
+5. Removing dead code that was previously counted as covered requires adding equivalent coverage elsewhere

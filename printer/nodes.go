@@ -1063,6 +1063,9 @@ func (p *printer) expr1(expr ast.Expr, prec1, depth int) {
 			p.print(x.Colon, token.COLON)
 			p.expr0(x.Y, depth+1)
 		*/
+	case *ast.EnumType:
+		p.enumType(x)
+
 	case *ast.SliceLit:
 		p.print(token.LBRACK)
 		p.exprList(x.Lbrack, x.Elts, depth+1, commaTerm, x.Rbrack, x.Incomplete)
@@ -2109,33 +2112,25 @@ func (p *printer) funcDecl(d *ast.FuncDecl) {
 	p.funcBody(p.distanceFrom(d.Pos(), startCol), vtab, d.Body)
 }
 
-func (p *printer) enumTypeDecl(d *ast.EnumTypeDecl) {
-	p.setComment(d.Doc)
-	p.print(d.Type, token.TYPE, blank)
-	p.expr(d.Name)
-	p.print(blank, token.CONST, blank)
-	p.setPos(d.Lparen)
+func (p *printer) enumType(x *ast.EnumType) {
+	p.setPos(x.Const)
+	p.print(token.CONST, blank)
+	p.setPos(x.Lparen)
 	p.print(token.LPAREN)
-	if n := len(d.Specs); n > 0 {
+	if n := len(x.Specs); n > 0 {
 		p.print(indent, formfeed)
-		keepType := keepTypeColumn(func() []ast.Spec {
-			specs := make([]ast.Spec, n)
-			for i, s := range d.Specs {
-				specs[i] = s
-			}
-			return specs
-		}())
+		keepType := keepTypeColumn(x.Specs)
 		var line int
-		for i, s := range d.Specs {
+		for i, s := range x.Specs {
 			if i > 0 {
 				p.linebreak(p.lineFor(s.Pos()), 1, ignore, p.linesFrom(line) > 0)
 			}
 			p.recordLine(&line)
-			p.valueSpec(s, keepType[i])
+			p.valueSpec(s.(*ast.ValueSpec), keepType[i])
 		}
 		p.print(unindent, formfeed)
 	}
-	p.setPos(d.Rparen)
+	p.setPos(x.Rparen)
 	p.print(token.RPAREN)
 }
 
@@ -2171,8 +2166,6 @@ func (p *printer) decl(decl ast.Decl) {
 		p.funcDecl(d)
 	case *ast.OverloadFuncDecl:
 		p.overloadFuncDecl(d)
-	case *ast.EnumTypeDecl:
-		p.enumTypeDecl(d)
 	default:
 		panic("unreachable")
 	}

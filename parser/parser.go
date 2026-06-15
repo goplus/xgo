@@ -4083,30 +4083,35 @@ func (p *parser) parseTypeSpec(doc *ast.CommentGroup, _ token.Token, _ int) ast.
 	return spec
 }
 
-// parseEnumTypeDecl parses `type XXX const (...)` enum type declarations.
-func (p *parser) parseEnumTypeDecl(doc *ast.CommentGroup, typePos token.Pos) *ast.EnumTypeDecl {
+// parseEnumTypeDecl parses `type XXX const (...)` and returns a *ast.GenDecl
+// containing a *ast.TypeSpec whose Type is *ast.EnumType.
+func (p *parser) parseEnumTypeDecl(doc *ast.CommentGroup, typePos token.Pos) *ast.GenDecl {
 	if p.trace {
-		defer un(trace(p, "EnumTypeDecl"))
+		defer un(trace(p, "EnumType"))
 	}
 
 	ident := p.parseIdent()
-	decl := &ast.EnumTypeDecl{
-		Doc:   doc,
-		Type:  typePos,
-		Name:  ident,
+	spec := &ast.TypeSpec{Doc: doc, Name: ident}
+	p.declare(spec, nil, p.topScope, ast.Typ, ident)
+
+	enumType := &ast.EnumType{
 		Const: p.expect(token.CONST),
 	}
-	p.declare(ident, nil, p.topScope, ast.Typ, ident)
-
-	decl.Lparen = p.expect(token.LPAREN)
+	enumType.Lparen = p.expect(token.LPAREN)
 	for iota := 0; p.tok != token.RPAREN && p.tok != token.EOF; iota++ {
-		spec := p.parseValueSpec(p.leadComment, token.CONST, iota).(*ast.ValueSpec)
-		decl.Specs = append(decl.Specs, spec)
+		enumType.Specs = append(enumType.Specs, p.parseValueSpec(p.leadComment, token.CONST, iota))
 	}
-	decl.Rparen = p.expect(token.RPAREN)
+	enumType.Rparen = p.expect(token.RPAREN)
+	spec.Type = enumType
 	p.expectSemi()
+	spec.Comment = p.lineComment
 
-	return decl
+	return &ast.GenDecl{
+		Doc:    doc,
+		TokPos: typePos,
+		Tok:    token.TYPE,
+		Specs:  []ast.Spec{spec},
+	}
 }
 
 func (p *parser) parseGenDecl(keyword token.Token, f parseSpecFunction) *ast.GenDecl {

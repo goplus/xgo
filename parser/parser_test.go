@@ -452,3 +452,115 @@ onStart => {
 }
 
 // -----------------------------------------------------------------------------
+
+func TestEnumTypeDecl(t *testing.T) {
+	fset := token.NewFileSet()
+	f, err := ParseFile(fset, "/foo/bar.xgo", `package main
+
+type Color const (
+	Red = iota
+	Green
+	Blue
+)
+`, ParseComments)
+	if err != nil {
+		t.Fatal("ParseFile failed:", err)
+	}
+	if len(f.Decls) != 1 {
+		t.Fatal("TestEnumTypeDecl: expected 1 decl, got", len(f.Decls))
+	}
+	genDecl, ok := f.Decls[0].(*ast.GenDecl)
+	if !ok || genDecl.Tok != token.TYPE {
+		t.Fatal("TestEnumTypeDecl: expected GenDecl(type)")
+	}
+	if len(genDecl.Specs) != 1 {
+		t.Fatal("TestEnumTypeDecl: expected 1 spec")
+	}
+	typeSpec, ok := genDecl.Specs[0].(*ast.TypeSpec)
+	if !ok {
+		t.Fatal("TestEnumTypeDecl: expected TypeSpec")
+	}
+	enumType, ok := typeSpec.Type.(*ast.EnumType)
+	if !ok {
+		t.Fatal("TestEnumTypeDecl: expected EnumType as TypeSpec.Type")
+	}
+	if len(enumType.Specs) != 3 {
+		t.Fatal("TestEnumTypeDecl: expected 3 specs, got", len(enumType.Specs))
+	}
+	if enumType.Pos() == token.NoPos {
+		t.Fatal("TestEnumTypeDecl: EnumType.Pos() is NoPos")
+	}
+	if enumType.End() == token.NoPos {
+		t.Fatal("TestEnumTypeDecl: EnumType.End() is NoPos")
+	}
+
+	// Verify Walk reaches EnumType specs (covers ast/walk.go EnumType case).
+	var names []string
+	ast.Inspect(f, func(n ast.Node) bool {
+		if id, ok := n.(*ast.Ident); ok {
+			names = append(names, id.Name)
+		}
+		return true
+	})
+	found := false
+	for _, name := range names {
+		if name == "Color" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("TestEnumTypeDecl: Walk did not visit Color ident")
+	}
+}
+
+func TestEnumTypeDeclInStmt(t *testing.T) {
+	fset := token.NewFileSet()
+	f, err := ParseFile(fset, "/foo/bar.xgo", `package main
+
+func main() {
+	type Status const (
+		Active = iota
+		Inactive
+	)
+}
+`, ParseComments)
+	if err != nil {
+		t.Fatal("ParseFile failed:", err)
+	}
+	if len(f.Decls) != 1 {
+		t.Fatal("TestEnumTypeDeclInStmt: expected 1 decl, got", len(f.Decls))
+	}
+	fn := f.Decls[0].(*ast.FuncDecl)
+	if len(fn.Body.List) != 1 {
+		t.Fatal("TestEnumTypeDeclInStmt: expected 1 stmt, got", len(fn.Body.List))
+	}
+	declStmt := fn.Body.List[0].(*ast.DeclStmt)
+	genDecl := declStmt.Decl.(*ast.GenDecl)
+	if genDecl.Tok != token.TYPE {
+		t.Fatal("TestEnumTypeDeclInStmt: expected TYPE token")
+	}
+	typeSpec := genDecl.Specs[0].(*ast.TypeSpec)
+	if _, ok := typeSpec.Type.(*ast.EnumType); !ok {
+		t.Fatal("TestEnumTypeDeclInStmt: expected EnumType")
+	}
+}
+
+func TestEnumTypeEnd(t *testing.T) {
+	// EnumType.End() when Rparen is NoPos and there are no specs.
+	empty := &ast.EnumType{Const: 10}
+	if empty.End() != 15 { // 10 + len("const")
+		t.Fatalf("TestEnumTypeEnd: empty End()=%d, want 15", empty.End())
+	}
+	// EnumType.End() when Rparen is NoPos but there is one spec.
+	withSpec := &ast.EnumType{
+		Const: 10,
+		Specs: []ast.Spec{
+			&ast.ValueSpec{Names: []*ast.Ident{{NamePos: 20, Name: "X"}}},
+		},
+	}
+	if withSpec.End() != 21 { // ident end = 20+1
+		t.Fatalf("TestEnumTypeEnd: withSpec End()=%d, want 21", withSpec.End())
+	}
+}
+
+// -----------------------------------------------------------------------------

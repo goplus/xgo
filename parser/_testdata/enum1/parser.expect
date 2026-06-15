@@ -1,126 +1,166 @@
 package main
 
 file enum1.xgo
-ast.EnumTypeDecl:
+ast.GenDecl:
   Doc:
     ast.CommentGroup:
       List:
         ast.Comment:
           Text: // Color is an integer enum using iota.
-  Name:
-    ast.Ident:
-      Name: Color
+  Tok: type
   Specs:
-    ast.ValueSpec:
-      Names:
+    ast.TypeSpec:
+      Doc:
+        ast.CommentGroup:
+          List:
+            ast.Comment:
+              Text: // Color is an integer enum using iota.
+      Name:
         ast.Ident:
-          Name: Red
-      Values:
-        ast.Ident:
-          Name: iota
-    ast.ValueSpec:
-      Names:
-        ast.Ident:
-          Name: Green
-    ast.ValueSpec:
-      Names:
-        ast.Ident:
-          Name: Blue
-ast.EnumTypeDecl:
+          Name: Color
+      Type:
+        ast.EnumType:
+          Specs:
+            ast.ValueSpec:
+              Names:
+                ast.Ident:
+                  Name: Red
+              Values:
+                ast.Ident:
+                  Name: iota
+            ast.ValueSpec:
+              Names:
+                ast.Ident:
+                  Name: Green
+            ast.ValueSpec:
+              Names:
+                ast.Ident:
+                  Name: Blue
+ast.GenDecl:
   Doc:
     ast.CommentGroup:
       List:
         ast.Comment:
           Text: // LogLevel is a string enum.
-  Name:
-    ast.Ident:
-      Name: LogLevel
+  Tok: type
   Specs:
-    ast.ValueSpec:
-      Names:
+    ast.TypeSpec:
+      Doc:
+        ast.CommentGroup:
+          List:
+            ast.Comment:
+              Text: // LogLevel is a string enum.
+      Name:
         ast.Ident:
-          Name: Debug
-      Values:
-        ast.BasicLit:
-          Kind: STRING
-          Value: "debug"
-    ast.ValueSpec:
-      Names:
-        ast.Ident:
-          Name: Info
-      Values:
-        ast.BasicLit:
-          Kind: STRING
-          Value: "info"
-    ast.ValueSpec:
-      Names:
-        ast.Ident:
-          Name: Warn
-      Values:
-        ast.BasicLit:
-          Kind: STRING
-          Value: "warn"
-    ast.ValueSpec:
-      Names:
-        ast.Ident:
-          Name: Error
-      Values:
-        ast.BasicLit:
-          Kind: STRING
-          Value: "error"
-ast.EnumTypeDecl:
+          Name: LogLevel
+      Type:
+        ast.EnumType:
+          Specs:
+            ast.ValueSpec:
+              Names:
+                ast.Ident:
+                  Name: Debug
+              Values:
+                ast.BasicLit:
+                  Kind: STRING
+                  Value: "debug"
+            ast.ValueSpec:
+              Names:
+                ast.Ident:
+                  Name: Info
+              Values:
+                ast.BasicLit:
+                  Kind: STRING
+                  Value: "info"
+            ast.ValueSpec:
+              Names:
+                ast.Ident:
+                  Name: Warn
+              Values:
+                ast.BasicLit:
+                  Kind: STRING
+                  Value: "warn"
+            ast.ValueSpec:
+              Names:
+                ast.Ident:
+                  Name: Error
+              Values:
+                ast.BasicLit:
+                  Kind: STRING
+                  Value: "error"
+ast.GenDecl:
   Doc:
     ast.CommentGroup:
       List:
         ast.Comment:
           Text: // Toggle is a boolean enum.
-  Name:
-    ast.Ident:
-      Name: Toggle
+  Tok: type
   Specs:
-    ast.ValueSpec:
-      Names:
+    ast.TypeSpec:
+      Doc:
+        ast.CommentGroup:
+          List:
+            ast.Comment:
+              Text: // Toggle is a boolean enum.
+      Name:
         ast.Ident:
-          Name: Off
-      Values:
-        ast.Ident:
-          Name: false
-    ast.ValueSpec:
-      Names:
-        ast.Ident:
-          Name: On
-      Values:
-        ast.Ident:
-          Name: true
-ast.EnumTypeDecl:
+          Name: Toggle
+      Type:
+        ast.EnumType:
+          Specs:
+            ast.ValueSpec:
+              Names:
+                ast.Ident:
+                  Name: Off
+              Values:
+                ast.Ident:
+                  Name: false
+            ast.ValueSpec:
+              Names:
+                ast.Ident:
+                  Name: On
+              Values:
+                ast.Ident:
+                  Name: true
+ast.GenDecl:
   Doc:
     ast.CommentGroup:
       List:
         ast.Comment:
           Text: // Permission uses bit-flag expressions.
-  Name:
-    ast.Ident:
-      Name: Permission
+  Tok: type
   Specs:
-    ast.ValueSpec:
-      Names:
+    ast.TypeSpec:
+      Doc:
+        ast.CommentGroup:
+          List:
+            ast.Comment:
+              Text: // Permission uses bit-flag expressions.
+      Name:
         ast.Ident:
-          Name: Read
-      Values:
-        ast.BinaryExpr:
-          X:
-            ast.BasicLit:
-              Kind: INT
-              Value: 1
-          Op: <<
-          Y:
-            ast.Ident:
-              Name: iota
-    ast.ValueSpec:
-      Names:
-        ast.Ident:
-          Name: Write
-    ast.ValueSpec:
-      Names:
-        ast.Ident:
-          Name: Execute
+          Name: Permission
+      Type:
+        ast.EnumType:
+          Specs:
+            ast.ValueSpec:
+              Names:
+                ast.Ident:
+                  Name: Read
+              Values:
+                ast.BinaryExpr:
+                  X:
+                    ast.BasicLit:
+                      Kind: INT
+                      Value: 1
+                  Op: <<
+                  Y:
+                    ast.Ident:
+                      Name: iota
+            ast.ValueSpec:
+              Names:
+                ast.Ident:
+                  Name: Write
+            ast.ValueSpec:
+              Names:
+                ast.Ident:
+                  Name: Execute
