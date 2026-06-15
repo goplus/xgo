@@ -1175,6 +1175,36 @@ func (p *printer) expr1(expr ast.Expr, prec1, depth int) {
 		p.print(x.Domain)
 		p.print(&ast.BasicLit{Kind: token.STRING, Value: x.Value})
 
+	case *ast.EnumType:
+		p.setPos(x.Const)
+		p.print(token.CONST)
+		if x.Lparen.IsValid() || len(x.Specs) > 1 {
+			p.setPos(x.Lparen)
+			p.print(blank, token.LPAREN)
+			if n := len(x.Specs); n > 0 {
+				p.print(indent, formfeed)
+				if n > 1 {
+					keepType := keepTypeColumn(x.Specs)
+					var line int
+					for i, s := range x.Specs {
+						if i > 0 {
+							p.linebreak(p.lineFor(s.Pos()), 1, ignore, p.linesFrom(line) > 0)
+						}
+						p.recordLine(&line)
+						p.valueSpec(s.(*ast.ValueSpec), keepType[i])
+					}
+				} else {
+					p.spec(x.Specs[0], 1, true)
+				}
+				p.print(unindent, formfeed)
+			}
+			p.setPos(x.Rparen)
+			p.print(token.RPAREN)
+		} else if len(x.Specs) > 0 {
+			p.print(blank)
+			p.spec(x.Specs[0], 1, true)
+		}
+
 	default:
 		log.Fatalf("unreachable %T\n", x)
 	}

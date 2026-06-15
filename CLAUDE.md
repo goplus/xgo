@@ -131,3 +131,4 @@ When adding new syntax to XGo, you must determine whether it belongs in the Mini
   - Ensure all code examples in documentation are runnable and correct
   - Verify documentation accurately reflects implemented behavior
   - Check that TOC links work correctly
+- **Coverage rule**: Unit test coverage **must not decrease** across any PR. Run `go test ./... -cover` before and after your changes and compare. If coverage drops for any package, add tests to compensate before submitting.

@@ -22,6 +22,41 @@ import (
 
 // -----------------------------------------------------------------------------
 
+// EnumType represents a `const ( ... )` type expression used in a TypeSpec.
+// It appears as the Type field of *TypeSpec when the syntax
+//
+//	type XXX const (
+//	    Name1 [= Expr1]
+//	    Name2 [= Expr2]
+//	    ...
+//	)
+//
+// is used.
+type EnumType struct {
+	Const  token.Pos // position of "const" keyword
+	Lparen token.Pos // position of '(', if any
+	Specs  []Spec    // enum value specs (each *ValueSpec)
+	Rparen token.Pos // position of ')', if any
+}
+
+// Pos returns position of first character belonging to the node.
+func (x *EnumType) Pos() token.Pos { return x.Const }
+
+// End returns position of first character immediately after the node.
+func (x *EnumType) End() token.Pos {
+	if x.Rparen.IsValid() {
+		return x.Rparen + 1
+	}
+	if n := len(x.Specs); n > 0 {
+		return x.Specs[n-1].End()
+	}
+	return x.Const + token.Pos(len("const"))
+}
+
+func (*EnumType) exprNode() {}
+
+// -----------------------------------------------------------------------------
+
 // OverloadFuncDecl node represents an overload function declaration:
 //
 // `func name = (overloadFuncs)`

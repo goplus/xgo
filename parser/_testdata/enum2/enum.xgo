@@ -1,0 +1,4 @@
+package main
+
+// Single-value enum without parentheses
+type Flag const Enabled = true

@@ -1,0 +1,146 @@
+package main
+
+file enum.xgo
+ast.GenDecl:
+  Doc:
+    ast.CommentGroup:
+      List:
+        ast.Comment:
+          Text: // Integer iota enum
+  Tok: type
+  Specs:
+    ast.TypeSpec:
+      Name:
+        ast.Ident:
+          Name: Color
+      Type:
+        ast.EnumType:
+          Specs:
+            ast.ValueSpec:
+              Names:
+                ast.Ident:
+                  Name: Red
+              Values:
+                ast.Ident:
+                  Name: iota
+            ast.ValueSpec:
+              Names:
+                ast.Ident:
+                  Name: Green
+            ast.ValueSpec:
+              Names:
+                ast.Ident:
+                  Name: Blue
+ast.GenDecl:
+  Doc:
+    ast.CommentGroup:
+      List:
+        ast.Comment:
+          Text: // String enum
+  Tok: type
+  Specs:
+    ast.TypeSpec:
+      Name:
+        ast.Ident:
+          Name: LogLevel
+      Type:
+        ast.EnumType:
+          Specs:
+            ast.ValueSpec:
+              Names:
+                ast.Ident:
+                  Name: Debug
+              Values:
+                ast.BasicLit:
+                  Kind: STRING
+                  Value: "debug"
+            ast.ValueSpec:
+              Names:
+                ast.Ident:
+                  Name: Info
+              Values:
+                ast.BasicLit:
+                  Kind: STRING
+                  Value: "info"
+            ast.ValueSpec:
+              Names:
+                ast.Ident:
+                  Name: Warn
+              Values:
+                ast.BasicLit:
+                  Kind: STRING
+                  Value: "warn"
+            ast.ValueSpec:
+              Names:
+                ast.Ident:
+                  Name: Error
+              Values:
+                ast.BasicLit:
+                  Kind: STRING
+                  Value: "error"
+ast.GenDecl:
+  Doc:
+    ast.CommentGroup:
+      List:
+        ast.Comment:
+          Text: // Boolean enum
+  Tok: type
+  Specs:
+    ast.TypeSpec:
+      Name:
+        ast.Ident:
+          Name: Toggle
+      Type:
+        ast.EnumType:
+          Specs:
+            ast.ValueSpec:
+              Names:
+                ast.Ident:
+                  Name: Off
+              Values:
+                ast.Ident:
+                  Name: false
+            ast.ValueSpec:
+              Names:
+                ast.Ident:
+                  Name: On
+              Values:
+                ast.Ident:
+                  Name: true
+ast.GenDecl:
+  Doc:
+    ast.CommentGroup:
+      List:
+        ast.Comment:
+          Text: // Bit-flag enum
+  Tok: type
+  Specs:
+    ast.TypeSpec:
+      Name:
+        ast.Ident:
+          Name: Permission
+      Type:
+        ast.EnumType:
+          Specs:
+            ast.ValueSpec:
+              Names:
+                ast.Ident:
+                  Name: Read
+              Values:
+                ast.BinaryExpr:
+                  X:
+                    ast.BasicLit:
+                      Kind: INT
+                      Value: 1
+                  Op: <<
+                  Y:
+                    ast.Ident:
+                      Name: iota
+            ast.ValueSpec:
+              Names:
+                ast.Ident:
+                  Name: Write
+            ast.ValueSpec:
+              Names:
+                ast.Ident:
+                  Name: Execute

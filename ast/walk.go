@@ -452,6 +452,9 @@ func Walk(v Visitor, node Node) {
 			Walk(v, n.Default)
 		}
 
+	case *EnumType:
+		walkList(v, n.Specs)
+
 	case *OverloadFuncDecl:
 		if n.Doc != nil {
 			Walk(v, n.Doc)
