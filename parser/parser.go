@@ -4063,11 +4063,46 @@ func (p *parser) parseTypeSpec(doc *ast.CommentGroup, _ token.Token, _ int) ast.
 		spec.Assign = p.pos
 		p.next()
 	}
-	spec.Type = p.parseType()
+	if p.tok == token.CONST {
+		enum := p.parseEnumType()
+		spec.Type = enum
+		// For the non-parenthesized single-value form, parseValueSpec already
+		// consumed the semicolon, so we skip the expectSemi call below.
+		if !enum.Lparen.IsValid() {
+			spec.Comment = p.lineComment
+			return spec
+		}
+	} else {
+		spec.Type = p.parseType()
+	}
 	p.expectSemi() // call before accessing p.linecomment
 	spec.Comment = p.lineComment
 
 	return spec
+}
+
+// parseEnumType parses `const ( ValueSpec... )` as an EnumType expression
+// used in a TypeSpec.
+func (p *parser) parseEnumType() *ast.EnumType {
+	if p.trace {
+		defer un(trace(p, "EnumType"))
+	}
+	constPos := p.expect(token.CONST)
+	enum := &ast.EnumType{Const: constPos}
+	if p.tok == token.LPAREN {
+		enum.Lparen = p.pos
+		p.next()
+		for iota := 0; p.tok != token.RPAREN && p.tok != token.EOF; iota++ {
+			enum.Specs = append(enum.Specs, p.parseValueSpec(p.leadComment, token.CONST, iota))
+		}
+		enum.Rparen = p.expect(token.RPAREN)
+	} else {
+		// single-value without parens: parseValueSpec consumes its own semicolon,
+		// so we must not call expectSemi again in parseTypeSpec.
+		// We wrap it in a one-element list without Lparen/Rparen.
+		enum.Specs = append(enum.Specs, p.parseValueSpec(nil, token.CONST, 0))
+	}
+	return enum
 }
 
 func (p *parser) parseGenDecl(keyword token.Token, f parseSpecFunction) *ast.GenDecl {

@@ -1,0 +1,29 @@
+package main
+
+// Integer iota enum
+type Color const (
+	Red = iota
+	Green
+	Blue
+)
+
+// String enum
+type LogLevel const (
+	Debug = "debug"
+	Info  = "info"
+	Warn  = "warn"
+	Error = "error"
+)
+
+// Boolean enum
+type Toggle const (
+	Off = false
+	On  = true
+)
+
+// Bit-flag enum
+type Permission const (
+	Read = 1 << iota
+	Write
+	Execute
+)

@@ -1,0 +1,25 @@
+package main
+
+file enum.xgo
+ast.GenDecl:
+  Doc:
+    ast.CommentGroup:
+      List:
+        ast.Comment:
+          Text: // Single-value enum without parentheses
+  Tok: type
+  Specs:
+    ast.TypeSpec:
+      Name:
+        ast.Ident:
+          Name: Flag
+      Type:
+        ast.EnumType:
+          Specs:
+            ast.ValueSpec:
+              Names:
+                ast.Ident:
+                  Name: Enabled
+              Values:
+                ast.Ident:
+                  Name: true
