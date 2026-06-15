@@ -1365,3 +1365,103 @@ func main() {
 }
 `)
 }
+
+func TestEnumTypeInt(t *testing.T) {
+	gopClTest(t, `
+type Color const (
+	Red = iota
+	Green
+	Blue
+)
+println Red, Green, Blue
+`, `package main
+
+import "fmt"
+
+type Color int
+
+const (
+	Red Color = iota
+	Green
+	Blue
+)
+
+func main() {
+	fmt.Println(Red, Green, Blue)
+}
+`)
+}
+
+func TestEnumTypeString(t *testing.T) {
+	gopClTest(t, `
+type Level const (
+	Low  = "low"
+	High = "high"
+)
+println Low, High
+`, `package main
+
+import "fmt"
+
+type Level string
+
+const (
+	Low  Level = "low"
+	High Level = "high"
+)
+
+func main() {
+	fmt.Println(Low, High)
+}
+`)
+}
+
+func TestEnumTypeBool(t *testing.T) {
+	gopClTest(t, `
+type Flag const (
+	Off = false
+	On  = true
+)
+println Off, On
+`, `package main
+
+import "fmt"
+
+type Flag bool
+
+const (
+	Off Flag = false
+	On  Flag = true
+)
+
+func main() {
+	fmt.Println(Off, On)
+}
+`)
+}
+
+func TestEnumTypeBinaryExpr(t *testing.T) {
+	gopClTest(t, `
+type Perm const (
+	R = 1 << iota
+	W
+	X
+)
+println R, W, X
+`, `package main
+
+import "fmt"
+
+type Perm int
+
+const (
+	R Perm = 1 << iota
+	W
+	X
+)
+
+func main() {
+	fmt.Println(R, W, X)
+}
+`)
+}

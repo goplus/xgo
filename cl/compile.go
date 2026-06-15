@@ -1127,6 +1127,20 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 					ld := getTypeLoader(parent, syms, pos, end, name)
 					defs := ctx.pkg.NewTypeDefs()
 					if goFile != skippingGoFile { // is XGo file
+						// Preload enum constant names into the symbol table so
+						// they can be resolved independently. Each name points
+						// to a loader that triggers the full type+const init.
+						if enumType, ok := t.Type.(*ast.EnumType); ok {
+							for _, spec := range enumType.Specs {
+								vs := spec.(*ast.ValueSpec)
+								for _, nameIdent := range vs.Names {
+									nameIdent := nameIdent
+									initLoader(parent, syms, nameIdent.Pos(), nameIdent.End(), nameIdent.Name, func() {
+										ld.load()
+									}, true)
+								}
+							}
+						}
 						ld.typ = func() {
 							old, _ := p.SetCurFile(goFile, true)
 							defer p.RestoreCurFile(old)
@@ -1155,9 +1169,30 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 								if debugLoad {
 									log.Println("==> Load > InitType", name)
 								}
-								decl.InitType(ctx.pkg, toType(ctx, t.Type))
-								if rec := ctx.recorder(); rec != nil {
-									rec.Def(tName, decl.Type().Obj())
+								if enumType, ok := t.Type.(*ast.EnumType); ok {
+									// Enum type: infer underlying type and load constants.
+									underlying := inferEnumUnderlyingType(ctx, enumType.Specs)
+									if underlying == nil {
+										ctx.handleErrorf(enumType.Const, enumType.End(),
+											"cannot infer underlying type for enum %s", name)
+										underlying = types.Typ[types.Invalid]
+									}
+									decl.InitType(ctx.pkg, underlying)
+									if rec := ctx.recorder(); rec != nil {
+										rec.Def(tName, decl.Type().Obj())
+									}
+									namedTyp := decl.Type()
+									loadEnumConsts(ctx, enumType, namedTyp)
+									// Remove enum constant names from syms so they
+									// are not loaded again.
+									for _, spec := range enumType.Specs {
+										removeNames(syms, spec.(*ast.ValueSpec).Names)
+									}
+								} else {
+									decl.InitType(ctx.pkg, toType(ctx, t.Type))
+									if rec := ctx.recorder(); rec != nil {
+										rec.Def(tName, decl.Type().Obj())
+									}
 								}
 							}
 						}

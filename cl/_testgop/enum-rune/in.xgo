@@ -1,0 +1,9 @@
+type Vowel const (
+	A = 'a'
+	E = 'e'
+	I = 'i'
+	O = 'o'
+	U = 'u'
+)
+
+println A, E, I

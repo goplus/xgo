@@ -1,0 +1,8 @@
+type Scale const (
+	Tiny   = 0.25
+	Small  = 0.5
+	Normal = 1.0
+	Large  = 2.0
+)
+
+println Tiny, Small, Normal, Large

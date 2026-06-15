@@ -1,0 +1,7 @@
+type Color const (
+	Red   = iota
+	Green
+	Blue
+)
+
+println Red, Green, Blue

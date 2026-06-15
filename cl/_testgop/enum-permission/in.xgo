@@ -1,0 +1,7 @@
+type Permission const (
+	Read    = 1 << iota
+	Write
+	Execute
+)
+
+println Read, Write, Execute

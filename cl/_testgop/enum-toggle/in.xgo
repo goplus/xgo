@@ -1,0 +1,6 @@
+type Toggle const (
+	Off = false
+	On  = true
+)
+
+println Off, On

@@ -1,0 +1,8 @@
+type LogLevel const (
+	Debug = "debug"
+	Info  = "info"
+	Warn  = "warn"
+	Error = "error"
+)
+
+println Debug, Info, Warn, Error
