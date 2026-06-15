@@ -462,6 +462,15 @@ func Walk(v Visitor, node Node) {
 		Walk(v, n.Name)
 		walkList(v, n.Funcs)
 
+	case *EnumTypeDecl:
+		if n.Doc != nil {
+			Walk(v, n.Doc)
+		}
+		Walk(v, n.Name)
+		for _, s := range n.Specs {
+			Walk(v, s)
+		}
+
 	case *EnvExpr:
 		Walk(v, n.Name)
 

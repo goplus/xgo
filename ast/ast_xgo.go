@@ -661,3 +661,34 @@ func (f *File) End() token.Pos {
 }
 
 // -----------------------------------------------------------------------------
+
+// EnumTypeDecl node represents an enum type declaration:
+//
+//	type XXX const (
+//	    XXXEnum1 = expr1
+//	    XXXEnum2 = expr2
+//	    ...
+//	)
+//
+// It declares XXX as a new named type and simultaneously declares
+// XXXEnum1, XXXEnum2, ... as named constants of type XXX. The underlying
+// type of XXX is inferred from the constant expressions.
+type EnumTypeDecl struct {
+	Doc    *CommentGroup // associated documentation; or nil
+	Type   token.Pos     // position of "type" keyword
+	Name   *Ident        // enum type name
+	Const  token.Pos     // position of "const" keyword
+	Lparen token.Pos     // position of "("
+	Specs  []*ValueSpec  // constant specs; len >= 0
+	Rparen token.Pos     // position of ")"
+}
+
+// Pos returns position of first character belonging to the node.
+func (d *EnumTypeDecl) Pos() token.Pos { return d.Type }
+
+// End returns position of first character immediately after the node.
+func (d *EnumTypeDecl) End() token.Pos { return d.Rparen + 1 }
+
+func (*EnumTypeDecl) declNode() {}
+
+// -----------------------------------------------------------------------------

@@ -1,0 +1,29 @@
+package main
+
+// Color is an integer enum using iota.
+type Color const (
+	Red = iota
+	Green
+	Blue
+)
+
+// LogLevel is a string enum.
+type LogLevel const (
+	Debug = "debug"
+	Info  = "info"
+	Warn  = "warn"
+	Error = "error"
+)
+
+// Toggle is a boolean enum.
+type Toggle const (
+	Off = false
+	On  = true
+)
+
+// Permission uses bit-flag expressions.
+type Permission const (
+	Read = 1 << iota
+	Write
+	Execute
+)

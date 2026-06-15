@@ -3834,7 +3834,20 @@ func (p *parser) parseStmt(flags int) (s ast.Stmt) {
 
 	switch p.tok {
 	case token.TYPE:
-		s = &ast.DeclStmt{Decl: p.parseGenDecl(p.tok, p.parseTypeSpec)}
+		doc := p.leadComment
+		typePos := p.pos
+		p.next() // consume 'type'
+		if p.tok == token.IDENT {
+			identPos, identLit := p.pos, p.lit
+			p.next() // consume ident
+			if p.tok == token.CONST {
+				p.unget(identPos, token.IDENT, identLit)
+				s = &ast.DeclStmt{Decl: p.parseEnumTypeDecl(doc, typePos)}
+				break
+			}
+			p.unget(identPos, token.IDENT, identLit)
+		}
+		s = &ast.DeclStmt{Decl: p.parseGenDeclFrom(doc, token.TYPE, typePos, p.parseTypeSpec)}
 	case token.CONST, token.VAR:
 		s = &ast.DeclStmt{Decl: p.parseGenDecl(p.tok, p.parseValueSpec)}
 	case
@@ -4070,6 +4083,32 @@ func (p *parser) parseTypeSpec(doc *ast.CommentGroup, _ token.Token, _ int) ast.
 	return spec
 }
 
+// parseEnumTypeDecl parses `type XXX const (...)` enum type declarations.
+func (p *parser) parseEnumTypeDecl(doc *ast.CommentGroup, typePos token.Pos) *ast.EnumTypeDecl {
+	if p.trace {
+		defer un(trace(p, "EnumTypeDecl"))
+	}
+
+	ident := p.parseIdent()
+	decl := &ast.EnumTypeDecl{
+		Doc:   doc,
+		Type:  typePos,
+		Name:  ident,
+		Const: p.expect(token.CONST),
+	}
+	p.declare(ident, nil, p.topScope, ast.Typ, ident)
+
+	decl.Lparen = p.expect(token.LPAREN)
+	for iota := 0; p.tok != token.RPAREN && p.tok != token.EOF; iota++ {
+		spec := p.parseValueSpec(p.leadComment, token.CONST, iota).(*ast.ValueSpec)
+		decl.Specs = append(decl.Specs, spec)
+	}
+	decl.Rparen = p.expect(token.RPAREN)
+	p.expectSemi()
+
+	return decl
+}
+
 func (p *parser) parseGenDecl(keyword token.Token, f parseSpecFunction) *ast.GenDecl {
 	if p.trace {
 		defer un(trace(p, "GenDecl("+keyword.String()+")"))
@@ -4079,6 +4118,35 @@ func (p *parser) parseGenDecl(keyword token.Token, f parseSpecFunction) *ast.Gen
 	}
 	doc := p.leadComment
 	pos := p.expect(keyword)
+	var lparen, rparen token.Pos
+	var list []ast.Spec
+	if p.tok == token.LPAREN {
+		lparen = p.pos
+		p.next()
+		for iota := 0; p.tok != token.RPAREN && p.tok != token.EOF; iota++ {
+			list = append(list, f(p.leadComment, keyword, iota))
+		}
+		rparen = p.expect(token.RPAREN)
+		p.expectSemi()
+	} else {
+		list = append(list, f(nil, keyword, 0))
+	}
+
+	return &ast.GenDecl{
+		Doc:    doc,
+		TokPos: pos,
+		Tok:    keyword,
+		Lparen: lparen,
+		Specs:  list,
+		Rparen: rparen,
+	}
+}
+
+// parseGenDeclFrom is like parseGenDecl but with the keyword already consumed.
+func (p *parser) parseGenDeclFrom(doc *ast.CommentGroup, keyword token.Token, pos token.Pos, f parseSpecFunction) *ast.GenDecl {
+	if p.trace {
+		defer un(trace(p, "GenDecl("+keyword.String()+")"))
+	}
 	var lparen, rparen token.Pos
 	var list []ast.Spec
 	if p.tok == token.LPAREN {
@@ -4339,7 +4407,31 @@ func (p *parser) parseDecl(sync map[token.Token]bool) ast.Decl {
 	case token.CONST, token.VAR:
 		f = p.parseValueSpec
 	case token.TYPE:
-		f = p.parseTypeSpec
+		// Peek ahead to detect `type IDENT const (` - enum type declaration.
+		doc := p.leadComment
+		typePos := p.pos
+		p.next() // consume 'type'
+		if p.tok == token.IDENT {
+			// Save ident info to restore via unget if needed.
+			identPos, identLit := p.pos, p.lit
+			p.next() // consume ident
+			if p.tok == token.CONST {
+				// This is `type XXX const (...)` - enum type declaration.
+				p.unget(identPos, token.IDENT, identLit) // restore ident
+				decl := p.parseEnumTypeDecl(doc, typePos)
+				if p.errors.Len() != 0 {
+					p.advance(sync)
+				}
+				return decl
+			}
+			// Not an enum - restore ident and fall through to parseGenDecl.
+			// We already consumed 'type', so we need to call parseGenDecl
+			// logic manually. Put the ident back and handle via inline parsing.
+			p.unget(identPos, token.IDENT, identLit)
+		}
+		// Fall through to normal type declaration.
+		// We already consumed 'type', so call parseGenDecl equivalent directly.
+		return p.parseGenDeclFrom(doc, token.TYPE, typePos, p.parseTypeSpec)
 	case token.FUNC:
 		decl, call := p.parseFuncDeclOrCall()
 		if decl != nil {
