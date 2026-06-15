@@ -563,4 +563,61 @@ func TestEnumTypeEnd(t *testing.T) {
 	}
 }
 
+// TestGroupedTypeDecl exercises the LPAREN branch of parseGenDeclFrom,
+// which is reached when a top-level TYPE declaration uses parenthesised
+// grouping: `type ( T1 = int; T2 = string )`.
+func TestGroupedTypeDecl(t *testing.T) {
+	fset := token.NewFileSet()
+	f, err := ParseFile(fset, "/foo/bar.xgo", `package main
+
+type (
+	MyInt    = int
+	MyString = string
+)
+`, ParseComments)
+	if err != nil {
+		t.Fatal("TestGroupedTypeDecl: ParseFile failed:", err)
+	}
+	if len(f.Decls) != 1 {
+		t.Fatalf("TestGroupedTypeDecl: expected 1 decl, got %d", len(f.Decls))
+	}
+	genDecl, ok := f.Decls[0].(*ast.GenDecl)
+	if !ok || genDecl.Tok != token.TYPE {
+		t.Fatal("TestGroupedTypeDecl: expected GenDecl(type)")
+	}
+	if len(genDecl.Specs) != 2 {
+		t.Fatalf("TestGroupedTypeDecl: expected 2 specs, got %d", len(genDecl.Specs))
+	}
+}
+
+// TestGroupedTypeDeclInStmt exercises the LPAREN branch of parseGenDeclFrom
+// when used inside a function body.
+func TestGroupedTypeDeclInStmt(t *testing.T) {
+	fset := token.NewFileSet()
+	f, err := ParseFile(fset, "/foo/bar.xgo", `package main
+
+func main() {
+	type (
+		MyInt    = int
+		MyString = string
+	)
+}
+`, ParseComments)
+	if err != nil {
+		t.Fatal("TestGroupedTypeDeclInStmt: ParseFile failed:", err)
+	}
+	fn := f.Decls[0].(*ast.FuncDecl)
+	if len(fn.Body.List) != 1 {
+		t.Fatalf("TestGroupedTypeDeclInStmt: expected 1 stmt, got %d", len(fn.Body.List))
+	}
+	declStmt := fn.Body.List[0].(*ast.DeclStmt)
+	genDecl := declStmt.Decl.(*ast.GenDecl)
+	if genDecl.Tok != token.TYPE {
+		t.Fatal("TestGroupedTypeDeclInStmt: expected TYPE token")
+	}
+	if len(genDecl.Specs) != 2 {
+		t.Fatalf("TestGroupedTypeDeclInStmt: expected 2 specs, got %d", len(genDecl.Specs))
+	}
+}
+
 // -----------------------------------------------------------------------------
