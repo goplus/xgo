@@ -821,28 +821,28 @@ func (p *parser) parseTypeName(ident *ast.Ident) ast.Expr {
 }
 
 const (
-	stateArrayTypeOrSliceLit = iota
-	stateTypeOrSliceOp
+	stateArrayTypeOrSliceMatrixLit = iota
+	stateTypeOrSliceMatrixOp
 	stateType
 )
 
 const (
 	resultNone      = 0
 	resultArrayType = 1 << iota
-	resultSliceLit
-	resultSliceOp
+	resultSliceOrMatrixLit
+	resultSliceOrMatrixOp
 	resultComprehensionExpr
 	resultParenType
 	resultType
 	resultIdent     // expr or type
-	resultExprFlags = resultSliceLit | resultSliceOp | resultComprehensionExpr
+	resultExprFlags = resultSliceOrMatrixLit | resultSliceOrMatrixOp | resultComprehensionExpr
 	resultTypeFlags = resultArrayType | resultParenType | resultType
 )
 
-// state = stateArrayTypeOrSliceLit | stateTypeOrSliceOp | stateType | ...
-func (p *parser) parseArrayTypeOrSliceLit(state int, slice ast.Expr) (expr ast.Expr, result int) {
+// state = stateArrayTypeOrSliceMatrixLit | stateTypeOrSliceMatrixOp | stateType | ...
+func (p *parser) parseArrayTypeOrSliceMatrixLit(state int, slice ast.Expr) (expr ast.Expr, result int) {
 	if p.trace {
-		defer un(trace(p, "ArrayType"))
+		defer un(trace(p, "ArrayTypeOrSliceMatrixLit"))
 	}
 
 	lbrack := p.expect(token.LBRACK)
@@ -855,12 +855,12 @@ func (p *parser) parseArrayTypeOrSliceLit(state int, slice ast.Expr) (expr ast.E
 	} else if p.tok != token.RBRACK {
 		len = p.parseRHS()
 		switch state {
-		case stateArrayTypeOrSliceLit:
+		case stateArrayTypeOrSliceMatrixLit:
 			switch p.tok {
-			case token.COMMA: // [a, b, c, d ...]
-				sliceLit := p.parseSliceOrMatrixLit(lbrack, len)
+			case token.COMMA, token.SEMICOLON: // [a, b, c, d ...] or [a; b; c]
+				lit := p.parseSliceOrMatrixLit(lbrack, len)
 				p.exprLev--
-				return sliceLit, resultSliceLit
+				return lit, resultSliceOrMatrixLit
 			case token.FOR: // [expr for k, v in container if cond]
 				phrases := p.parseForPhrases()
 				p.exprLev--
@@ -873,10 +873,10 @@ func (p *parser) parseArrayTypeOrSliceLit(state int, slice ast.Expr) (expr ast.E
 					Fors: phrases, Rpos: rbrack,
 				}, resultComprehensionExpr
 			}
-		case stateTypeOrSliceOp:
+		case stateTypeOrSliceMatrixOp:
 			switch p.tok {
-			case token.COLON: // slice[i:j:k]
-				return p.parseIndexOrSliceContinue(slice, lbrack, len), resultSliceOp
+			case token.COLON: // sliceOrMatrix[i:j:k]
+				return p.parseIndexOrSliceContinue(slice, lbrack, len), resultSliceOrMatrixOp
 			}
 		}
 	}
@@ -887,20 +887,20 @@ func (p *parser) parseArrayTypeOrSliceLit(state int, slice ast.Expr) (expr ast.E
 	switch state {
 	case stateType:
 		elt = p.parseType()
-	case stateArrayTypeOrSliceLit:
+	case stateArrayTypeOrSliceMatrixLit:
 		sliceLit := newSliceLit(lbrack, rbrack, len)
-		elt, result = p.tryIdentOrType(stateTypeOrSliceOp, sliceLit)
+		elt, result = p.tryIdentOrType(stateTypeOrSliceMatrixOp, sliceLit)
 		switch result {
 		case resultNone:
 			if debugParseOutput {
 				log.Printf("ast.SliceLit{Elts: %v}\n", sliceLit.Elts)
 			}
-			return sliceLit, resultSliceLit
-		case resultSliceOp:
-			return elt, resultSliceOp
+			return sliceLit, resultSliceOrMatrixLit
+		case resultSliceOrMatrixOp:
+			return elt, resultSliceOrMatrixOp
 		}
 		p.resolve(elt)
-	case stateTypeOrSliceOp:
+	case stateTypeOrSliceMatrixOp:
 		elt = p.tryType()
 		if elt == nil {
 			if len == nil {
@@ -909,10 +909,10 @@ func (p *parser) parseArrayTypeOrSliceLit(state int, slice ast.Expr) (expr ast.E
 			if debugParseOutput {
 				log.Printf("ast.IndexExpr{X: %v, Index: %v}\n", slice, len)
 			}
-			return &ast.IndexExpr{X: slice, Index: len}, resultSliceOp
+			return &ast.IndexExpr{X: slice, Index: len}, resultSliceOrMatrixOp
 		}
 	default:
-		panic("parseArrayTypeOrSliceLit: unexpected state")
+		panic("parseArrayTypeOrSliceMatrixLit: unexpected state")
 	}
 
 	if debugParseOutput {
@@ -1555,7 +1555,7 @@ func (p *parser) parseArrayFieldOrTypeInstance(x *ast.Ident, state int) (*ast.Id
 	return nil, packIndexExpr(x, lbrack, args, rbrack)
 }
 
-// state = stateArrayTypeOrSliceLit | stateTypeOrSliceOp | stateType | ...
+// state = stateArrayTypeOrSliceMatrixLit | stateTypeOrSliceMatrixOp | stateType | ...
 // If the result is an identifier, it is not resolved.
 func (p *parser) tryIdentOrType(state int, len ast.Expr) (ast.Expr, int) {
 	switch p.tok {
@@ -1566,7 +1566,7 @@ func (p *parser) tryIdentOrType(state int, len ast.Expr) (ast.Expr, int) {
 		}
 		return typ, resultIdent
 	case token.LBRACK:
-		return p.parseArrayTypeOrSliceLit(state, len)
+		return p.parseArrayTypeOrSliceMatrixLit(state, len)
 	case token.STRUCT:
 		return p.parseStructType(), resultType
 	case token.MUL:
@@ -2094,7 +2094,7 @@ func (p *parser) parseOperand(flags int) (x ast.Expr, exprKind int) {
 		return p.parseEnvExpr(), 0
 	}
 
-	typ, result := p.tryIdentOrType(stateArrayTypeOrSliceLit, nil)
+	typ, result := p.tryIdentOrType(stateArrayTypeOrSliceMatrixLit, nil)
 	if (result & resultExprFlags) != 0 { // is an expr, not a type
 		return typ, 0
 	}
