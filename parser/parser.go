@@ -1565,7 +1565,7 @@ func (p *parser) tryIdentOrType(state int, len ast.Expr) (ast.Expr, int) {
 			typ = p.parseTypeInstance(typ)
 		}
 		return typ, resultIdent
-	case token.LBRACK: // [n]T, []T, [expr for k, v in container if cond], slice[i:j:k]
+	case token.LBRACK:
 		return p.parseArrayTypeOrSliceMatrixLit(state, len)
 	case token.STRUCT:
 		return p.parseStructType(), resultType
