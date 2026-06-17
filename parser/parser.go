@@ -857,7 +857,7 @@ func (p *parser) parseArrayTypeOrSliceMatrixLit(state int, slice ast.Expr) (expr
 		switch state {
 		case stateArrayTypeOrSliceMatrixLit:
 			switch p.tok {
-			case token.COMMA: // [a, b, c, d ...]
+			case token.COMMA, token.SEMICOLON: // [a, b, c, d ...] or [a; b; c]
 				lit := p.parseSliceOrMatrixLit(lbrack, len)
 				p.exprLev--
 				return lit, resultSliceOrMatrixLit
