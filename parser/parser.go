@@ -830,12 +830,12 @@ const (
 	resultNone      = 0
 	resultArrayType = 1 << iota
 	resultSliceOrMatrixLit
-	resultSliceMatrixOp
+	resultSliceOrMatrixOp
 	resultComprehensionExpr
 	resultParenType
 	resultType
 	resultIdent     // expr or type
-	resultExprFlags = resultSliceOrMatrixLit | resultSliceMatrixOp | resultComprehensionExpr
+	resultExprFlags = resultSliceOrMatrixLit | resultSliceOrMatrixOp | resultComprehensionExpr
 	resultTypeFlags = resultArrayType | resultParenType | resultType
 )
 
@@ -876,7 +876,7 @@ func (p *parser) parseArrayTypeOrSliceMatrixLit(state int, slice ast.Expr) (expr
 		case stateTypeOrSliceMatrixOp:
 			switch p.tok {
 			case token.COLON: // sliceOrMatrix[i:j:k]
-				return p.parseIndexOrSliceContinue(slice, lbrack, len), resultSliceMatrixOp
+				return p.parseIndexOrSliceContinue(slice, lbrack, len), resultSliceOrMatrixOp
 			}
 		}
 	}
@@ -896,8 +896,8 @@ func (p *parser) parseArrayTypeOrSliceMatrixLit(state int, slice ast.Expr) (expr
 				log.Printf("ast.SliceLit{Elts: %v}\n", sliceLit.Elts)
 			}
 			return sliceLit, resultSliceOrMatrixLit
-		case resultSliceMatrixOp:
-			return elt, resultSliceMatrixOp
+		case resultSliceOrMatrixOp:
+			return elt, resultSliceOrMatrixOp
 		}
 		p.resolve(elt)
 	case stateTypeOrSliceMatrixOp:
@@ -909,7 +909,7 @@ func (p *parser) parseArrayTypeOrSliceMatrixLit(state int, slice ast.Expr) (expr
 			if debugParseOutput {
 				log.Printf("ast.IndexExpr{X: %v, Index: %v}\n", slice, len)
 			}
-			return &ast.IndexExpr{X: slice, Index: len}, resultSliceMatrixOp
+			return &ast.IndexExpr{X: slice, Index: len}, resultSliceOrMatrixOp
 		}
 	default:
 		panic("parseArrayTypeOrSliceMatrixLit: unexpected state")
