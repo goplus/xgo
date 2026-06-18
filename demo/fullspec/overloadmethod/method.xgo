@@ -2,12 +2,12 @@ type foo struct {
 }
 
 func (a *foo) mulInt(b int) *foo {
-	println "mulInt"
+	echo "mulInt"
 	return a
 }
 
 func (a *foo) mulFoo(b *foo) *foo {
-	println "mulFoo"
+	echo "mulFoo"
 	return a
 }
 

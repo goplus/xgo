@@ -2,17 +2,17 @@ type foo struct {
 }
 
 func (a foo) mulInt(b int) (ret foo) {
-	println "a * int"
+	echo "a * int"
 	return
 }
 
 func (a foo) mulFoo(b foo) (ret foo) {
-	println "a * b"
+	echo "a * b"
 	return
 }
 
 func intMulFoo(a int, b foo) (ret foo) {
-	println "int * b"
+	echo "int * b"
 	return
 }
 

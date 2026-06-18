@@ -11,5 +11,5 @@ func mul = (
 	mulFloat
 )
 
-println mul(100, 7)
-println mul(1.2, 3.14)
+echo mul(100, 7)
+echo mul(1.2, 3.14)
