@@ -17,7 +17,7 @@ type T struct {
 }
 
 func (T) Close() (err error) {
-	log.echo("Hi!")
+	log.println("Hi!")
 	return
 }
 
