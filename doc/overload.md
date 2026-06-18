@@ -230,7 +230,9 @@ func (a *foo) mulFoo(b *foo) *foo { ... }
 const XGoo_foo_mul = ".mulInt,.mulFoo"
 ```
 
-The constant name is `XGoo_<TypeName>_<MethodName>`, scoping the overload declaration to its receiver type. The `.` prefix on each variant signals "this is a method on `foo`", not a global function.
+The constant name follows the pattern `XGoo_<TypeName>_<MethodName>`, scoping the overload declaration to its receiver type. The `.` prefix on each variant signals "this is a method on `foo`", not a global function.
+
+> **Escaping rule:** if either `<TypeName>` or `<MethodName>` contains an underscore, the single-underscore separators are promoted to double underscores throughout the entire constant name, i.e. `XGoo__<TypeName>__<MethodName>`. This prevents ambiguity when parsing the name back into its components.
 
 ### Overload operators: `XGo_` names and the full operator table
 
@@ -319,10 +321,10 @@ func (a foo) mulInt(b int) (ret foo)  { ... }  // foo * int
 func (a foo) mulFoo(b foo) (ret foo)  { ... }  // foo * foo
 func intMulFoo(a int, b foo) (ret foo){ ... }  // int * foo
 
-const XGoo_foo_XGo_Mul = ".mulInt,.mulFoo,intMulFoo"
+const XGoo__foo__XGo_Mul = ".mulInt,.mulFoo,intMulFoo"
 ```
 
-Reading `XGoo_foo_XGo_Mul`: this declares the overloaded `*` operator (`XGo_Mul`) on type `foo`. The variants `.mulInt` and `.mulFoo` are methods on `foo`; `intMulFoo` is a package-level function handling the `int * foo` case.
+Reading `XGoo__foo__XGo_Mul`: this declares the overloaded `*` operator (`XGo_Mul`) on type `foo`. Because `XGo_Mul` contains an underscore, the separators are doubled throughout. The variants `.mulInt` and `.mulFoo` are methods on `foo`; `intMulFoo` is a package-level function handling the `int * foo` case.
 
 ### Summary: the two encoding primitives
 
@@ -331,7 +333,7 @@ All of XGo's overloading — functions, methods, and operators — is built from
 | Primitive | When used | Example |
 |---|---|---|
 | `__N` numeric suffix | Inline literal variants | `add__0`, `add__1` |
-| `XGoo_` string constant | Named variant groups (funcs, methods, operators) | `XGoo_mul`, `XGoo_foo_mul`, `XGoo_foo_XGo_Mul` |
+| `XGoo_` string constant | Named variant groups (funcs, methods, operators) | `XGoo_mul`, `XGoo_foo_mul`, `XGoo__foo__XGo_Mul` |
 
 In `XGoo_` constant values, `.name` denotes a method on the receiver type; a bare `name` denotes a package-level function.
 
