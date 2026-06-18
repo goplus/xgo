@@ -905,6 +905,77 @@ func main() {
 `)
 }
 
+func TestReflectTypeArg(t *testing.T) {
+	gopMixedClTest(t, "main", `
+package main
+
+import (
+	"reflect"
+)
+
+func foo(t reflect.Type) {}
+
+func accept(typs ...reflect.Type) {}
+
+type MyStruct struct{}
+`, `
+foo int
+foo MyStruct
+accept int, string, MyStruct
+`, `package main
+
+import "reflect"
+
+func main() {
+	foo(reflect.TypeFor[int]())
+	foo(reflect.TypeFor[MyStruct]())
+	accept(reflect.TypeFor[int](), reflect.TypeFor[string](), reflect.TypeFor[MyStruct]())
+}
+`)
+}
+
+func TestReflectTypeArgMixed(t *testing.T) {
+	gopMixedClTest(t, "main", `
+package main
+
+import (
+	"reflect"
+)
+
+func setHandler(event string, t reflect.Type) {}
+`, `
+setHandler "click", int
+`, `package main
+
+import "reflect"
+
+func main() {
+	setHandler("click", reflect.TypeFor[int]())
+}
+`)
+}
+
+func TestReflectTypeArgDisambiguation(t *testing.T) {
+	gopMixedClTest(t, "main", `
+package main
+
+import (
+	"reflect"
+)
+
+func foo(t reflect.Type) {}
+
+var theType reflect.Type = reflect.TypeFor[int]()
+`, `
+foo theType
+`, `package main
+
+func main() {
+	foo(theType)
+}
+`)
+}
+
 func TestYaptest(t *testing.T) {
 	gopMixedClTest(t, "main", `package main
 

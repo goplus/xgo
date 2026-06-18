@@ -1278,7 +1278,13 @@ func compileCallArgs(ctx *blockCtx, lhs int, pfn *gogen.Element, fn *fnType, v *
 			compileNumberUnitLit(ctx, expr, t)
 		default:
 			compileExpr(ctx, 1, arg)
-			if sigParamLen(t) == 0 {
+			if isReflectType(t) {
+				stk := cb.InternalStack()
+				if tt, ok := stk.Get(-1).Type.(*gogen.TypeType); ok {
+					stk.PopN(1)
+					reflectTypeFor(ctx, tt.Type())
+				}
+			} else if sigParamLen(t) == 0 {
 				if nonClosure(cb.Get(-1).Type) {
 					cb.ConvertToClosure()
 				}
@@ -1303,6 +1309,26 @@ func compileCallArgs(ctx *blockCtx, lhs int, pfn *gogen.Element, fn *fnType, v *
 var (
 	errCallNext = errors.New("call next")
 )
+
+// isReflectType reports whether t is the reflect.Type interface from the standard library.
+func isReflectType(t types.Type) bool {
+	if t == nil {
+		return false
+	}
+	named, ok := t.(*types.Named)
+	if !ok {
+		return false
+	}
+	obj := named.Obj()
+	return obj.Name() == "Type" && obj.Pkg() != nil && obj.Pkg().Path() == "reflect"
+}
+
+// reflectTypeFor generates a reflect.TypeFor[T]() call and pushes its result.
+func reflectTypeFor(ctx *blockCtx, T types.Type) {
+	reflectPkg := ctx.pkg.Import("reflect")
+	typeForFn := reflectPkg.Ref("TypeFor")
+	ctx.cb.Val(typeForFn).Typ(T).Index(1, 0).Call(0)
+}
 
 type clLambaFlag string
 
