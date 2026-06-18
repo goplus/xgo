@@ -1,0 +1,6 @@
+import "reflect"
+
+func accept(...reflect.Type) {}
+
+echo reflect.new(int).elem
+accept *int, bool
