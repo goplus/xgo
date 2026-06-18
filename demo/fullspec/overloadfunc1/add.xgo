@@ -7,5 +7,5 @@ func add = (
 	}
 )
 
-println add(100, 7)
-println add("Hello", "World")
+echo add(100, 7)
+echo add("Hello", "World")

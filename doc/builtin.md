@@ -304,7 +304,7 @@ Opens file for reading with O_RDONLY mode.
 ```go
 file, err := open("data.txt")
 if err != nil {
-    errorln(err)
+    fatal(err)
 }
 defer file.close
 ```
@@ -316,7 +316,7 @@ Creates or truncates file with mode 0o666.
 ```go
 file, err := create("output.txt")
 if err != nil {
-    errorln(err)
+    fatal(err)
 }
 defer file.close
 ```

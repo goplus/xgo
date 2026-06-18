@@ -2,34 +2,34 @@ type foo struct {
 }
 
 func (a foo) + (b foo) (ret foo) {
-	println "a + b"
+	echo "a + b"
 	return
 }
 
 func (a foo) - (b foo) (ret foo) {
-	println "a - b"
+	echo "a - b"
 	return
 }
 
 func (a foo) -> (b foo) {
-	println "a -> b"
+	echo "a -> b"
 }
 
 func (a foo) <> (b foo) {
-	println "a <> b"
+	echo "a <> b"
 }
 
 func -(a foo) (ret foo) {
-	println "-a"
+	echo "-a"
 	return
 }
 
 func ++(a foo) {
-	println "a++"
+	echo "a++"
 }
 
 func (a foo) != (b foo) bool {
-	println "a != b"
+	echo "a != b"
 	return true
 }
 
@@ -39,7 +39,7 @@ var d = a - b
 var e = -a
 var f = a != b
 
-println f
+echo f
 a++
 a -> b
 a <> b

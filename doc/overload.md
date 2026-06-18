@@ -1,9 +1,9 @@
-Overload Func/Method/Operator/Types
+Function/Method/Operator/Type Overloading
 =====
 
 ### Overload Funcs
 
-Define `overload func` in `inline func literal` style (see [overloadfunc1/add.xgo](demo/overloadfunc1/add.xgo)):
+Define `overload func` in `inline func literal` style (see [overloadfunc1/add.xgo](../demo/fullspec/overloadfunc1/add.xgo)):
 
 ```go
 func add = (
@@ -15,11 +15,11 @@ func add = (
 	}
 )
 
-println add(100, 7)
-println add("Hello", "World")
+echo add(100, 7)
+echo add("Hello", "World")
 ```
 
-Define `overload func` in `ident` style (see [overloadfunc2/mul.xgo](demo/overloadfunc2/mul.xgo)):
+Define `overload func` in `ident` style (see [overloadfunc2/mul.xgo](../demo/fullspec/overloadfunc2/mul.xgo)):
 
 ```go
 func mulInt(a, b int) int {
@@ -35,25 +35,25 @@ func mul = (
 	mulFloat
 )
 
-println mul(100, 7)
-println mul(1.2, 3.14)
+echo mul(100, 7)
+echo mul(1.2, 3.14)
 ```
 
 ### Overload Methods
 
-Define `overload method` (see [overloadmethod/method.xgo](demo/overloadmethod/method.xgo)):
+Define `overload method` (see [overloadmethod/method.xgo](../demo/fullspec/overloadmethod/method.xgo)):
 
 ```go
 type foo struct {
 }
 
 func (a *foo) mulInt(b int) *foo {
-	println "mulInt"
+	echo "mulInt"
 	return a
 }
 
 func (a *foo) mulFoo(b *foo) *foo {
-	println "mulFoo"
+	echo "mulFoo"
 	return a
 }
 
@@ -69,19 +69,19 @@ var d = a.mul(c)
 
 ### Overload Unary Operators
 
-Define `overload unary operator` (see [overloadop1/overloadop.xgo](demo/overloadop1/overloadop.xgo)):
+Define `overload unary operator` (see [overloadop1/overloadop.xgo](../demo/fullspec/overloadop1/overloadop.xgo)):
 
 ```go
 type foo struct {
 }
 
 func -(a foo) (ret foo) {
-	println "-a"
+	echo "-a"
 	return
 }
 
 func ++(a foo) {
-	println "a++"
+	echo "a++"
 }
 
 var a foo
@@ -91,19 +91,19 @@ a++
 
 ### Overload Binary Operators
 
-Define `overload binary operator` (see [overloadop1/overloadop.xgo](demo/overloadop1/overloadop.xgo)):
+Define `overload binary operator` (see [overloadop1/overloadop.xgo](../demo/fullspec/overloadop1/overloadop.xgo)):
 
 ```go
 type foo struct {
 }
 
 func (a foo) * (b foo) (ret foo) {
-	println "a * b"
+	echo "a * b"
 	return
 }
 
 func (a foo) != (b foo) bool {
-	println "a != b"
+	echo "a != b"
 	return true
 }
 
@@ -112,24 +112,24 @@ var c = a * b
 var d = a != b
 ```
 
-However, `binary operator` usually need to support interoperability between multiple types. In this case it becomes more complex (see [overloadop2/overloadop.xgo](demo/overloadop2/overloadop.xgo)):
+However, `binary operator` usually need to support interoperability between multiple types. In this case it becomes more complex (see [overloadop2/overloadop.xgo](../demo/fullspec/overloadop2/overloadop.xgo)):
 
 ```go
 type foo struct {
 }
 
 func (a foo) mulInt(b int) (ret foo) {
-	println "a * int"
+	echo "a * int"
 	return
 }
 
 func (a foo) mulFoo(b foo) (ret foo) {
-	println "a * b"
+	echo "a * b"
 	return
 }
 
 func intMulFoo(a int, b foo) (ret foo) {
-	println "int * b"
+	echo "int * b"
 	return
 }
 
@@ -152,4 +152,3 @@ TODO
 ### Overload Typecast
 
 TODO
-

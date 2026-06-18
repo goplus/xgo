@@ -17,7 +17,7 @@ type T struct {
 }
 
 func (T) Close() (err error) {
-	log.Println("Hi!")
+	log.echo("Hi!")
 	return
 }
 
@@ -40,4 +40,4 @@ func foo(a, b int) string {
 	return ""
 }
 
-println "Hello, world", T{}.f(0)
+echo "Hello, world", T{}.f(0)
