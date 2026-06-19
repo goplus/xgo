@@ -17,6 +17,7 @@
 package cl
 
 import (
+	"errors"
 	"go/constant"
 	"go/types"
 	"log"
@@ -114,9 +115,20 @@ func toParam(ctx *blockCtx, fld *ast.Field, args []*types.Var) []*types.Var {
 // -----------------------------------------------------------------------------
 
 func toType(ctx *blockCtx, typ ast.Expr) (t types.Type) {
+	ret, err := tryType(ctx, typ, false)
+	if err != nil {
+		ctx.handleErr(err)
+		return types.Typ[types.Invalid]
+	}
+	return ret
+}
+
+func tryType(ctx *blockCtx, typ ast.Expr, noTermList bool) (t types.Type, _ error) {
 	if rec := ctx.recorder(); rec != nil {
 		defer func() {
-			rec.recordType(typ, t)
+			if t != nil {
+				rec.recordType(typ, t)
+			}
 		}()
 	}
 	switch v := typ.(type) {
@@ -125,7 +137,10 @@ func toType(ctx *blockCtx, typ ast.Expr) (t types.Type) {
 		defer func() {
 			ctx.idents = ctx.idents[:len(ctx.idents)-1]
 		}()
-		typ := toIdentType(ctx, v)
+		typ, err := tryIdentType(ctx, v)
+		if err != nil {
+			return nil, err
+		}
 		if ctx.inInst == 0 {
 			if t, ok := typ.(*types.Named); ok {
 				if namedIsTypeParams(ctx, t) {
@@ -138,57 +153,71 @@ func toType(ctx *blockCtx, typ ast.Expr) (t types.Type) {
 							break
 						}
 					}
-					ctx.handleErrorf(pos, end, "cannot use generic type %v without instantiation", t.Obj().Type())
-					return types.Typ[types.Invalid]
+					return nil, ctx.newCodeErrorf(pos, end, "cannot use generic type %v without instantiation", t.Obj().Type())
 				}
 			}
 		}
-		return typ
+		return typ, nil
 	case *ast.StarExpr:
-		elem := toType(ctx, v.X)
-		return types.NewPointer(elem)
+		elem, err := tryType(ctx, v.X, noTermList)
+		if err != nil {
+			return nil, err
+		}
+		return types.NewPointer(elem), nil
 	case *ast.ArrayType:
-		return toArrayType(ctx, v)
+		return toArrayType(ctx, v), nil
 	case *ast.InterfaceType:
-		return toInterfaceType(ctx, v)
+		return toInterfaceType(ctx, v), nil
 	case *ast.Ellipsis:
 		elem := toType(ctx, v.Elt)
-		return types.NewSlice(elem)
+		return types.NewSlice(elem), nil
 	case *ast.MapType:
-		return toMapType(ctx, v)
+		return toMapType(ctx, v), nil
 	case *ast.TupleType:
-		return toTupleType(ctx, v)
+		return toTupleType(ctx, v), nil
 	case *ast.StructType:
-		return toStructType(ctx, v)
+		return toStructType(ctx, v), nil
 	case *ast.ChanType:
-		return toChanType(ctx, v)
+		return toChanType(ctx, v), nil
 	case *ast.FuncType:
-		return toFuncType(ctx, v, nil, nil)
+		return toFuncType(ctx, v, nil, nil), nil
 	case *ast.SelectorExpr:
-		typ := toExternalType(ctx, v)
+		typ, err := tryExternalType(ctx, v)
+		if err != nil {
+			return nil, err
+		}
 		if ctx.inInst == 0 {
 			if t, ok := typ.(*types.Named); ok {
 				if namedIsTypeParams(ctx, t) {
-					panic(ctx.newCodeErrorf(v.Pos(), v.End(), "cannot use generic type %v without instantiation", t.Obj().Type()))
+					return nil, ctx.newCodeErrorf(v.Pos(), v.End(), "cannot use generic type %v without instantiation", t.Obj().Type())
 				}
 			}
 		}
-		return typ
+		return typ, nil
 	case *ast.ParenExpr:
-		return toType(ctx, v.X)
+		return tryType(ctx, v.X, noTermList)
 	case *ast.BinaryExpr:
-		return toBinaryExprType(ctx, v)
+		if noTermList {
+			return nil, errNotAType
+		}
+		return toBinaryExprType(ctx, v), nil
 	case *ast.UnaryExpr:
-		return toUnaryExprType(ctx, v)
+		if noTermList {
+			return nil, errNotAType
+		}
+		return toUnaryExprType(ctx, v), nil
 	case *ast.IndexExpr:
-		return toIndexType(ctx, v)
+		return tryIndexType(ctx, v)
 	case *ast.IndexListExpr:
-		return toIndexListType(ctx, v)
+		return tryIndexListType(ctx, v)
 	default:
-		ctx.handleErrorf(v.Pos(), v.End(), "toType unexpected: %T", v)
-		return types.Typ[types.Invalid]
+		return nil, ctx.newCodeErrorf(v.Pos(), v.End(), "toType unexpected: %T", v)
 	}
 }
+
+var (
+	errNotAType = errors.New("not a type")
+)
 
 var (
 	typesChanDirs = [...]types.ChanDir{
@@ -202,8 +231,11 @@ func toChanType(ctx *blockCtx, v *ast.ChanType) *types.Chan {
 	return types.NewChan(typesChanDirs[v.Dir], toType(ctx, v.Value))
 }
 
-func toExternalType(ctx *blockCtx, v *ast.SelectorExpr) types.Type {
-	id := v.X.(*ast.Ident)
+func tryExternalType(ctx *blockCtx, v *ast.SelectorExpr) (typ types.Type, err error) {
+	id, ok := v.X.(*ast.Ident)
+	if !ok {
+		return nil, errNotAType
+	}
 	name := id.Name
 	if pi, ok := ctx.findImport(name); ok {
 		rec := ctx.recorder()
@@ -215,13 +247,13 @@ func toExternalType(ctx *blockCtx, v *ast.SelectorExpr) types.Type {
 			if rec != nil {
 				rec.Use(v.Sel, t)
 			}
-			return t.Type()
+			return t.Type(), nil
 		}
-		ctx.handleErrorf(v.Pos(), v.End(), "%s.%s is not a type", name, v.Sel.Name)
+		err = ctx.newCodeErrorf(v.Pos(), v.End(), "%s.%s is not a type", name, v.Sel.Name)
 	} else {
-		ctx.handleErrorf(v.Pos(), v.End(), "undefined: %s", name)
+		err = ctx.newCodeErrorf(v.Pos(), v.End(), "undefined: %s", name)
 	}
-	return types.Typ[types.Invalid]
+	return
 }
 
 /*-----------------------------------------------------------------------------
@@ -233,7 +265,16 @@ Name context:
 
 // ---------------------------------------------------------------------------*/
 
-func toIdentType(ctx *blockCtx, ident *ast.Ident) (ret types.Type) {
+func toIdentType(ctx *blockCtx, ident *ast.Ident) types.Type {
+	ret, err := tryIdentType(ctx, ident)
+	if err != nil {
+		ctx.handleErr(err)
+		return types.Typ[types.Invalid]
+	}
+	return ret
+}
+
+func tryIdentType(ctx *blockCtx, ident *ast.Ident) (typ types.Type, err error) {
 	var obj types.Object
 	if rec := ctx.recorder(); rec != nil {
 		defer func() {
@@ -245,26 +286,26 @@ func toIdentType(ctx *blockCtx, ident *ast.Ident) (ret types.Type) {
 	if ctx.tlookup != nil {
 		if typ := ctx.tlookup.Lookup(ident.Name); typ != nil {
 			obj = typ.Obj()
-			return typ
+			return typ, nil
 		}
 	}
 	v, builtin := lookupType(ctx, ident.Name)
 	if isBuiltin(builtin) {
-		ctx.handleErrorf(ident.Pos(), ident.End(), "use of builtin %s not in function call", ident.Name)
-		return types.Typ[types.Invalid]
+		err = ctx.newCodeErrorf(ident.Pos(), ident.End(), "use of builtin %s not in function call", ident.Name)
+		return
 	}
 	if t, ok := v.(*types.TypeName); ok {
 		obj = t
-		return t.Type()
+		return t.Type(), nil
 	}
 	if v, _ := lookupPkgRef(ctx, gogen.PkgRef{}, ident, objPkgRef); v != nil {
 		if t, ok := v.(*types.TypeName); ok {
 			obj = t
-			return t.Type()
+			return t.Type(), nil
 		}
 	}
-	ctx.handleErrorf(ident.Pos(), ident.End(), "%s is not a type", ident.Name)
-	return types.Typ[types.Invalid]
+	err = ctx.newCodeErrorf(ident.Pos(), ident.End(), "%s is not a type", ident.Name)
+	return
 }
 
 // TODO: optimization
@@ -546,13 +587,16 @@ func toInterfaceType(ctx *blockCtx, v *ast.InterfaceType) types.Type {
 	return intf
 }
 
-func instantiate(ctx *blockCtx, exprX ast.Expr, indices ...ast.Expr) types.Type {
+func instantiate(ctx *blockCtx, exprX ast.Expr, indices ...ast.Expr) (types.Type, error) {
 	ctx.inInst++
 	defer func() {
 		ctx.inInst--
 	}()
 
-	x := toType(ctx, exprX)
+	x, err := tryType(ctx, exprX, true)
+	if err != nil {
+		return nil, err
+	}
 	idx := make([]types.Type, len(indices))
 	for i, index := range indices {
 		idx[i] = toType(ctx, index)
@@ -561,14 +605,14 @@ func instantiate(ctx *blockCtx, exprX ast.Expr, indices ...ast.Expr) types.Type 
 	if rec := ctx.recorder(); rec != nil {
 		rec.instantiate(exprX, x, typ)
 	}
-	return typ
+	return typ, nil
 }
 
-func toIndexType(ctx *blockCtx, v *ast.IndexExpr) types.Type {
+func tryIndexType(ctx *blockCtx, v *ast.IndexExpr) (types.Type, error) {
 	return instantiate(ctx, v.X, v.Index)
 }
 
-func toIndexListType(ctx *blockCtx, v *ast.IndexListExpr) types.Type {
+func tryIndexListType(ctx *blockCtx, v *ast.IndexListExpr) (types.Type, error) {
 	return instantiate(ctx, v.X, v.Indices...)
 }
 
