@@ -1200,20 +1200,30 @@ func compileCallArgs(ctx *blockCtx, lhs int, pfn *gogen.Element, fn *fnType, v *
 		}
 		args := cb.InternalStack().GetArgs(n)
 		var targs []types.Type
+		m := 0 // number of leading explicit type arguments
 		for i, arg := range args {
 			typ := arg.Type
 			t, ok := typ.(*gogen.TypeType)
 			if !ok {
-				return ctx.newCodeErrorf(vargs[i].Pos(), vargs[i].End(), "%v not type", ctx.LoadExpr(vargs[i]))
+				if i == 0 {
+					return ctx.newCodeErrorf(vargs[i].Pos(), vargs[i].End(), "%v not type", ctx.LoadExpr(vargs[i]))
+				}
+				break
 			}
 			targs = append(targs, t.Type())
+			m++
 		}
-		ret, err := types.Instantiate(nil, fn.sig, targs, true)
-		if err != nil {
-			return ctx.newCodeError(v.Pos(), v.End(), err.Error())
-		}
-		fn.init(1, ret.(*types.Signature), false)
 		vargs = vargs[n:]
+		if m == n {
+			// All type params explicitly provided: instantiate eagerly.
+			ret, err := types.Instantiate(nil, fn.sig, targs, true)
+			if err != nil {
+				return ctx.newCodeError(v.Pos(), v.End(), err.Error())
+			}
+			fn.init(1, ret.(*types.Signature), false)
+		}
+		// m < n: type-arg elements and early value args already on the stack;
+		// gogen's boundTypeParams (via instrFlagXGoxFunc) will infer the rest.
 	}
 
 	var needInferFunc bool

@@ -1,0 +1,3 @@
+import "github.com/goplus/xgo/cl/internal/typeargs"
+
+echo typeargs.convert(string, 100)
