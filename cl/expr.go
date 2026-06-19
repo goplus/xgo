@@ -1201,6 +1201,9 @@ func compileCallArgs(ctx *blockCtx, lhs int, pfn *gogen.Element, fn *fnType, v *
 		for i := 0; i < n; i++ {
 			typ, err := tryType(ctx, vargs[i], true)
 			if err != nil {
+				if i == 0 {
+					return ctx.newCodeErrorf(vargs[i].Pos(), vargs[i].End(), "%v not type", ctx.LoadExpr(vargs[i]))
+				}
 				break
 			}
 			cb.Typ(typ)
