@@ -20,6 +20,12 @@ const (
 	XGoPackage = true
 )
 
+// XGox_As has one non-inferable TypeParam (T, only in return position)
+// and no inferable TypeParams.
+func XGox_As[T any](src any) (T, error) {
+	panic("not implemented")
+}
+
 // XGox_Convert has one non-inferable TypeParam (To, only in return position)
 // and one inferable TypeParam (From, appears in the parameter list).
 func XGox_Convert[To any, From any](src From) To {

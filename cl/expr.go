@@ -1194,26 +1194,28 @@ func compileCallArgs(ctx *blockCtx, lhs int, pfn *gogen.Element, fn *fnType, v *
 
 	vargsOrg := vargs
 	if fn.typeAsParams && fn.typeparam {
-		n := fn.sig.TypeParams().Len()
+		tp := fn.sig.TypeParams()
+		ntp := tp.Len()
+		targs := make([]types.Type, 0, ntp)
+		n := min(ntp, len(vargs))
 		for i := 0; i < n; i++ {
-			compileExpr(ctx, 1, vargs[i])
-		}
-		args := cb.InternalStack().GetArgs(n)
-		var targs []types.Type
-		for i, arg := range args {
-			typ := arg.Type
-			t, ok := typ.(*gogen.TypeType)
-			if !ok {
-				return ctx.newCodeErrorf(vargs[i].Pos(), vargs[i].End(), "%v not type", ctx.LoadExpr(vargs[i]))
+			typ, err := tryType(ctx, vargs[i], true)
+			if err != nil {
+				break
 			}
-			targs = append(targs, t.Type())
+			cb.Typ(typ)
+			targs = append(targs, typ)
+		}
+		m := len(targs)
+		for i := m; i < ntp; i++ {
+			targs = append(targs, tp.At(i))
 		}
 		ret, err := types.Instantiate(nil, fn.sig, targs, true)
 		if err != nil {
 			return ctx.newCodeError(v.Pos(), v.End(), err.Error())
 		}
 		fn.init(1, ret.(*types.Signature), false)
-		vargs = vargs[n:]
+		vargs = vargs[m:]
 	}
 
 	var needInferFunc bool

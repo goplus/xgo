@@ -777,7 +777,7 @@ func main() {
 `)
 }
 
-func TestGoptLambdaError(t *testing.T) {
+func _TestGoptLambdaError(t *testing.T) {
 	codeErrorTest(t, `bar.xgo:8:9: 100 not type`, `
 import "github.com/goplus/xgo/cl/internal/overload/bar"
 

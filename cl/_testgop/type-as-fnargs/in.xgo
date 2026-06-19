@@ -1,3 +1,4 @@
 import "github.com/goplus/xgo/cl/internal/typeargs"
 
+echo typeargs.as(int, "100")
 echo typeargs.convert(string, 100)

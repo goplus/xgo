@@ -21,6 +21,7 @@ coverage:
     - "cl/internal/spx3"
     - "cl/internal/test"
     - "cl/internal/unit"
+    - "cl/internal/typeargs"
     - "parser/fsx"
     - "parser/iox"
     - "parser/parsertest"
