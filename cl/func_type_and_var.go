@@ -198,12 +198,12 @@ func tryType(ctx *blockCtx, typ ast.Expr, noTermList bool) (t types.Type, _ erro
 		return tryType(ctx, v.X, noTermList)
 	case *ast.BinaryExpr:
 		if noTermList {
-			return nil, errTermListNotAllowed
+			return nil, errNotAType
 		}
 		return toBinaryExprType(ctx, v), nil
 	case *ast.UnaryExpr:
 		if noTermList {
-			return nil, errTermListNotAllowed
+			return nil, errNotAType
 		}
 		return toUnaryExprType(ctx, v), nil
 	case *ast.IndexExpr:
@@ -216,7 +216,7 @@ func tryType(ctx *blockCtx, typ ast.Expr, noTermList bool) (t types.Type, _ erro
 }
 
 var (
-	errTermListNotAllowed = errors.New("term list not allowed in this context")
+	errNotAType = errors.New("not a type")
 )
 
 var (
@@ -232,7 +232,10 @@ func toChanType(ctx *blockCtx, v *ast.ChanType) *types.Chan {
 }
 
 func tryExternalType(ctx *blockCtx, v *ast.SelectorExpr) (typ types.Type, err error) {
-	id := v.X.(*ast.Ident)
+	id, ok := v.X.(*ast.Ident)
+	if !ok {
+		return nil, errNotAType
+	}
 	name := id.Name
 	if pi, ok := ctx.findImport(name); ok {
 		rec := ctx.recorder()
