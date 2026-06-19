@@ -1198,15 +1198,26 @@ func compileCallArgs(ctx *blockCtx, lhs int, pfn *gogen.Element, fn *fnType, v *
 		ntp := tp.Len()
 		targs := make([]types.Type, 0, ntp)
 		n := min(ntp, len(vargs))
+		errIdx := -1
 		for i := 0; i < n; i++ {
 			typ, err := tryType(ctx, vargs[i], true)
 			if err != nil {
+				errIdx = i
 				break
 			}
 			cb.Typ(typ)
 			targs = append(targs, typ)
 		}
 		m := len(targs)
+		if errIdx >= 0 {
+			// If there is a valid type expression after errIdx, it means the user
+			// was trying to pass a type argument at errIdx but it is not a type.
+			for j := errIdx + 1; j < len(vargs); j++ {
+				if _, e := tryType(ctx, vargs[j], true); e == nil {
+					return ctx.newCodeErrorf(vargs[errIdx].Pos(), vargs[errIdx].End(), "%v not type", ctx.LoadExpr(vargs[errIdx]))
+				}
+			}
+		}
 		for i := m; i < ntp; i++ {
 			targs = append(targs, tp.At(i))
 		}
