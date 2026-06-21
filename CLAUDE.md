@@ -1,21 +1,9 @@
 # XGo Project AI Assistant Guide
 
-## Project Overview
-
-**XGo** is the first AI-native programming language that integrates software engineering into a unified whole.
-
-**Key Characteristics**:
-- Easy to learn with smaller syntax set than Go and Python
-- Ready for large projects with unified ecosystem integration
-
-## My Role & Your Role
-
-- **My Role**: XGo language developer/contributor
-- **Your Role**: Senior programming language development assistant specializing in syntax design and compiler implementation
-
-## Workflow & Collaboration Style
+## Workflow
 
 ### Adding New Syntax Features
+
 When implementing new language syntax, follow this three-phase approach:
 
 **IMPORTANT**: Each phase must be implemented in a separate pull request. Do NOT mix phases in a single PR. This separation ensures:
@@ -37,8 +25,10 @@ When implementing new language syntax, follow this three-phase approach:
 **Scope**: Code generation via `cl` package ONLY
 - **Code Generation**: Implement semantics using `github.com/goplus/gogen` package
 - **Type Safety**: Leverage gogen's type information maintenance for semantic correctness
-- **Testing**: Add comprehensive test cases in `cl/_testgop/` covering various usage scenarios
+- **Testing**: Add comprehensive test cases in `cl/_testxgo/` covering various usage scenarios
 - **Prerequisite**: Phase 1 PR must be merged before starting Phase 2
+
+When submitting a new PR to the `gogen` repository for a change, also submit a PR to the `xgo` repository that updates the `gogen` module to the latest code from the corresponding `gogen` branch. The xgo PR's go.mod/go.sum must pin the gogen dependency to the feature branch's commit (not to a released version), so the two PRs represent a coherent, reviewable change set.
 
 #### Phase 3: Documentation (Third Pull Request)
 **Scope**: User-facing documentation updates ONLY
@@ -47,47 +37,6 @@ When implementing new language syntax, follow this three-phase approach:
 - **Language Specification**: Update specification documents (see Language Specification Structure below)
 - **Examples**: Provide clear, runnable code examples demonstrating the feature
 - **Prerequisite**: Phase 2 PR must be merged before starting Phase 3
-
-### Language Specification Structure
-
-XGo maintains two levels of language specifications to serve different user needs:
-
-#### MiniSpec (Recommended Best Practices)
-- **Purpose**: Simplified syntax set representing recommended best practices
-- **Audience**: All XGo users - everyone should learn and apply this subset
-- **Characteristics**: Simple, Turing-complete, and sufficient for elegant implementation of any business requirements
-- **Files to update**:
-  - `doc/spec-mini.md` - MiniSpec documentation in markdown format
-  - `doc/spec/mini/mini.xgo` - MiniSpec grammar definition in XGo TPL (EBNF-like) syntax
-
-#### FullSpec (Complete Language Syntax)
-- **Purpose**: Complete syntax set including all language features
-- **Audience**: Experts and library designers who need advanced features
-- **Characteristics**: Comprehensive syntax including specialized features beyond MiniSpec
-- **Files to update**:
-  - `doc/spec.md` - FullSpec documentation in markdown format
-
-#### Determining Spec Classification for New Syntax
-
-When adding new syntax to XGo, you must determine whether it belongs in the MiniSpec or FullSpec:
-
-**Add to MiniSpec if the syntax**:
-- Represents a recommended best practice for general use
-- Is simple and intuitive for most users
-- Solves common programming problems elegantly
-- Should be learned by all XGo developers
-
-**Add to FullSpec only if the syntax**:
-- Is specialized for advanced use cases (e.g., library design)
-- Adds complexity that most users don't need
-- Provides alternative ways to accomplish tasks already covered in MiniSpec
-- Is primarily intended for expert developers
-
-**Update Process**:
-1. Determine the appropriate specification level (MiniSpec or FullSpec)
-2. Update the corresponding markdown documentation file(s)
-3. If adding to MiniSpec, also update the TPL grammar file (`doc/spec/mini/mini.xgo`)
-4. Ensure examples demonstrate the new syntax clearly
 
 ### Communication Protocol
 - When I request syntax additions, first confirm the exact grammar specification
@@ -123,7 +72,7 @@ When adding new syntax to XGo, you must determine whether it belongs in the Mini
 ### Testing Requirements
 
 - **Phase 1**: 100% test coverage for new syntax parsing in `parser/_testdata/`
-- **Phase 2**: Comprehensive test coverage for semantic implementation in `cl/_testgop/` covering:
+- **Phase 2**: Comprehensive test coverage for semantic implementation in `cl/_testxgo/` covering:
   - Common usage scenarios
   - Edge cases and error conditions
   - Integration with existing type system
