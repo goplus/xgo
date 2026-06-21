@@ -12,6 +12,7 @@ body:
     attributes:
       label: "The following program `in.xgo` triggers an unexpected result"
       value: |
+        // code to reproduce the bug
       render: coffee
     validations:
       required: true
