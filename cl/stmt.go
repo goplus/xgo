@@ -1033,7 +1033,20 @@ func compileType(ctx *blockCtx, t *ast.TypeSpec) {
 	if t.Assign != token.NoPos { // alias type
 		ctx.cb.AliasType(name, toType(ctx, t.Type))
 	} else {
-		ctx.cb.NewType(name).InitType(ctx.pkg, toType(ctx, t.Type))
+		cb := ctx.cb
+		enumType, isEnum := t.Type.(*ast.EnumType)
+		typeDecl := cb.NewType(name)
+		var underlying types.Type
+		if isEnum {
+			underlying = inferEnumUnderlyingType(ctx, enumType)
+		} else {
+			underlying = toType(ctx, t.Type)
+		}
+		typeDecl.InitType(ctx.pkg, underlying)
+		if isEnum {
+			cdecl := ctx.pkg.NewConstDefs(cb.Scope())
+			loadConstSpecs(ctx, cdecl, enumType.Specs, typeDecl.Type())
+		}
 	}
 }
 

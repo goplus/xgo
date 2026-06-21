@@ -1,0 +1,10 @@
+func f() {
+    type Permission const (
+        Read    = 1 << iota
+        Write
+        Execute
+    )
+    var a Permission
+    a = Write
+    echo a
+}
