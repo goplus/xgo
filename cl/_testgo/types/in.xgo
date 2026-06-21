@@ -1,0 +1,13 @@
+import (
+	"math/cmplx"
+)
+
+var (
+	ToBe   bool       = false
+	MaxInt uint64     = 1<<64 - 1
+	z      complex128 = cmplx.sqrt(-5 + 12i)
+)
+
+printf "Type: %T Value: %v\n", ToBe, ToBe
+printf "Type: %T Value: %v\n", MaxInt, MaxInt
+printf "Type: %T Value: %v\n", z, z

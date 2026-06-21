@@ -36,8 +36,12 @@ func _TestTestjs(t *testing.T) {
 	}
 }
 
-func TestTestgop(t *testing.T) {
-	cltest.FromDir(t, "", "./_testgop")
+func TestTestxgo(t *testing.T) {
+	cltest.FromDir(t, "", "./_testxgo")
+}
+
+func _TestTestgo(t *testing.T) {
+	cltest.FromDir(t, "types", "./_testgo")
 }
 
 func TestTestc(t *testing.T) {
