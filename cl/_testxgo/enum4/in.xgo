@@ -1,0 +1,13 @@
+type Weekday const (
+	Sunday = byte(iota)
+	Monday
+	Tuesday
+	Wednesday
+	Thursday
+	Friday
+	Saturday
+)
+
+var v Weekday
+v = Friday
+echo v
