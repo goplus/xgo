@@ -38,7 +38,7 @@ echo mul(1.2, 3.14)
 
 #### Design Philosophy: What Overloading Means in XGo
 
-XGo's overloading is not the conventional model — where multiple functions share the same name and a smart compiler selects the most suitable one. Instead, an overloaded name is a single, uniquely-named entity that carries an ordered list of prototypes. At a call site, the compiler walks the prototype list and binds to the **first** prototype that matches the argument types.
+XGo's overloading is not the conventional model — where multiple functions share the same name and a smart compiler selects the most suitable one. Instead, an overloaded name is a **single, uniquely-named entity** that carries an ordered list of prototypes. At a call site, the compiler walks the prototype list and binds to the **first** prototype that matches the argument types.
 
 The distinction matters: there is no "best match" ranking or ambiguity resolution, only sequential first-match. This makes overload resolution predictable and explicit — the programmer controls dispatch priority simply by the order in which prototypes are declared.
 
