@@ -10,9 +10,8 @@ body:
   - type: textarea
     id: sample
     attributes:
-      label: "The following program `sample.gop` triggers an unexpected result"
+      label: "The following program `in.xgo` triggers an unexpected result"
       value: |
-        // add a sample
       render: coffee
     validations:
       required: true
@@ -31,10 +30,10 @@ body:
       label: Got
       description: |-
         ```console
-        $ gop run ./sample.gop
+        $ xgo run ./in.xgo
         // output
         ```
-      placeholder: $ xgo run ./sample.gop
+      placeholder: $ xgo run ./in.xgo
       render: console
     validations:
       required: true
