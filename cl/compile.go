@@ -1645,6 +1645,10 @@ func loadImport(ctx *blockCtx, spec *ast.ImportSpec) {
 }
 
 func inferEnumUnderlyingType(ctx *blockCtx, enumType *ast.EnumType) types.Type {
+	if len(enumType.Specs) == 0 {
+		ctx.handleErrorf(enumType.Pos(), enumType.End(), "enum type should have at least one const spec")
+		return types.Typ[types.Invalid]
+	}
 	spec := enumType.Specs[0].(*ast.ValueSpec)
 	compileExpr(ctx, 1, spec.Values[0])
 	return types.Default(ctx.cb.InternalStack().Pop().Type)
