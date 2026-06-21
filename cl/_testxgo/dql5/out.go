@@ -19,7 +19,7 @@ func main() {
 </body></html>
 `)
 		if _xgo_err != nil {
-			_xgo_err = errors.NewFrame(_xgo_err, "html`<html><body>\n<p>Links:</p>\n<ul>\n\t<li class=\"abc\"><a href=\"foo\">Foo</a>\n\t<li><a href=\"/bar/baz\">BarBaz</a>\n</ul>\n</body></html>\n`", "cl/_testgop/dql5/in.xgo", 1, "main.main")
+			_xgo_err = errors.NewFrame(_xgo_err, "html`<html><body>\n<p>Links:</p>\n<ul>\n\t<li class=\"abc\"><a href=\"foo\">Foo</a>\n\t<li><a href=\"/bar/baz\">BarBaz</a>\n</ul>\n</body></html>\n`", "cl/_testxgo/dql5/in.xgo", 1, "main.main")
 			panic(_xgo_err)
 		}
 		return
