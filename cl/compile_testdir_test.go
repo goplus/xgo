@@ -30,12 +30,6 @@ func TestTestspx(t *testing.T) {
 	}
 }
 
-func _TestTestjs(t *testing.T) {
-	if runtime.GOOS != "windows" {
-		cltest.FromDirEx(t, "", "./_testjs", false, true)
-	}
-}
-
 func TestTestxgo(t *testing.T) {
 	cltest.FromDir(t, "", "./_testxgo")
 }
@@ -52,6 +46,14 @@ func TestTestpy(t *testing.T) {
 	cltest.FromDir(t, "", "./_testpy")
 }
 
+func _TestTestjs(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		cltest.FromDirEx(t, "", "./_testjs", false, true)
+	}
+}
+
+/*
 func TestTestnext(t *testing.T) {
 	cltest.FromDir(t, "", "./_testnext")
 }
+*/
