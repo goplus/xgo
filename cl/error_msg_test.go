@@ -1060,6 +1060,21 @@ printf("%+v\n", int32)
 `)
 }
 
+func TestErrEnumType(t *testing.T) {
+	codeErrorTest(t, "bar.xgo:2:12: enum type should have at least one const spec", `
+type Scale const ()
+`)
+	codeErrorTest(t, "bar.xgo:3:9: const type should be omitted for enum const", `
+type Permission const (
+	Read   int = 1 << iota
+	Write
+	Execute
+)
+
+echo Write
+`)
+}
+
 func TestToTypeError(t *testing.T) {
 	codeErrorTestAst(t, "main", "bar.xgo", `bar.xgo:3:3: toType unexpected: *ast.BadExpr`, `
 type
