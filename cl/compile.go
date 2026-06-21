@@ -1676,8 +1676,9 @@ func loadConsts(ctx *blockCtx, cdecl *gogen.ConstDefs, v *ast.ValueSpec, iotav i
 	if v.Type != nil {
 		if typ != nil {
 			ctx.handleErrorf(v.Type.Pos(), v.Type.End(), "const type should be omitted for enum const")
+		} else {
+			typ = toType(ctx, v.Type)
 		}
-		typ = toType(ctx, v.Type)
 	}
 	if debugLoad {
 		log.Println("==> Load const", names, typ)
