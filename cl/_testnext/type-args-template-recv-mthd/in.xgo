@@ -1,0 +1,14 @@
+import "github.com/goplus/xgo/cl/internal/typeargs"
+
+type MyApp struct {
+    typeargs.App
+}
+
+type Start struct {
+}
+
+var app MyApp
+
+app.onCall Start, args => {
+	echo "onCall"
+}
