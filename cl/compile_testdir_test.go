@@ -52,6 +52,6 @@ func TestTestpy(t *testing.T) {
 	cltest.FromDir(t, "", "./_testpy")
 }
 
-func _TestTestnext(t *testing.T) {
-	cltest.FromDir(t, "type-args-template-recv-mthd", "./_testnext")
+func TestTestnext(t *testing.T) {
+	cltest.FromDir(t, "", "./_testnext")
 }
