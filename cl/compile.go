@@ -1085,10 +1085,10 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 		}
 	}
 
-	preloadConst := func(d *ast.GenDecl) {
+	preloadConst := func(specs []ast.Spec) {
 		pkg := ctx.pkg
 		cdecl := pkg.NewConstDefs(pkg.Types.Scope())
-		for _, spec := range d.Specs {
+		for _, spec := range specs {
 			vSpec := spec.(*ast.ValueSpec)
 			if debugLoad {
 				log.Println("==> Preload const", vSpec.Names)
@@ -1096,8 +1096,8 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 			setNamesLoader(parent, syms, vSpec.Names, func() {
 				if c := cdecl; c != nil {
 					cdecl = nil
-					loadConstSpecs(ctx, c, d.Specs)
-					for _, s := range d.Specs {
+					loadConstSpecs(ctx, c, specs, nil)
+					for _, s := range specs {
 						v := s.(*ast.ValueSpec)
 						removeNames(syms, v.Names)
 					}
@@ -1127,6 +1127,9 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 					ld := getTypeLoader(parent, syms, pos, end, name)
 					defs := ctx.pkg.NewTypeDefs()
 					if goFile != skippingGoFile { // is XGo file
+						/* TODO(xsw): enumType, ok := t.Type.(*ast.EnumType)
+						if ok { // enum type
+						} */
 						ld.typ = func() {
 							old, _ := p.SetCurFile(goFile, true)
 							defer p.RestoreCurFile(old)
@@ -1187,7 +1190,7 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 					}
 				}
 			case token.CONST:
-				preloadConst(d)
+				preloadConst(d.Specs)
 			case token.VAR:
 				if d == classDecl { // skip class fields
 					continue
@@ -1318,14 +1321,10 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 					ctx.overpos[name.Name] = name.NamePos
 				}
 				oval := strings.Join(onames, ",")
-				preloadConst(&ast.GenDecl{
-					Doc: d.Doc,
-					Tok: token.CONST,
-					Specs: []ast.Spec{
-						&ast.ValueSpec{
-							Names:  []*ast.Ident{{Name: oname}},
-							Values: []ast.Expr{stringLit(oval)},
-						},
+				preloadConst([]ast.Spec{
+					&ast.ValueSpec{
+						Names:  []*ast.Ident{{Name: oname}},
+						Values: []ast.Expr{stringLit(oval)},
 					},
 				})
 				ctx.lbinames = append(ctx.lbinames, oname)
@@ -1631,14 +1630,14 @@ func loadImport(ctx *blockCtx, spec *ast.ImportSpec) {
 	ctx.imports[name] = pkgImp{pkg, pkgName}
 }
 
-func loadConstSpecs(ctx *blockCtx, cdecl *gogen.ConstDefs, specs []ast.Spec) {
+func loadConstSpecs(ctx *blockCtx, cdecl *gogen.ConstDefs, specs []ast.Spec, typ types.Type) {
 	for iotav, spec := range specs {
 		vSpec := spec.(*ast.ValueSpec)
-		loadConsts(ctx, cdecl, vSpec, iotav)
+		loadConsts(ctx, cdecl, vSpec, iotav, typ)
 	}
 }
 
-func loadConsts(ctx *blockCtx, cdecl *gogen.ConstDefs, v *ast.ValueSpec, iotav int) {
+func loadConsts(ctx *blockCtx, cdecl *gogen.ConstDefs, v *ast.ValueSpec, iotav int, typ types.Type) {
 	vNames := v.Names
 	names := makeNames(vNames)
 	if v.Values == nil {
@@ -1649,8 +1648,10 @@ func loadConsts(ctx *blockCtx, cdecl *gogen.ConstDefs, v *ast.ValueSpec, iotav i
 		defNames(ctx, vNames, nil)
 		return
 	}
-	var typ types.Type
 	if v.Type != nil {
+		if typ != nil {
+			panic("TODO: v.Type should be nil for enum type")
+		}
 		typ = toType(ctx, v.Type)
 	}
 	if debugLoad {

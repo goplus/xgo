@@ -1013,7 +1013,7 @@ func compileDeclStmt(ctx *blockCtx, expr *ast.DeclStmt) {
 			}
 		case token.CONST:
 			cdecl := ctx.pkg.NewConstDefs(ctx.cb.Scope())
-			loadConstSpecs(ctx, cdecl, d.Specs)
+			loadConstSpecs(ctx, cdecl, d.Specs, nil)
 		case token.VAR:
 			for _, spec := range d.Specs {
 				v := spec.(*ast.ValueSpec)

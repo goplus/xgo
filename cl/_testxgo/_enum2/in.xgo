@@ -1,0 +1,18 @@
+type Weekday const (
+	Sunday = iota
+	Monday
+	Tuesday
+	Wednesday
+	Thursday
+	Friday
+	Saturday
+)
+
+type Permission const (
+	Read    = 1 << iota
+	Write
+	Execute
+)
+
+echo Sunday, Monday, Saturday
+echo Read, Write, Execute
