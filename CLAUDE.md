@@ -89,6 +89,16 @@ When adding new syntax to XGo, you must determine whether it belongs in the Mini
 3. If adding to MiniSpec, also update the TPL grammar file (`doc/spec/mini/mini.xgo`)
 4. Ensure examples demonstrate the new syntax clearly
 
+### Cross-Repository PR Workflow (xgo ↔ gogen)
+
+When submitting a new PR to the `gogen` repository for a change, also submit a PR to the `xgo` repository that updates the `gogen` module to the latest code from the corresponding `gogen` branch. The `xgo` PR must be based on the branch that contains the `gogen` changes (not on `main`), so that the two PRs can be reviewed and merged together.
+
+In practice:
+1. Create a feature branch and PR in `gogen`.
+2. In `xgo`, create a companion branch from the `gogen` feature branch (or from the `xgo` base branch, then update `go.mod`/`go.sum` to point at the `gogen` branch's commit).
+3. Open the `xgo` PR, referencing the `gogen` PR.
+4. Merge the `gogen` PR first, then update the `xgo` PR to use the released/merged `gogen` version and merge it.
+
 ### Communication Protocol
 - When I request syntax additions, first confirm the exact grammar specification
 - Always consider backward compatibility with existing Go code
