@@ -1134,7 +1134,7 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 						enumType, ok := t.Type.(*ast.EnumType)
 						if ok { // enum type
 							preloadConst(enumType.Specs, func() types.Type {
-								doNewType(ld) // create this type, but don't init
+								ld.load()
 								return ctx.pkg.Types.Scope().Lookup(name).Type()
 							})
 						}
@@ -1655,10 +1655,10 @@ func inferEnumUnderlyingType(ctx *blockCtx, enumType *ast.EnumType) types.Type {
 }
 
 // typ = enum type for enum consts, or nil for normal consts
-func loadConstSpecs(ctx *blockCtx, cdecl *gogen.ConstDefs, specs []ast.Spec, typ types.Type) {
+func loadConstSpecs(ctx *blockCtx, cdecl *gogen.ConstDefs, specs []ast.Spec, enumType types.Type) {
 	for iotav, spec := range specs {
 		vSpec := spec.(*ast.ValueSpec)
-		loadConsts(ctx, cdecl, vSpec, iotav, typ)
+		loadConsts(ctx, cdecl, vSpec, iotav, enumType)
 	}
 }
 
@@ -1673,8 +1673,9 @@ func loadConsts(ctx *blockCtx, cdecl *gogen.ConstDefs, v *ast.ValueSpec, iotav i
 		defNames(ctx, vNames, nil)
 		return
 	}
+	isEnum := typ != nil
 	if v.Type != nil {
-		if typ != nil {
+		if isEnum {
 			ctx.handleErrorf(v.Type.Pos(), v.Type.End(), "const type should be omitted for enum const")
 		} else {
 			typ = toType(ctx, v.Type)
@@ -1686,6 +1687,17 @@ func loadConsts(ctx *blockCtx, cdecl *gogen.ConstDefs, v *ast.ValueSpec, iotav i
 	fn := func(cb *gogen.CodeBuilder) int {
 		for _, val := range v.Values {
 			compileExpr(ctx, 1, val)
+			if isEnum {
+				stk := cb.InternalStack()
+				e := stk.Get(-1)
+				if t, ok := e.Type.(*types.Basic); !ok || t.Info()&types.IsUntyped == 0 {
+					// not untyped, convert value to the enum type
+					stk.Pop()
+					cb.Typ(typ)
+					stk.Push(e)
+					cb.Call(1)
+				}
+			}
 		}
 		return len(v.Values)
 	}
