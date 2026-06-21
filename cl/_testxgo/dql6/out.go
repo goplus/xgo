@@ -27,7 +27,7 @@ func mul(a, b float64) float64 {
 }
 `)
 		if _xgo_err != nil {
-			_xgo_err = errors.NewFrame(_xgo_err, "golang`package main\n\nvar (\n\ta, b string\n\tc    int\n)\n\nfunc add(a, b int) int {\n\treturn a + b\n}\n\nfunc mul(a, b float64) float64 {\n\treturn a * b\n}\n`", "cl/_testgop/dql6/in.xgo", 1, "main.main")
+			_xgo_err = errors.NewFrame(_xgo_err, "golang`package main\n\nvar (\n\ta, b string\n\tc    int\n)\n\nfunc add(a, b int) int {\n\treturn a + b\n}\n\nfunc mul(a, b float64) float64 {\n\treturn a * b\n}\n`", "cl/_testxgo/dql6/in.xgo", 1, "main.main")
 			panic(_xgo_err)
 		}
 		return

@@ -18,7 +18,7 @@ func main() {
 		var _xgo_err error
 		_xgo_ret, _xgo_err = BarTwo()
 		if _xgo_err != nil {
-			_xgo_err = errors.NewFrame(_xgo_err, "bar", "cl/_testgop/errwrap3/in.xgo", 14, "main.main")
+			_xgo_err = errors.NewFrame(_xgo_err, "bar", "cl/_testxgo/errwrap3/in.xgo", 14, "main.main")
 			panic(_xgo_err)
 		}
 		return

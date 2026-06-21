@@ -22,7 +22,7 @@ func main() {
 </animals></doc>
 `)
 		if _xgo_err != nil {
-			_xgo_err = errors.NewFrame(_xgo_err, "xml`<doc><animals>\n\t<animal class=\"gopher\">Line 1</animal>\n\t<animal class=\"armadillo\">Line 2</animal>\n\t<animal class=\"zebra\">Line 3</animal>\n\t<animal class=\"unknown\">Line 4</animal>\n\t<animal class=\"gopher\">Line 5</animal>\n\t<animal class=\"bee\">Line 6</animal>\n\t<animal class=\"gopher\">Line 7</animal>\n\t<animal class=\"zebra\">Line 8</animal>\n</animals></doc>\n`", "cl/_testgop/dql4/in.xgo", 1, "main.main")
+			_xgo_err = errors.NewFrame(_xgo_err, "xml`<doc><animals>\n\t<animal class=\"gopher\">Line 1</animal>\n\t<animal class=\"armadillo\">Line 2</animal>\n\t<animal class=\"zebra\">Line 3</animal>\n\t<animal class=\"unknown\">Line 4</animal>\n\t<animal class=\"gopher\">Line 5</animal>\n\t<animal class=\"bee\">Line 6</animal>\n\t<animal class=\"gopher\">Line 7</animal>\n\t<animal class=\"zebra\">Line 8</animal>\n</animals></doc>\n`", "cl/_testxgo/dql4/in.xgo", 1, "main.main")
 			panic(_xgo_err)
 		}
 		return

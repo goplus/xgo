@@ -13,7 +13,7 @@ func F2() (err error) {
 		var _xgo_err error
 		_autoGo_1, _autoGo_2, _xgo_err = F()
 		if _xgo_err != nil {
-			_xgo_err = errors.NewFrame(_xgo_err, "F()", "cl/_testgop/errwrap2/in.xgo", 7, "main.F2")
+			_xgo_err = errors.NewFrame(_xgo_err, "F()", "cl/_testxgo/errwrap2/in.xgo", 7, "main.F2")
 			return _xgo_err
 		}
 		goto _autoGo_3

@@ -30,7 +30,7 @@ func main() {
 			})
 		}).XGo_Attr__1("name")
 		if _xgo_err != nil {
-			_xgo_err = errors.NewFrame(_xgo_err, "doc.users@($age?:100 < 18).$name", "cl/_testgop/dql2/in.xgo", 4, "main.main")
+			_xgo_err = errors.NewFrame(_xgo_err, "doc.users@($age?:100 < 18).$name", "cl/_testxgo/dql2/in.xgo", 4, "main.main")
 			panic(_xgo_err)
 		}
 		return
