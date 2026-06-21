@@ -1042,10 +1042,10 @@ func compileType(ctx *blockCtx, t *ast.TypeSpec) {
 		} else {
 			underlying = toType(ctx, t.Type)
 		}
-		typeDecl.InitType(ctx.pkg, underlying)
+		typ := typeDecl.InitType(ctx.pkg, underlying)
 		if isEnum {
 			cdecl := ctx.pkg.NewConstDefs(cb.Scope())
-			loadConstSpecs(ctx, cdecl, enumType.Specs, typeDecl.Type())
+			loadConstSpecs(ctx, cdecl, enumType.Specs, typ)
 		}
 	}
 }
