@@ -1,3 +1,5 @@
+# Enum Type
+
 In Go, defining an enumeration requires two separate declarations: first a
 named type with an explicit underlying type, and then a `const` block whose
 values are typed as that named type:

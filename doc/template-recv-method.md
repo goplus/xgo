@@ -1,5 +1,4 @@
-Template Recv Method
-=====
+# Template Recv Method
 
 A **Template Recv Method** lets a framework base type call back into a method that you — the user — implement on your own type. The dispatch is handled automatically at the call site; you do not need to register anything.
 
