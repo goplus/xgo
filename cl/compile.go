@@ -1085,7 +1085,7 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 		}
 	}
 
-	preloadConst := func(specs []ast.Spec) {
+	preloadConst := func(specs []ast.Spec, getEnumTyp func() types.Type) {
 		pkg := ctx.pkg
 		cdecl := pkg.NewConstDefs(pkg.Types.Scope())
 		for _, spec := range specs {
@@ -1096,7 +1096,11 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 			setNamesLoader(parent, syms, vSpec.Names, func() {
 				if c := cdecl; c != nil {
 					cdecl = nil
-					loadConstSpecs(ctx, c, specs, nil)
+					var typ types.Type
+					if getEnumTyp != nil {
+						typ = getEnumTyp()
+					}
+					loadConstSpecs(ctx, c, specs, typ)
 					for _, s := range specs {
 						v := s.(*ast.ValueSpec)
 						removeNames(syms, v.Names)
@@ -1127,9 +1131,13 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 					ld := getTypeLoader(parent, syms, pos, end, name)
 					defs := ctx.pkg.NewTypeDefs()
 					if goFile != skippingGoFile { // is XGo file
-						/* TODO(xsw): enumType, ok := t.Type.(*ast.EnumType)
+						enumType, ok := t.Type.(*ast.EnumType)
 						if ok { // enum type
-						} */
+							preloadConst(enumType.Specs, func() types.Type {
+								doNewType(ld) // create this type, but don't init
+								return ctx.pkg.Types.Scope().Lookup(name).Type()
+							})
+						}
 						ld.typ = func() {
 							old, _ := p.SetCurFile(goFile, true)
 							defer p.RestoreCurFile(old)
@@ -1158,9 +1166,15 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 								if debugLoad {
 									log.Println("==> Load > InitType", name)
 								}
-								decl.InitType(ctx.pkg, toType(ctx, t.Type))
+								var underlying types.Type
+								if enumType != nil {
+									underlying = inferEnumUnderlyingType(ctx, enumType)
+								} else {
+									underlying = toType(ctx, t.Type)
+								}
+								typ := decl.InitType(ctx.pkg, underlying)
 								if rec := ctx.recorder(); rec != nil {
-									rec.Def(tName, decl.Type().Obj())
+									rec.Def(tName, typ.Obj())
 								}
 							}
 						}
@@ -1190,7 +1204,7 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 					}
 				}
 			case token.CONST:
-				preloadConst(d.Specs)
+				preloadConst(d.Specs, nil)
 			case token.VAR:
 				if d == classDecl { // skip class fields
 					continue
@@ -1326,7 +1340,7 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 						Names:  []*ast.Ident{{Name: oname}},
 						Values: []ast.Expr{stringLit(oval)},
 					},
-				})
+				}, nil)
 				ctx.lbinames = append(ctx.lbinames, oname)
 			} else {
 				ctx.overpos[name.Name] = name.NamePos
@@ -1630,6 +1644,13 @@ func loadImport(ctx *blockCtx, spec *ast.ImportSpec) {
 	ctx.imports[name] = pkgImp{pkg, pkgName}
 }
 
+func inferEnumUnderlyingType(ctx *blockCtx, enumType *ast.EnumType) types.Type {
+	spec := enumType.Specs[0].(*ast.ValueSpec)
+	compileExpr(ctx, 1, spec.Values[0])
+	return types.Default(ctx.cb.InternalStack().Pop().Type)
+}
+
+// typ = enum type for enum consts, or nil for normal consts
 func loadConstSpecs(ctx *blockCtx, cdecl *gogen.ConstDefs, specs []ast.Spec, typ types.Type) {
 	for iotav, spec := range specs {
 		vSpec := spec.(*ast.ValueSpec)
@@ -1650,7 +1671,7 @@ func loadConsts(ctx *blockCtx, cdecl *gogen.ConstDefs, v *ast.ValueSpec, iotav i
 	}
 	if v.Type != nil {
 		if typ != nil {
-			panic("TODO: v.Type should be nil for enum type")
+			ctx.handleErrorf(v.Type.Pos(), v.Type.End(), "const type should be omitted for enum const")
 		}
 		typ = toType(ctx, v.Type)
 	}
