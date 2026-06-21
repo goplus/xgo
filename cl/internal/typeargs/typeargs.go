@@ -20,6 +20,8 @@ const (
 	XGoPackage = true
 )
 
+// -----------------------------------------------------------------------------
+
 // XGox_As has one non-inferable TypeParam (T, only in return position)
 // and no inferable TypeParams.
 func XGox_As[T any](src any) (T, error) {
@@ -31,3 +33,20 @@ func XGox_As[T any](src any) (T, error) {
 func XGox_Convert[To any, From any](src From) To {
 	panic("not implemented")
 }
+
+// -----------------------------------------------------------------------------
+
+type App struct {
+}
+
+func (p *App) initApp() {}
+
+type iAppProto interface {
+	initApp()
+}
+
+func XGot_App_XGox_OnCall[InT any, AppT iAppProto](a AppT, callback func(args *InT)) {
+	panic("not implemented")
+}
+
+// -----------------------------------------------------------------------------
