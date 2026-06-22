@@ -19,6 +19,7 @@ package cl
 
 import (
 	"fmt"
+	"go/constant"
 	gotoken "go/token"
 	"go/types"
 	"log"
@@ -341,6 +342,17 @@ func doInitMethods(ld *typeLoader) {
 	}
 }
 
+// enumSharedConst holds info about a package-level enum constant that may be shared
+// across multiple enum types with the same name and identical untyped value.
+// A nil *enumSharedConst in the registry map is a sentinel meaning "pre-scanned as
+// potentially shared; first enum type hasn't emitted it yet".
+// An entry with enumTypeName == "" means "was typed on first emission; not shareable".
+type enumSharedConst struct {
+	val          constant.Value // the constant value (nil if not shareable)
+	enumTypeName string         // name of the first enum type declaring this constant; "" = not shareable
+	pos          token.Pos      // position in the first enum type
+}
+
 type pkgCtx struct {
 	*nodeInterp
 	nproj    int                      // number of non-test projects
@@ -354,9 +366,10 @@ type pkgCtx struct {
 	tylds    []*typeLoader
 	errs     errors.List
 
-	generics map[string]bool // generic type record
-	idents   []*ast.Ident    // toType ident recored
-	inInst   int             // toType in generic instance
+	generics         map[string]bool              // generic type record
+	idents           []*ast.Ident                 // toType ident recored
+	inInst           int                          // toType in generic instance
+	enumSharedConsts map[string]*enumSharedConst  // package-level shared enum const registry
 
 	goxMainClass string
 	goxMain      int32 // normal gox files with main func
@@ -580,13 +593,14 @@ func NewPackage(pkgPath string, pkg *ast.Package, conf *Config) (p *gogen.Packag
 		fset: fset, files: files, relBaseDir: relBaseDir,
 	}
 	ctx := &pkgCtx{
-		fset:       fset,
-		nodeInterp: interp,
-		projs:      make(map[string]*classProject),
-		classes:    make(map[*ast.File]*classFile),
-		overpos:    make(map[string]token.Pos),
-		syms:       make(map[string]loader),
-		generics:   make(map[string]bool),
+		fset:             fset,
+		nodeInterp:       interp,
+		projs:            make(map[string]*classProject),
+		classes:          make(map[*ast.File]*classFile),
+		overpos:          make(map[string]token.Pos),
+		syms:             make(map[string]loader),
+		generics:         make(map[string]bool),
+		enumSharedConsts: make(map[string]*enumSharedConst),
 	}
 	confGox := &gogen.Config{
 		Types:           conf.Types,
@@ -644,6 +658,51 @@ func NewPackage(pkgPath string, pkg *ast.Package, conf *Config) (p *gogen.Packag
 				log.Println("==> ClassFile", f.path)
 			}
 			loadClass(ctx, p, f.path, classFile, conf)
+		}
+	}
+
+	// Pre-scan all XGo files to find enum const names that appear in multiple
+	// package-level enum types. Those names will be emitted as untyped constants
+	// so they are assignable to all participating enum types.
+	{
+		nameCount := make(map[string]int) // name -> count of enum types declaring it
+		for _, sf := range sfiles {
+			if sf.IsClass {
+				continue
+			}
+			for _, decl := range sf.Decls {
+				gd, ok := decl.(*ast.GenDecl)
+				if !ok || gd.Tok != token.TYPE {
+					continue
+				}
+				for _, spec := range gd.Specs {
+					t := spec.(*ast.TypeSpec)
+					enumType, isEnum := t.Type.(*ast.EnumType)
+					if !isEnum || enumHasIota(enumType.Specs) {
+						continue
+					}
+					seen := make(map[string]bool)
+					for _, s := range enumType.Specs {
+						vs := s.(*ast.ValueSpec)
+						if vs.Values == nil {
+							continue
+						}
+						for _, nm := range vs.Names {
+							if nm.Name != "_" && !seen[nm.Name] {
+								seen[nm.Name] = true
+								nameCount[nm.Name]++
+							}
+						}
+					}
+				}
+			}
+		}
+		// Pre-populate enumSharedConsts with nil sentinels for names seen in 2+ enum
+		// types. The actual value is filled in during loadConsts on first emission.
+		for name, count := range nameCount {
+			if count >= 2 {
+				ctx.enumSharedConsts[name] = nil
+			}
 		}
 	}
 
@@ -1085,13 +1144,41 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 		}
 	}
 
-	preloadConst := func(specs []ast.Spec, getEnumTyp func() types.Type) {
+	preloadConst := func(specs []ast.Spec, getEnumTyp func() types.Type, enumTypeName string) {
 		pkg := ctx.pkg
 		cdecl := pkg.NewConstDefs(pkg.Types.Scope())
 		for _, spec := range specs {
 			vSpec := spec.(*ast.ValueSpec)
 			if debugLoad {
 				log.Println("==> Preload const", vSpec.Names)
+			}
+			// For package-level enum types, skip loader registration for names
+			// that are already registered (shared across enum types). The loader
+			// for the first enum type will handle loading all the specs including
+			// the shared-name check when triggered.
+			if enumTypeName != "" {
+				allShared := true
+				for _, nm := range vSpec.Names {
+					if nm.Name == "_" {
+						allShared = false
+						break
+					}
+					if _, inRegistry := ctx.enumSharedConsts[nm.Name]; !inRegistry {
+						allShared = false
+						break
+					}
+					if _, alreadyInSyms := syms[nm.Name]; !alreadyInSyms {
+						allShared = false
+						break
+					}
+				}
+				if allShared {
+					// This spec's names are all shared and already have loaders.
+					// Register a secondary loader that triggers the second enum type's
+					// full spec loading when any of its non-shared names is referenced.
+					// For the shared names themselves, the first enum's loader handles them.
+					continue
+				}
 			}
 			setNamesLoader(parent, syms, vSpec.Names, func() {
 				if c := cdecl; c != nil {
@@ -1100,7 +1187,7 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 					if getEnumTyp != nil {
 						typ = getEnumTyp()
 					}
-					loadConstSpecs(ctx, c, specs, typ)
+					loadConstSpecs(ctx, c, specs, typ, enumTypeName)
 					for _, s := range specs {
 						v := s.(*ast.ValueSpec)
 						removeNames(syms, v.Names)
@@ -1136,7 +1223,7 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 							preloadConst(enumType.Specs, func() types.Type {
 								ld.load()
 								return ctx.pkg.Types.Scope().Lookup(name).Type()
-							})
+							}, name)
 						}
 						ld.typ = func() {
 							old, _ := p.SetCurFile(goFile, true)
@@ -1204,7 +1291,7 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 					}
 				}
 			case token.CONST:
-				preloadConst(d.Specs, nil)
+				preloadConst(d.Specs, nil, "")
 			case token.VAR:
 				if d == classDecl { // skip class fields
 					continue
@@ -1340,7 +1427,7 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 						Names:  []*ast.Ident{{Name: oname}},
 						Values: []ast.Expr{stringLit(oval)},
 					},
-				}, nil)
+				}, nil, "")
 				ctx.lbinames = append(ctx.lbinames, oname)
 			} else {
 				ctx.overpos[name.Name] = name.NamePos
@@ -1655,14 +1742,21 @@ func inferEnumUnderlyingType(ctx *blockCtx, enumType *ast.EnumType) types.Type {
 }
 
 // typ = enum type for enum consts, or nil for normal consts
-func loadConstSpecs(ctx *blockCtx, cdecl *gogen.ConstDefs, specs []ast.Spec, enumType types.Type) {
+// enumTypeName = non-empty for package-level enum types (enables name sharing)
+func loadConstSpecs(ctx *blockCtx, cdecl *gogen.ConstDefs, specs []ast.Spec, enumType types.Type, enumTypeName string) {
+	// If this is a package-level enum type and it uses iota anywhere in its
+	// body, it is ineligible for name sharing. Clear enumTypeName so that
+	// loadConsts treats it as a plain (non-sharing) enum.
+	if enumTypeName != "" && enumHasIota(specs) {
+		enumTypeName = ""
+	}
 	for iotav, spec := range specs {
 		vSpec := spec.(*ast.ValueSpec)
-		loadConsts(ctx, cdecl, vSpec, iotav, enumType)
+		loadConsts(ctx, cdecl, vSpec, iotav, enumType, enumTypeName)
 	}
 }
 
-func loadConsts(ctx *blockCtx, cdecl *gogen.ConstDefs, v *ast.ValueSpec, iotav int, typ types.Type) {
+func loadConsts(ctx *blockCtx, cdecl *gogen.ConstDefs, v *ast.ValueSpec, iotav int, typ types.Type, enumTypeName string) {
 	vNames := v.Names
 	names := makeNames(vNames)
 	if v.Values == nil {
@@ -1684,6 +1778,37 @@ func loadConsts(ctx *blockCtx, cdecl *gogen.ConstDefs, v *ast.ValueSpec, iotav i
 	if debugLoad {
 		log.Println("==> Load const", names, typ)
 	}
+
+	// For package-level enum types with a single name, check whether this
+	// constant participates in name sharing across enum types.
+	if isEnum && enumTypeName != "" && len(names) == 1 {
+		name := names[0]
+		if name != "_" {
+			if shared, isInRegistry := ctx.enumSharedConsts[name]; isInRegistry {
+				if shared == nil {
+					// Sentinel: pre-scanned as potentially shared, first enum to emit it.
+					emitEnumSharedConst(ctx, cdecl, v, iotav, typ, vNames, name, enumTypeName)
+					return
+				}
+				if shared.enumTypeName == "" {
+					// First enum's value was typed; this const is not shareable.
+					// Fall through to normal emission which will hit gogen's redeclaration error.
+					// Emit a more helpful error first.
+					ctx.handleErrorf(v.Pos(), v.End(),
+						"enum constant %q has a typed value; shared enum constants must be untyped", name)
+					return
+				}
+				// Already emitted as an untyped constant in another enum type.
+				// Verify the value is compatible and skip re-emission.
+				checkEnumSharedConst(ctx, v, shared, enumTypeName)
+				defNames(ctx, vNames, nil)
+				return
+			}
+			// Not in registry: this name is unique to this enum type, use normal
+			// typed emission (fall through).
+		}
+	}
+
 	fn := func(cb *gogen.CodeBuilder) int {
 		for _, val := range v.Values {
 			compileExpr(ctx, 1, val)
@@ -1703,6 +1828,117 @@ func loadConsts(ctx *blockCtx, cdecl *gogen.ConstDefs, v *ast.ValueSpec, iotav i
 	}
 	cdecl.New(fn, iotav, v.Pos(), typ, names...)
 	defNames(ctx, v.Names, nil)
+}
+
+// enumHasIota reports whether any value expression in specs references iota.
+func enumHasIota(specs []ast.Spec) bool {
+	for _, spec := range specs {
+		vSpec := spec.(*ast.ValueSpec)
+		for _, val := range vSpec.Values {
+			found := false
+			ast.Inspect(val, func(n ast.Node) bool {
+				if id, ok := n.(*ast.Ident); ok && id.Name == "iota" {
+					found = true
+					return false
+				}
+				return !found
+			})
+			if found {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// emitEnumSharedConst emits a package-level enum constant. If the value is an
+// untyped constant, it is emitted without a type (making it shareable across
+// enum types) and registered in the shared const registry. If the value is typed,
+// it falls back to normal typed-enum emission and is not registered for sharing.
+func emitEnumSharedConst(ctx *blockCtx, cdecl *gogen.ConstDefs, v *ast.ValueSpec, iotav int, enumTyp types.Type, vNames []*ast.Ident, name, enumTypeName string) {
+	// Pre-evaluate the expression to determine whether the value is untyped,
+	// without committing any output. Pop the result after inspection.
+	compileExpr(ctx, 1, v.Values[0])
+	stk := ctx.cb.InternalStack()
+	e := stk.Pop()
+	bt, isBasic := e.Type.(*types.Basic)
+	isUntyped := isBasic && bt.Info()&types.IsUntyped != 0
+
+	if !isUntyped {
+		// Typed value: emit with enum type conversion (standard enum behavior).
+		// Mark as not shareable so subsequent enum types get a proper error.
+		fn := func(cb *gogen.CodeBuilder) int {
+			compileExpr(ctx, 1, v.Values[0])
+			stk := cb.InternalStack()
+			elem := stk.Get(-1)
+			stk.Pop()
+			cb.Typ(enumTyp)
+			stk.Push(elem)
+			cb.Call(1)
+			return 1
+		}
+		cdecl.New(fn, iotav, v.Pos(), enumTyp, name)
+		// Mark as not shareable: enumTypeName="" distinguishes from the nil sentinel.
+		ctx.enumSharedConsts[name] = &enumSharedConst{pos: v.Pos()}
+		defNames(ctx, vNames, nil)
+		return
+	}
+
+	// Untyped value: emit without a type and register for sharing.
+	fn := func(cb *gogen.CodeBuilder) int {
+		compileExpr(ctx, 1, v.Values[0])
+		return 1
+	}
+	cdecl.New(fn, iotav, v.Pos(), nil, name)
+
+	// Register the constant for sharing by subsequent enum types.
+	cval := e.CVal
+	if cval != nil {
+		ctx.enumSharedConsts[name] = &enumSharedConst{
+			val:          cval,
+			enumTypeName: enumTypeName,
+			pos:          v.Pos(),
+		}
+	}
+	defNames(ctx, vNames, nil)
+}
+
+// checkEnumSharedConst verifies that a re-declaration of a shared enum constant
+// is legal and reports an error otherwise.
+func checkEnumSharedConst(ctx *blockCtx, v *ast.ValueSpec, shared *enumSharedConst, enumTypeName string) {
+	name := v.Names[0].Name
+	if v.Values == nil {
+		ctx.handleErrorf(v.Pos(), v.End(),
+			"enum constant %q conflicts with %q: repeat-previous syntax not allowed for shared enum constants",
+			name, shared.enumTypeName)
+		return
+	}
+
+	// Evaluate the expression to obtain its value and type without emitting.
+	for _, val := range v.Values {
+		compileExpr(ctx, 1, val)
+	}
+	stk := ctx.cb.InternalStack()
+	e := stk.Get(-1)
+	cval := e.CVal
+	bt, isBasic := e.Type.(*types.Basic)
+	isUntyped := isBasic && bt.Info()&types.IsUntyped != 0
+	stk.PopN(len(v.Values))
+
+	if !isUntyped {
+		ctx.handleErrorf(v.Pos(), v.End(),
+			"enum constant %q has a typed value; shared enum constants must be untyped", name)
+		return
+	}
+	if cval == nil || shared.val == nil {
+		return // can't compare; let it pass
+	}
+	if constant.Compare(cval, gotoken.EQL, shared.val) {
+		return // values match — sharing is valid
+	}
+	ctx.handleErrorf(v.Pos(), v.End(),
+		"enum constant %q already declared with value %s (%s); cannot redeclare with value %s (%s)",
+		name, shared.val, shared.enumTypeName, cval, enumTypeName)
 }
 
 func loadVars(ctx *blockCtx, v *ast.ValueSpec, doc *ast.CommentGroup, global bool) {

@@ -1,0 +1,17 @@
+type Direction const (
+	None  = 0
+	North = 1
+	South = 2
+	East  = 3
+	West  = 4
+)
+
+type Priority const (
+	None = 0
+	Low  = 1
+	High = 2
+)
+
+var d Direction = None
+var p Priority = None
+echo d, p

@@ -1,0 +1,26 @@
+type RepeatMode const (
+	None    = ""
+	Once    = "Once"
+	Daily   = "Daily"
+	Weekly  = "Weekly"
+	Monthly = "Monthly"
+	Yearly  = "Yearly"
+)
+
+type MonthlyRepeatOnDay const (
+	None       = ""
+	Sunday     = "Sunday"
+	Monday     = "Monday"
+	Tuesday    = "Tuesday"
+	Wednesday  = "Wednesday"
+	Thursday   = "Thursday"
+	Friday     = "Friday"
+	Saturday   = "Saturday"
+	Day        = "day"
+	Weekday    = "weekday"
+	WeekendDay = "weekend day"
+)
+
+var r RepeatMode = None
+var m MonthlyRepeatOnDay = None
+echo r, m

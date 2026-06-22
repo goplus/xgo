@@ -1075,6 +1075,32 @@ echo Write
 `)
 }
 
+func TestErrEnumSharedConst(t *testing.T) {
+	// Different underlying values for the same shared name.
+	codeErrorTest(t, `bar.xgo:6:2: enum constant "None" already declared with value "none" (RepeatMode); cannot redeclare with value "no repeat" (MonthlyRepeatOnDay)`, `
+type RepeatMode const (
+	None = "none"
+)
+type MonthlyRepeatOnDay const (
+	None   = "no repeat"
+	Sunday = "Sunday"
+)
+echo None, Sunday
+`)
+	// Shared name with a typed (non-untyped) value.
+	codeErrorTest(t, `bar.xgo:7:2: enum constant "None" has a typed value; shared enum constants must be untyped`, `
+type Foo const (
+	None = uint32(0)
+	Bar  = uint32(1)
+)
+type Baz const (
+	None = uint32(0)
+	Qux  = uint32(2)
+)
+echo Bar, Qux
+`)
+}
+
 func TestToTypeError(t *testing.T) {
 	codeErrorTestAst(t, "main", "bar.xgo", `bar.xgo:3:3: toType unexpected: *ast.BadExpr`, `
 type

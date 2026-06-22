@@ -1013,7 +1013,7 @@ func compileDeclStmt(ctx *blockCtx, expr *ast.DeclStmt) {
 			}
 		case token.CONST:
 			cdecl := ctx.pkg.NewConstDefs(ctx.cb.Scope())
-			loadConstSpecs(ctx, cdecl, d.Specs, nil)
+			loadConstSpecs(ctx, cdecl, d.Specs, nil, "")
 		case token.VAR:
 			for _, spec := range d.Specs {
 				v := spec.(*ast.ValueSpec)
@@ -1045,7 +1045,7 @@ func compileType(ctx *blockCtx, t *ast.TypeSpec) {
 		typ := typeDecl.InitType(ctx.pkg, underlying)
 		if isEnum {
 			cdecl := ctx.pkg.NewConstDefs(cb.Scope())
-			loadConstSpecs(ctx, cdecl, enumType.Specs, typ)
+			loadConstSpecs(ctx, cdecl, enumType.Specs, typ, "")
 		}
 	}
 }
