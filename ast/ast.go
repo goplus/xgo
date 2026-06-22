@@ -947,18 +947,6 @@ type (
 		EndPos  token.Pos     // end of spec (overrides Path.Pos if nonzero)
 	}
 
-	// A ValueSpec node represents a constant or variable declaration
-	// (ConstSpec or VarSpec production).
-	//
-	ValueSpec struct {
-		Doc     *CommentGroup // associated documentation; or nil
-		Names   []*Ident      // value names (len(Names) > 0)
-		Type    Expr          // value type; or nil
-		Tag     *BasicLit     // classfile field tag; or nil
-		Values  []Expr        // initial values; or nil
-		Comment *CommentGroup // line comments; or nil
-	}
-
 	// A TypeSpec node represents a type declaration (TypeSpec production).
 	TypeSpec struct {
 		Doc        *CommentGroup // associated documentation; or nil
@@ -981,14 +969,6 @@ func (s *ImportSpec) Pos() token.Pos {
 }
 
 // Pos returns position of first character belonging to the node.
-func (s *ValueSpec) Pos() token.Pos {
-	if len(s.Names) == 0 {
-		return s.Type.Pos()
-	}
-	return s.Names[0].Pos()
-}
-
-// Pos returns position of first character belonging to the node.
 func (s *TypeSpec) Pos() token.Pos { return s.Name.Pos() }
 
 // End returns position of first character immediately after the node.
@@ -997,17 +977,6 @@ func (s *ImportSpec) End() token.Pos {
 		return s.EndPos
 	}
 	return s.Path.End()
-}
-
-// End returns position of first character immediately after the node.
-func (s *ValueSpec) End() token.Pos {
-	if n := len(s.Values); n > 0 {
-		return s.Values[n-1].End()
-	}
-	if s.Type != nil {
-		return s.Type.End()
-	}
-	return s.Names[len(s.Names)-1].End()
 }
 
 // End returns position of first character immediately after the node.
@@ -1048,19 +1017,6 @@ type (
 		Specs  []Spec
 		Rparen token.Pos // position of ')', if any
 	}
-
-	// A FuncDecl node represents a function declaration.
-	FuncDecl struct {
-		Doc      *CommentGroup // associated documentation; or nil
-		Recv     *FieldList    // receiver (methods); or nil (functions)
-		Name     *Ident        // function/method name
-		Type     *FuncType     // function signature: parameters, results, and position of "func" keyword
-		Body     *BlockStmt    // function body; or nil for external (non-Go) function
-		Operator bool          // is operator or not
-		Shadow   bool          // is a shadow entry
-		IsClass  bool          // recv set by class
-		Static   bool          // recv is static (class method)
-	}
 )
 
 // Pos and End implementations for declaration nodes.
@@ -1071,9 +1027,6 @@ func (d *BadDecl) Pos() token.Pos { return d.From }
 // Pos returns position of first character belonging to the node.
 func (d *GenDecl) Pos() token.Pos { return d.TokPos }
 
-// Pos returns position of first character belonging to the node.
-func (d *FuncDecl) Pos() token.Pos { return d.Type.Pos() }
-
 // End returns position of first character immediately after the node.
 func (d *BadDecl) End() token.Pos { return d.To }
 
@@ -1083,14 +1036,6 @@ func (d *GenDecl) End() token.Pos {
 		return d.Rparen + 1
 	}
 	return d.Specs[0].End()
-}
-
-// End returns position of first character immediately after the node.
-func (d *FuncDecl) End() token.Pos {
-	if d.Body != nil {
-		return d.Body.End()
-	}
-	return d.Type.End()
 }
 
 // declNode() ensures that only declaration nodes can be
