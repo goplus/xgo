@@ -10,7 +10,7 @@ require (
 	github.com/goplus/cobra v1.10.7 //xgo:class
 	github.com/goplus/gogen v1.23.3
 	github.com/goplus/lib v0.3.1
-	github.com/goplus/mod v0.20.2
+	github.com/goplus/mod v0.20.3
 	github.com/qiniu/x v1.18.0
 	golang.org/x/net v0.50.0
 )
