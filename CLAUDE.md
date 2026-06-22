@@ -22,7 +22,7 @@ When implementing new language syntax, follow this three-phase approach:
 - **What NOT to include**: Do NOT add any code generation or semantic logic in `cl/` package - that belongs in Phase 2
 
 #### Phase 2: Semantic Implementation (Second Pull Request)
-**Scope**: Code generation via `cl` package ONLY
+**Scope**: Code generation via `cl` package and `gogen` module ONLY
 - **Code Generation**: Implement semantics using `github.com/goplus/gogen` package
 - **Type Safety**: Leverage gogen's type information maintenance for semantic correctness
 - **Testing**: Add comprehensive test cases in `cl/_testxgo/` covering various usage scenarios
