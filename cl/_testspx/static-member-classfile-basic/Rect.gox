@@ -1,0 +1,14 @@
+const .name = "rect"
+var (
+	.count int = 100
+	Rect.total int = 200
+)
+
+func Get() string {
+	return name
+}
+
+func Inc() {
+	count++
+	Rect.total++
+}
