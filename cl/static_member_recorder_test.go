@@ -98,3 +98,25 @@ foo.count++
 		}
 	}
 }
+
+func TestClassfileStaticMemberRecorderUsesBareMember(t *testing.T) {
+	rec := &staticMemberRecorder{fset: cltest.Conf.Fset}
+	conf := *cltest.Conf
+	conf.Recorder = rec
+
+	fs := memfs.SingleFile("/foo", "Rect.gox", `
+const .name = "rect"
+
+func Get() string {
+	return name
+}
+`)
+	cltest.DoFS(t, &conf, fs, "/foo", nil, "main", nil)
+
+	if rec.hasUse("Rect", "Rect", 4) {
+		t.Fatalf("bare static member should not record explicit receiver use: %#v", rec.uses)
+	}
+	if !rec.hasUse("name", "XGos_Rect_Name", 5) {
+		t.Fatalf("missing static member use in %#v", rec.uses)
+	}
+}
