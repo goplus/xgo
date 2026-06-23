@@ -221,6 +221,10 @@ func canUseStaticMemberSelector(ctx *blockCtx, x *ast.Ident) bool {
 }
 
 func staticMemberRecvNames(ctx *blockCtx) []string {
+	if ctx.staticMemberRecvsInited {
+		return ctx.staticMemberRecvs
+	}
+	ctx.staticMemberRecvsInited = true
 	var names []string
 	if name := classRecvName(ctx); name != "" {
 		names = append(names, name)
@@ -235,6 +239,7 @@ func staticMemberRecvNames(ctx *blockCtx) []string {
 			names = append(names, name)
 		}
 	}
+	ctx.staticMemberRecvs = names
 	return names
 }
 

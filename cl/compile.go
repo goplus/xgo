@@ -510,6 +510,9 @@ type blockCtx struct {
 	fileScope *types.Scope // available when isXGoFile
 	rec       *goxRecorder
 
+	staticMemberRecvs       []string
+	staticMemberRecvsInited bool
+
 	fileLine  bool
 	isClass   bool
 	isXgoFile bool // is XGo file or not
@@ -1557,6 +1560,8 @@ func staticMethod(tname, name string) string {
 }
 
 func staticMember(tname, name string) string {
+	// Static values share the static-method namespace so each type has one
+	// static member namespace for both methods and values.
 	return staticMethod(tname, name)
 }
 
