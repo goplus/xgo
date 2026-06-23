@@ -1,0 +1,7 @@
+var (
+	Rect.total, width int = 200, 10
+)
+
+func Get() int {
+	return width + Rect.total
+}
