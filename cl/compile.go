@@ -27,7 +27,6 @@ import (
 	"strconv"
 	"strings"
 
-	goast "go/ast"
 	gotoken "go/token"
 
 	"github.com/goplus/gogen"
@@ -336,19 +335,12 @@ func (p *constNamePos) End() token.Pos {
 }
 
 func compileConstVal(cb *gogen.CodeBuilder, v constant.Value) {
-	var kind gotoken.Token
 	switch v.Kind() {
-	case constant.String:
-		kind = gotoken.STRING
-	case constant.Int:
-		kind = gotoken.INT
+	case constant.String, constant.Int:
+		cb.Val(constant.Val(v))
 	default:
 		panic("unsupported const kind (only string and int) across different enum")
 	}
-	cb.Val(&goast.BasicLit{
-		Kind:  kind,
-		Value: v.ExactString(),
-	})
 }
 
 type constNameLoader struct {
