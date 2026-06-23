@@ -242,6 +242,12 @@ func TestErrInFunc(t *testing.T) {
 
 func TestClassErrCode(t *testing.T) {
 	testClassErrCode(t, `var (
+	x int
+)
+
+var y int
+`, `/foo/bar.gox:5:1: multiple top-level var declarations in classfile`, ``)
+	testClassErrCode(t, `var (
 	A,B
 	v int
 )
@@ -267,6 +273,21 @@ var (
 const c = 100
 const d
 `, `/foo/bar.gox:5:7: missing constant value`, ``)
+}
+
+func TestErrStaticMember(t *testing.T) {
+	testClassErrCode(t, `var (
+	. B int
+)
+`, `/foo/bar.gox:2:4: whitespace is not allowed in static member name`, ``)
+	testErrCode(t, `var (
+	A. B int
+)
+`, `/foo/bar.xgo:2:5: whitespace is not allowed in static member name`, ``)
+	testErrCode(t, `var (
+	A .B int
+)
+`, `/foo/bar.xgo:2:4: whitespace is not allowed in static member name`, ``)
 }
 
 func TestErrGlobal(t *testing.T) {
@@ -357,6 +378,11 @@ func TestCheckExpr(t *testing.T) {
 	p.checkExpr(&ast.IndexListExpr{})
 	p.checkExpr(&ast.FuncType{})
 	p.checkExpr(&ast.FuncLit{})
+}
+
+func TestErrType(t *testing.T) {
+	testErrCode(t, `var a *
+`, `/foo/bar.xgo:1:9: expected type, found 'EOF'`, ``)
 }
 
 func TestErrTupleType(t *testing.T) {
