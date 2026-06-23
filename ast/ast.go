@@ -755,9 +755,6 @@ func (s *LabeledStmt) Pos() token.Pos { return s.Label.Pos() }
 func (s *ExprStmt) Pos() token.Pos { return s.X.Pos() }
 
 // Pos returns position of first character belonging to the node.
-func (s *SendStmt) Pos() token.Pos { return s.Chan.Pos() }
-
-// Pos returns position of first character belonging to the node.
 func (s *IncDecStmt) Pos() token.Pos { return s.X.Pos() }
 
 // Pos returns position of first character belonging to the node.
@@ -909,7 +906,6 @@ func (*DeclStmt) stmtNode()       {}
 func (*EmptyStmt) stmtNode()      {}
 func (*LabeledStmt) stmtNode()    {}
 func (*ExprStmt) stmtNode()       {}
-func (*SendStmt) stmtNode()       {}
 func (*IncDecStmt) stmtNode()     {}
 func (*AssignStmt) stmtNode()     {}
 func (*GoStmt) stmtNode()         {}
@@ -985,15 +981,15 @@ func (s *TypeSpec) End() token.Pos { return s.Type.End() }
 // specNode() ensures that only spec nodes can be
 // assigned to a Spec.
 func (*ImportSpec) specNode() {}
-func (*ValueSpec) specNode()  {}
 func (*TypeSpec) specNode()   {}
+
+// ----------------------------------------------------------------------------
 
 // A declaration is represented by one of the following declaration nodes.
 type (
 	// A BadDecl node is a placeholder for declarations containing
 	// syntax errors for which no correct declaration nodes can be
 	// created.
-	//
 	BadDecl struct {
 		From, To token.Pos // position range of bad declaration
 	}
@@ -1008,7 +1004,6 @@ type (
 	//	token.CONST   *ValueSpec
 	//	token.TYPE    *TypeSpec
 	//	token.VAR     *ValueSpec
-	//
 	GenDecl struct {
 		Doc    *CommentGroup // associated documentation; or nil
 		TokPos token.Pos     // position of Tok
@@ -1040,9 +1035,8 @@ func (d *GenDecl) End() token.Pos {
 
 // declNode() ensures that only declaration nodes can be
 // assigned to a Decl.
-func (*BadDecl) declNode()  {}
-func (*GenDecl) declNode()  {}
-func (*FuncDecl) declNode() {}
+func (*BadDecl) declNode() {}
+func (*GenDecl) declNode() {}
 
 // ----------------------------------------------------------------------------
 
