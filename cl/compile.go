@@ -256,7 +256,7 @@ type baseLoader struct {
 	start token.Pos
 }
 
-func initLoader(ctx *pkgCtx, syms map[string]loader, start, end token.Pos, name string, fn func(), genBody bool) bool {
+func initLoader(ctx *pkgCtx, syms map[string]loader, at *ast.Ident, name string, fn func(), genBody bool) bool {
 	if name == "_" {
 		if genBody {
 			ctx.inits = append(ctx.inits, fn)
@@ -266,10 +266,10 @@ func initLoader(ctx *pkgCtx, syms map[string]loader, start, end token.Pos, name 
 	if old, ok := syms[name]; ok {
 		oldpos := ctx.Position(old.pos())
 		ctx.handleErrorf(
-			start, end, "%s redeclared in this block\n\tprevious declaration at %v", name, oldpos)
+			at.Pos(), at.End(), "%s redeclared in this block\n\tprevious declaration at %v", name, oldpos)
 		return false
 	}
-	syms[name] = &baseLoader{start: start, fn: fn}
+	syms[name] = &baseLoader{start: at.Pos(), fn: fn}
 	return true
 }
 
@@ -1049,7 +1049,7 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 				if debugLoad {
 					log.Println("==> Preload func", fname)
 				}
-				if initLoader(parent, syms, name.Pos(), name.End(), fname, fn, genFnBody) {
+				if initLoader(parent, syms, name, fname, fn, genFnBody) {
 					if strings.HasPrefix(fname, "XGox_") { // XGox_xxx func
 						ctx.lbinames = append(ctx.lbinames, fname)
 					}
@@ -1066,7 +1066,7 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 					defer p.RestoreCurFile(old)
 					loadFunc(ctx, nil, fname, d, genFnBody)
 				}
-				initLoader(parent, syms, name.Pos(), name.End(), fname, fn, genFnBody)
+				initLoader(parent, syms, name, fname, fn, genFnBody)
 				ctx.lbinames = append(ctx.lbinames, fname)
 			} else {
 				if debugLoad {
@@ -1108,7 +1108,7 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 				}
 			}
 			for _, name := range vSpec.Names {
-				initLoader(parent, syms, name.Pos(), name.End(), name.Name, loadConst, true)
+				initLoader(parent, syms, name, name.Name, loadConst, true)
 			}
 		}
 	}
@@ -1227,7 +1227,7 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 						}
 					}
 					for _, name := range vSpec.Names {
-						initLoader(parent, syms, name.Pos(), name.End(), name.Name, loadVar, true)
+						initLoader(parent, syms, name, name.Name, loadVar, true)
 					}
 				}
 			default:
