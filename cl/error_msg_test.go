@@ -1060,7 +1060,7 @@ printf("%+v\n", int32)
 `)
 }
 
-func TestErrEnumType(t *testing.T) {
+func TestErrEnumType1(t *testing.T) {
 	codeErrorTest(t, "bar.xgo:2:12: enum type should have at least one const spec", `
 type Scale const ()
 `)
@@ -1072,6 +1072,20 @@ type Permission const (
 )
 
 echo Write
+`)
+}
+
+func TestErrEnumType2(t *testing.T) {
+	codeErrorTest(t, `bar.xgo:7:2: enum constant "None" already declared with value "none"; cannot redeclare with value "no repeat"`, `
+type RepeatMode const (
+	None = "none"
+)
+
+type MonthlyRepeatOnDay const (
+	None = "no repeat"
+)
+
+echo None
 `)
 }
 

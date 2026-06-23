@@ -1,15 +1,15 @@
 type Direction const (
-	None  = 0
-	North = 1
-	South = 2
-	East  = 3
-	West  = 4
+	None  = uint8(iota)
+	North
+	South
+	East
+	West
 )
 
 type Priority const (
-	None = 0
-	Low  = 1
-	High = 2
+	None = iota
+	Low
+	High
 )
 
 var d Direction = None

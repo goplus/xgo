@@ -2,22 +2,22 @@ package main
 
 import "fmt"
 
-type Direction int
+type Direction uint8
 
 const (
-	_None_1 Direction = 0
-	North   Direction = 1
-	South   Direction = 2
-	East    Direction = 3
-	West    Direction = 4
+	_None_1 Direction = Direction(uint8(iota))
+	North
+	South
+	East
+	West
 )
 
 type Priority int
 
 const (
-	_None_2 Priority = 0
-	Low     Priority = 1
-	High    Priority = 2
+	_None_2 Priority = iota
+	Low
+	High
 )
 const None = 0
 

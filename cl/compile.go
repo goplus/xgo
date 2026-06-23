@@ -339,18 +339,24 @@ type constNameLoader struct {
 	list  []*constNamePos
 	cdecl *gogen.ConstDefs
 	scope *types.Scope
+	ctx   *blockCtx
 }
 
 func (p *constNameLoader) load() {
+	var oldVal constant.Value
 	for i, cnp := range p.list {
 		cnp.fn()
-		o := p.scope.Lookup(cnp.newName.Name).(*types.Const)
+		val := p.scope.Lookup(cnp.newName.Name).(*types.Const).Val()
+		name := cnp.name
 		if i == 0 {
-			name := cnp.name
+			oldVal = val
 			p.cdecl.New(func(cb *gogen.CodeBuilder) int {
-				compileConstVal(cb, o.Val())
+				compileConstVal(cb, val)
 				return 1
 			}, 0, name.NamePos, nil, name.Name)
+		} else if constant.Compare(val, gotoken.NEQ, oldVal) {
+			p.ctx.handleErrorf(name.Pos(), name.End(),
+				"enum constant %q already declared with value %v; cannot redeclare with value %v", name, oldVal, val)
 		}
 	}
 }
@@ -377,7 +383,7 @@ func (p *blockCtx) addConstNamePos(name string, old, new *constNamePos) {
 	pkg := p.pkg
 	scope := pkg.Types.Scope()
 	cdecl := pkg.NewConstDefs(scope)
-	ld = &constNameLoader{list: []*constNamePos{old, new}, cdecl: cdecl, scope: scope}
+	ld = &constNameLoader{list: []*constNamePos{old, new}, cdecl: cdecl, scope: scope, ctx: p}
 	if ctx.consts == nil {
 		ctx.consts = make(map[string]*constNameLoader)
 	}
