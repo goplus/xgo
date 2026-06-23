@@ -712,7 +712,7 @@ func (p *parser) parseIdent() *ast.Ident {
 func (p *parser) parseIdentEx() (*ast.Ident, bool) {
 	var posErr token.Pos
 	var ret string
-	if p.tok == token.PERIOD {
+	if p.inClassFile() && p.tok == token.PERIOD {
 		posDot := p.pos
 		p.next()
 		name := p.parseIdent()
