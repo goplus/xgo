@@ -53,6 +53,8 @@ func (s *ValueSpec) End() token.Pos {
 	return s.Names[len(s.Names)-1].End()
 }
 
+func (*ValueSpec) specNode() {}
+
 // -----------------------------------------------------------------------------
 
 // EnumType represents a `const ( ... )` type expression used in a TypeSpec.
@@ -113,6 +115,8 @@ func (d *FuncDecl) End() token.Pos {
 	}
 	return d.Type.End()
 }
+
+func (*FuncDecl) declNode() {}
 
 // -----------------------------------------------------------------------------
 
@@ -183,6 +187,8 @@ func (*CallExpr) exprNode() {}
 func (x *CallExpr) IsCommand() bool {
 	return x.NoParenEnd != token.NoPos
 }
+
+// -----------------------------------------------------------------------------
 
 // A KwargExpr node represents a keyword argument expression.
 type KwargExpr struct {
@@ -655,6 +661,9 @@ type SendStmt struct {
 	Ellipsis token.Pos // position of "..."
 }
 
+// Pos returns position of first character belonging to the node.
+func (s *SendStmt) Pos() token.Pos { return s.Chan.Pos() }
+
 // End returns position of first character immediately after the node.
 func (s *SendStmt) End() token.Pos {
 	if s.Ellipsis != token.NoPos {
@@ -663,6 +672,8 @@ func (s *SendStmt) End() token.Pos {
 	vals := s.Values
 	return vals[len(vals)-1].End()
 }
+
+func (*SendStmt) stmtNode() {}
 
 // -----------------------------------------------------------------------------
 
