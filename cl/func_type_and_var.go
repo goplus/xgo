@@ -57,16 +57,16 @@ func toRecv(ctx *blockCtx, recv *ast.FieldList) *types.Var {
 	return ret
 }
 
-func getRecvTypeName(ctx *pkgCtx, recv *ast.FieldList, handleErr bool) (string, bool) {
+func getRecvTypeName(ctx *pkgCtx, recv *ast.FieldList, handleErr bool) (*ast.Ident, bool) {
 	typ, _, _ := getRecvType(recv.List[0].Type)
 	if t, ok := typ.(*ast.Ident); ok {
-		return t.Name, true
+		return t, true
 	}
 	if handleErr {
 		src := ctx.LoadExpr(typ)
 		ctx.handleErrorf(typ.Pos(), typ.End(), "invalid receiver type %v (%v is not a defined type)", src, src)
 	}
-	return "", false
+	return nil, false
 }
 
 func toResults(ctx *blockCtx, in *ast.FieldList) *types.Tuple {

@@ -19,13 +19,15 @@ package cl
 
 import (
 	"fmt"
-	gotoken "go/token"
+	"go/constant"
 	"go/types"
 	"log"
 	"reflect"
 	"sort"
 	"strconv"
 	"strings"
+
+	gotoken "go/token"
 
 	"github.com/goplus/gogen"
 	"github.com/goplus/gogen/target"
@@ -34,6 +36,7 @@ import (
 	"github.com/goplus/xgo/ast/fromgo"
 	"github.com/goplus/xgo/token"
 	"github.com/qiniu/x/errors"
+	"github.com/qiniu/x/stringutil"
 )
 
 type dbgFlags int
@@ -248,28 +251,36 @@ func (p *nodeInterp) ProjFile() *ast.File {
 
 type loader interface {
 	load()
-	pos() token.Pos
+	node() ast.Node
 }
 
 type baseLoader struct {
-	fn    func()
-	start token.Pos
+	fn func()
+	at ast.Node
 }
 
-func initLoader(ctx *pkgCtx, syms map[string]loader, start, end token.Pos, name string, fn func(), genBody bool) bool {
+func initLoader(bctx *blockCtx, at ast.Node, name string, fn func(), genBody bool) bool {
+	ctx := bctx.pkgCtx
 	if name == "_" {
 		if genBody {
 			ctx.inits = append(ctx.inits, fn)
 		}
 		return false
 	}
+	syms := ctx.syms
 	if old, ok := syms[name]; ok {
-		oldpos := ctx.Position(old.pos())
+		if cnp, ok := at.(*constNamePos); ok {
+			if oldcnp, ok := old.node().(*constNamePos); ok {
+				bctx.addConstNamePos(name, oldcnp, cnp)
+				return true
+			}
+		}
+		oldpos := ctx.Position(old.node().Pos())
 		ctx.handleErrorf(
-			start, end, "%s redeclared in this block\n\tprevious declaration at %v", name, oldpos)
+			at.Pos(), at.End(), "%s redeclared in this block\n\tprevious declaration at %v", name, oldpos)
 		return false
 	}
-	syms[name] = &baseLoader{start: start, fn: fn}
+	syms[name] = &baseLoader{at: at, fn: fn}
 	return true
 }
 
@@ -277,39 +288,145 @@ func (p *baseLoader) load() {
 	p.fn()
 }
 
-func (p *baseLoader) pos() token.Pos {
-	return p.start
+func (p *baseLoader) node() ast.Node {
+	return p.at
+}
+
+type constNamePos struct {
+	name    *ast.Ident
+	newName *ast.Ident
+	fn      func()
+	specs   *[]ast.Spec
+	ispec   int
+	idx     int
+}
+
+func newConstNamePos(specs *[]ast.Spec, ispec, idx int, fn func()) *constNamePos {
+	name := (*specs)[ispec].(*ast.ValueSpec).Names[idx]
+	return &constNamePos{specs: specs, ispec: ispec, name: name, idx: idx, fn: fn}
+}
+
+func (p *constNamePos) rename(newName string) {
+	p.newName = &ast.Ident{Name: newName}
+
+	pspecs := p.specs
+	specs := *pspecs
+	newSpecs := make([]ast.Spec, len(specs))
+	copy(newSpecs, specs)
+	*pspecs = newSpecs
+
+	spec := newSpecs[p.ispec].(*ast.ValueSpec)
+	newSpec := *spec
+	newSpecs[p.ispec] = &newSpec
+
+	names := newSpec.Names
+	newNames := make([]*ast.Ident, len(names))
+	copy(newNames, names)
+	newSpec.Names = newNames
+	newSpec.Names[p.idx] = p.newName // clone before rename
+}
+
+func (p *constNamePos) Pos() token.Pos {
+	return p.name.Pos()
+}
+
+func (p *constNamePos) End() token.Pos {
+	return p.name.End()
+}
+
+func compileConstVal(cb *gogen.CodeBuilder, v constant.Value) {
+	switch v.Kind() {
+	case constant.String, constant.Int:
+		cb.Val(constant.Val(v))
+	default:
+		panic("unsupported const kind (only string and int) across different enum")
+	}
+}
+
+type constNameLoader struct {
+	list  []*constNamePos
+	cdecl *gogen.ConstDefs
+	scope *types.Scope
+	ctx   *blockCtx
+}
+
+func (p *constNameLoader) load() {
+	var oldVal constant.Value
+	list := p.list
+	p.list = nil // avoid duplicate load
+	for i, cnp := range list {
+		cnp.fn()
+		val := p.scope.Lookup(cnp.newName.Name).(*types.Const).Val()
+		name := cnp.name
+		if i == 0 {
+			oldVal = val
+			p.cdecl.New(func(cb *gogen.CodeBuilder) int {
+				compileConstVal(cb, val)
+				return 1
+			}, 0, name.NamePos, nil, name.Name)
+		} else if constant.Compare(val, gotoken.NEQ, oldVal) {
+			p.ctx.handleErrorf(name.Pos(), name.End(),
+				"enum constant %q already declared with value %v; cannot redeclare with value %v", name, oldVal, val)
+		}
+	}
+}
+
+func (p *constNameLoader) node() ast.Node {
+	return p.list[0]
+}
+
+func (p *pkgCtx) getTempConstName(name string) string {
+	p.idxConstName++
+	return stringutil.Concat("_", name, "_", strconv.Itoa(p.idxConstName))
+}
+
+func (p *blockCtx) addConstNamePos(name string, old, new *constNamePos) {
+	ctx := p.pkgCtx
+	ld, ok := ctx.consts[name]
+	if ok {
+		new.rename(ctx.getTempConstName(name))
+		ld.list = append(ld.list, new)
+		return
+	}
+	old.rename(ctx.getTempConstName(name))
+	new.rename(ctx.getTempConstName(name))
+	pkg := p.pkg
+	scope := pkg.Types.Scope()
+	cdecl := pkg.NewConstDefs(scope)
+	ld = &constNameLoader{list: []*constNamePos{old, new}, cdecl: cdecl, scope: scope, ctx: p}
+	if ctx.consts == nil {
+		ctx.consts = make(map[string]*constNameLoader)
+	}
+	p.inits = append(p.inits, ld.load) // load const name even nobody use it
+	ctx.consts[name] = ld
+	ctx.syms[name] = ld
 }
 
 type typeLoader struct {
 	typ, typInit func()
 	methods      []func()
-	start        token.Pos
+	at           ast.Node
 }
 
-func getTypeLoader(ctx *pkgCtx, syms map[string]loader, start, end token.Pos, name string) *typeLoader {
-	t, ok := syms[name]
-	if ok {
-		if start != token.NoPos {
-			ld := t.(*typeLoader)
-			if ld.start == token.NoPos {
-				ld.start = start
-			} else {
-				ctx.handleErrorf(
-					start, end, "%s redeclared in this block\n\tprevious declaration at %v",
-					name, ctx.Position(ld.pos()))
+func getTypeLoader(ctx *pkgCtx, syms map[string]loader, at ast.Node, name string) *typeLoader {
+	if t, ok := syms[name]; ok {
+		if ld, ok := t.(*typeLoader); ok {
+			if ld.at == nil || at == nil {
+				ld.at = at
+				return ld
 			}
-			return ld
 		}
-	} else {
-		t = &typeLoader{start: start}
-		syms[name] = t
+		panic(ctx.newCodeErrorf(
+			at.Pos(), at.End(), "%s redeclared in this block\n\tprevious declaration at %v",
+			name, ctx.Position(t.node().Pos())))
 	}
-	return t.(*typeLoader)
+	t := &typeLoader{at: at}
+	syms[name] = t
+	return t
 }
 
-func (p *typeLoader) pos() token.Pos {
-	return p.start
+func (p *typeLoader) node() ast.Node {
+	return p.at
 }
 
 func (p *typeLoader) load() {
@@ -349,6 +466,7 @@ type pkgCtx struct {
 	overpos  map[string]token.Pos // overload => pos
 	fset     *token.FileSet
 	syms     map[string]loader
+	consts   map[string]*constNameLoader
 	lbinames []any // names that should load before initXGoPkg (can be string/func or *ast.Ident/type)
 	inits    []func()
 	tylds    []*typeLoader
@@ -359,7 +477,8 @@ type pkgCtx struct {
 	inInst   int             // toType in generic instance
 
 	goxMainClass string
-	goxMain      int32 // normal gox files with main func
+	goxMain      int // normal gox files with main func
+	idxConstName int // index of const name for auto rename
 }
 
 type pkgImp struct {
@@ -782,8 +901,8 @@ func loadFile(ctx *pkgCtx, f *ast.File) {
 					ctx.loadSymbol(name)
 				}
 			} else {
-				if name, ok := getRecvTypeName(ctx, d.Recv, false); ok {
-					getTypeLoader(ctx, ctx.syms, token.NoPos, token.NoPos, name).load()
+				if trecv, ok := getRecvTypeName(ctx, d.Recv, false); ok {
+					getTypeLoader(ctx, ctx.syms, nil, trecv.Name).load()
 				}
 			}
 		}
@@ -863,7 +982,7 @@ func preloadXGoFile(p *gogen.Package, ctx *blockCtx, file string, f *ast.File, c
 		pos := f.Pos()
 		end := f.End()
 		ctx.classDecl = f.ClassFieldsDecl()
-		ld := getTypeLoader(parent, syms, pos, end, classType)
+		ld := getTypeLoader(parent, syms, f, classType)
 		ld.typ = func() {
 			if debugLoad {
 				log.Println("==> Load > NewType", classType)
@@ -975,7 +1094,7 @@ func preloadXGoFile(p *gogen.Package, ctx *blockCtx, file string, f *ast.File, c
 	preloadFile(p, ctx, f, goFile, !conf.Outline)
 	if work != nil && work.feats != 0 {
 		workFeats := work.feats
-		ld := getTypeLoader(parent, parent.syms, token.NoPos, token.NoPos, classType)
+		ld := getTypeLoader(parent, parent.syms, nil, classType)
 		if (workFeats & workClassHasName) != 0 { // Classfname() string
 			ld.methods = append(ld.methods, func() {
 				old, _ := p.SetCurFile(goFile, true)
@@ -1049,13 +1168,14 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 				if debugLoad {
 					log.Println("==> Preload func", fname)
 				}
-				if initLoader(parent, syms, name.Pos(), name.End(), fname, fn, genFnBody) {
+				if initLoader(ctx, name, fname, fn, genFnBody) {
 					if strings.HasPrefix(fname, "XGox_") { // XGox_xxx func
 						ctx.lbinames = append(ctx.lbinames, fname)
 					}
 				}
 			}
-		} else if tname, ok := getRecvTypeName(parent, d.Recv, true); ok {
+		} else if trecv, ok := getRecvTypeName(parent, d.Recv, true); ok {
+			tname := trecv.Name
 			if d.Static {
 				if debugLoad {
 					log.Printf("==> Preload static method %s.%s\n", tname, fname)
@@ -1066,13 +1186,13 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 					defer p.RestoreCurFile(old)
 					loadFunc(ctx, nil, fname, d, genFnBody)
 				}
-				initLoader(parent, syms, name.Pos(), name.End(), fname, fn, genFnBody)
+				initLoader(ctx, name, fname, fn, genFnBody)
 				ctx.lbinames = append(ctx.lbinames, fname)
 			} else {
 				if debugLoad {
 					log.Printf("==> Preload method %s.%s\n", tname, fname)
 				}
-				ld := getTypeLoader(parent, syms, token.NoPos, token.NoPos, tname)
+				ld := getTypeLoader(parent, syms, nil, tname)
 				fn := func() {
 					old, _ := p.SetCurFile(goFile, true)
 					defer p.RestoreCurFile(old)
@@ -1088,12 +1208,12 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 	preloadConst := func(specs []ast.Spec, getEnumTyp func() types.Type) {
 		pkg := ctx.pkg
 		cdecl := pkg.NewConstDefs(pkg.Types.Scope())
-		for _, spec := range specs {
+		for ispec, spec := range specs {
 			vSpec := spec.(*ast.ValueSpec)
 			if debugLoad {
 				log.Println("==> Preload const", vSpec.Names)
 			}
-			setNamesLoader(parent, syms, vSpec.Names, func() {
+			loadConst := func() {
 				if c := cdecl; c != nil {
 					cdecl = nil
 					var typ types.Type
@@ -1106,7 +1226,15 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 						removeNames(syms, v.Names)
 					}
 				}
-			})
+			}
+			if getEnumTyp != nil {
+				// load enum type even nobody use it
+				ctx.inits = append(ctx.inits, loadConst)
+			}
+			for i, name := range vSpec.Names {
+				at := newConstNamePos(&specs, ispec, i, loadConst)
+				initLoader(ctx, at, name.Name, loadConst, true)
+			}
 		}
 	}
 
@@ -1126,9 +1254,7 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 					if debugLoad {
 						log.Println("==> Preload type", name)
 					}
-					pos := tName.Pos()
-					end := tName.End()
-					ld := getTypeLoader(parent, syms, pos, end, name)
+					ld := getTypeLoader(parent, syms, tName, name)
 					defs := ctx.pkg.NewTypeDefs()
 					if goFile != skippingGoFile { // is XGo file
 						enumType, ok := t.Type.(*ast.EnumType)
@@ -1214,7 +1340,7 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 					if debugLoad {
 						log.Println("==> Preload var", vSpec.Names)
 					}
-					setNamesLoader(parent, syms, vSpec.Names, func() {
+					loadVar := func() {
 						if v := vSpec; v != nil { // only init once
 							vSpec = nil
 							old, _ := p.SetCurFile(goFile, true)
@@ -1222,7 +1348,10 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 							loadVars(ctx, v, d.Doc, true)
 							removeNames(syms, v.Names)
 						}
-					})
+					}
+					for _, name := range vSpec.Names {
+						initLoader(ctx, name, name.Name, loadVar, true)
+					}
 				}
 			default:
 				log.Panicln("TODO - tok:", d.Tok, "spec:", reflect.TypeOf(d.Specs).Elem())
@@ -1766,8 +1895,10 @@ func defNames(ctx *blockCtx, names []*ast.Ident, scope *types.Scope) {
 			scope = ctx.cb.Scope()
 		}
 		for _, name := range names {
-			if o := scope.Lookup(name.Name); o != nil {
-				rec.Def(name, o)
+			if name.Name != "_" {
+				if o := scope.Lookup(name.Name); o != nil {
+					rec.Def(name, o)
+				}
 			}
 		}
 	}
@@ -1784,12 +1915,6 @@ func makeNames(vals []*ast.Ident) []string {
 func removeNames(syms map[string]loader, names []*ast.Ident) {
 	for _, name := range names {
 		delete(syms, name.Name)
-	}
-}
-
-func setNamesLoader(ctx *pkgCtx, syms map[string]loader, names []*ast.Ident, load func()) {
-	for _, name := range names {
-		initLoader(ctx, syms, name.Pos(), name.End(), name.Name, load, true)
 	}
 }
 

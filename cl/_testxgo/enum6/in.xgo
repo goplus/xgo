@@ -1,0 +1,17 @@
+type Direction const (
+	None  = uint8(iota)
+	North
+	South
+	East
+	West
+)
+
+type Priority const (
+	None = iota
+	Low
+	High
+)
+
+var d Direction = None
+var p Priority = None
+echo d, p

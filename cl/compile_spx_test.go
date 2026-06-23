@@ -61,9 +61,7 @@ foo = []Sprite{*Kai}
 `, ``, "Game.tgmx", "Kai.tspx")
 
 	gopSpxErrorTestEx(t, `Game.tgmx:1:6: Game redeclared in this block
-	previous declaration at Game.tgmx:1:1
-Game.tgmx:1:1: invalid receiver type Game (Game is an interface type)
-Game.tgmx:1:1: invalid receiver type Game (Game is an interface type)`, `type Game interface {}`, ``, "Game.tgmx", "Kai.tspx")
+	previous declaration at Game.tgmx:1:1`, `type Game interface {}`, ``, "Game.tgmx", "Kai.tspx")
 
 	gopSpxErrorTestEx(t, `Kai.tspx:1:1: Kai redeclared in this block
 	previous declaration at Game.tgmx:1:6`, `type Kai interface {}`, ``, "Game.tgmx", "Kai.tspx")
