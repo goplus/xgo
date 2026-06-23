@@ -1086,7 +1086,7 @@ func preloadXGoFile(p *gogen.Package, ctx *blockCtx, file string, f *ast.File, c
 	preloadFile(p, ctx, f, goFile, !conf.Outline)
 	if work != nil && work.feats != 0 {
 		workFeats := work.feats
-		ld := getTypeLoader(parent, parent.syms, f, classType)
+		ld := getTypeLoader(parent, parent.syms, nil, classType)
 		if (workFeats & workClassHasName) != 0 { // Classfname() string
 			ld.methods = append(ld.methods, func() {
 				old, _ := p.SetCurFile(goFile, true)
