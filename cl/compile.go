@@ -1093,7 +1093,7 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 			if debugLoad {
 				log.Println("==> Preload const", vSpec.Names)
 			}
-			setNamesLoader(parent, syms, vSpec.Names, func() {
+			loadConst := func() {
 				if c := cdecl; c != nil {
 					cdecl = nil
 					var typ types.Type
@@ -1106,7 +1106,10 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 						removeNames(syms, v.Names)
 					}
 				}
-			})
+			}
+			for _, name := range vSpec.Names {
+				initLoader(parent, syms, name.Pos(), name.End(), name.Name, loadConst, true)
+			}
 		}
 	}
 
@@ -1214,7 +1217,7 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 					if debugLoad {
 						log.Println("==> Preload var", vSpec.Names)
 					}
-					setNamesLoader(parent, syms, vSpec.Names, func() {
+					loadVar := func() {
 						if v := vSpec; v != nil { // only init once
 							vSpec = nil
 							old, _ := p.SetCurFile(goFile, true)
@@ -1222,7 +1225,10 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 							loadVars(ctx, v, d.Doc, true)
 							removeNames(syms, v.Names)
 						}
-					})
+					}
+					for _, name := range vSpec.Names {
+						initLoader(parent, syms, name.Pos(), name.End(), name.Name, loadVar, true)
+					}
 				}
 			default:
 				log.Panicln("TODO - tok:", d.Tok, "spec:", reflect.TypeOf(d.Specs).Elem())
@@ -1784,12 +1790,6 @@ func makeNames(vals []*ast.Ident) []string {
 func removeNames(syms map[string]loader, names []*ast.Ident) {
 	for _, name := range names {
 		delete(syms, name.Name)
-	}
-}
-
-func setNamesLoader(ctx *pkgCtx, syms map[string]loader, names []*ast.Ident, load func()) {
-	for _, name := range names {
-		initLoader(ctx, syms, name.Pos(), name.End(), name.Name, load, true)
 	}
 }
 
