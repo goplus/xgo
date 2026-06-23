@@ -1084,8 +1084,6 @@ type RepeatMode const (
 type MonthlyRepeatOnDay const (
 	None = "no repeat"
 )
-
-echo None
 `)
 }
 

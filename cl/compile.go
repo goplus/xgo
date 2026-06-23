@@ -344,7 +344,9 @@ type constNameLoader struct {
 
 func (p *constNameLoader) load() {
 	var oldVal constant.Value
-	for i, cnp := range p.list {
+	list := p.list
+	p.list = nil // avoid duplicate load
+	for i, cnp := range list {
 		cnp.fn()
 		val := p.scope.Lookup(cnp.newName.Name).(*types.Const).Val()
 		name := cnp.name
@@ -387,6 +389,7 @@ func (p *blockCtx) addConstNamePos(name string, old, new *constNamePos) {
 	if ctx.consts == nil {
 		ctx.consts = make(map[string]*constNameLoader)
 	}
+	p.inits = append(p.inits, ld.load) // load const name even nobody use it
 	ctx.consts[name] = ld
 	ctx.syms[name] = ld
 }
