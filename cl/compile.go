@@ -1490,7 +1490,12 @@ func loadFunc(ctx *blockCtx, recv *types.Var, name string, d *ast.FuncDecl, genB
 		}
 	}
 	if genBody {
-		if body := d.Body; body != nil {
+		body, err := wrapFuncBody(ctx, d)
+		if err != nil {
+			ctx.handleErr(err)
+			return
+		}
+		if body != nil {
 			if recv != nil {
 				file := pkg.CurFile()
 				ctx.inits = append(ctx.inits, func() { // interface issue: #795

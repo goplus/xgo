@@ -4364,6 +4364,65 @@ func (p *parser) parseFuncDeclOrCall() (ast.Decl, *ast.CallExpr) {
 	return decl, nil
 }
 
+const wrapFuncModifier = "Warp"
+
+func isWrapFuncModifier(name string) bool {
+	return strings.EqualFold(name, wrapFuncModifier)
+}
+
+func (p *parser) isWrapFuncDecl() bool {
+	leadComment, lineComment := p.leadComment, p.lineComment
+	pos, tok, lit := p.pos, p.tok, p.lit // current token must be func
+	// Keep `Warp func() {}` as a normal command call, but recognize `Warp func Foo`.
+	p.next()
+	ok := p.tok == token.IDENT
+	p.unget(pos, tok, lit)
+	p.leadComment, p.lineComment = leadComment, lineComment
+	return ok
+}
+
+func (p *parser) parseWrapFuncDecl(sync map[token.Token]bool) (ast.Decl, bool) {
+	if !p.inClassFile() || !isWrapFuncModifier(p.lit) {
+		return nil, false
+	}
+
+	wrap := &ast.Ident{NamePos: p.pos, Name: p.lit}
+	doc := p.leadComment
+	p.next()
+	if p.tok != token.FUNC {
+		p.unget(wrap.Pos(), token.IDENT, wrap.Name)
+		return nil, false
+	}
+
+	if !p.isWrapFuncDecl() {
+		p.resolve(wrap)
+		call := p.parseCallOrConversion(wrap, true)
+		p.expectSemi()
+		return p.parseGlobalStmts(sync, wrap.Pos(), &ast.ExprStmt{X: call}), true
+	}
+
+	decl, _ := p.parseFuncDeclOrCall()
+	if fn, ok := decl.(*ast.FuncDecl); ok {
+		fn.Wrap = wrap
+		if fn.Doc == nil {
+			fn.Doc = doc
+		}
+		if p.errors.Len() != 0 {
+			p.advance(sync)
+		}
+		return fn, true
+	}
+
+	p.error(wrap.Pos(), "warp modifier requires a named function declaration")
+	if p.errors.Len() != 0 {
+		p.advance(sync)
+	}
+	if decl != nil {
+		return decl, true
+	}
+	return &ast.BadDecl{From: wrap.Pos(), To: p.pos}, true
+}
+
 func (p *parser) parseDecl(sync map[token.Token]bool) ast.Decl {
 	if p.trace {
 		defer un(trace(p, "Declaration"))
@@ -4384,6 +4443,11 @@ func (p *parser) parseDecl(sync map[token.Token]bool) ast.Decl {
 			return decl
 		}
 		return p.parseGlobalStmts(sync, pos, &ast.ExprStmt{X: call})
+	case token.IDENT:
+		if decl, ok := p.parseWrapFuncDecl(sync); ok {
+			return decl
+		}
+		return p.parseGlobalStmts(sync, pos)
 	default:
 		return p.parseGlobalStmts(sync, pos)
 	}

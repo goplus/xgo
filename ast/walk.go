@@ -367,6 +367,9 @@ func Walk(v Visitor, node Node) {
 			if n.Doc != nil {
 				Walk(v, n.Doc)
 			}
+			if n.Wrap != nil {
+				Walk(v, n.Wrap)
+			}
 			if n.Recv != nil {
 				Walk(v, n.Recv)
 			}

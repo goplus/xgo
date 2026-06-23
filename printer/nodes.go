@@ -2112,7 +2112,11 @@ func (p *printer) funcDecl(d *ast.FuncDecl) {
 		return
 	}
 
-	pos := d.Pos()
+	if d.Wrap != nil {
+		p.expr(d.Wrap)
+		p.print(blank)
+	}
+	pos := d.Type.Pos()
 	p.print(pos, token.FUNC, blank)
 	// We have to save startCol only after emitting FUNC; otherwise it can be on a
 	// different line (all whitespace preceding the FUNC is emitted only when the
@@ -2136,7 +2140,7 @@ func (p *printer) funcDecl(d *ast.FuncDecl) {
 		p.print(blank)
 	}
 	p.signature(d.Type.Params, d.Type.Results)
-	p.funcBody(p.distanceFrom(d.Pos(), startCol), vtab, d.Body)
+	p.funcBody(p.distanceFrom(pos, startCol), vtab, d.Body)
 }
 
 func (p *printer) overloadFuncDecl(d *ast.OverloadFuncDecl) {

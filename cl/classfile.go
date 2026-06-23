@@ -36,6 +36,11 @@ import (
 
 // -----------------------------------------------------------------------------
 
+const (
+	classConstSched    = "Gop_sched"
+	classConstWrapCall = "Gop_wrapCall"
+)
+
 type classFile struct {
 	name    string // class type, empty for default project class
 	clsfile string
@@ -72,19 +77,20 @@ func workClassByProto(works []*workClass, proto string) *workClass {
 }
 
 type classProject struct {
-	gameClass_ string       // project class type name
-	game       gogen.Ref    // Game (project base class)
-	works      []*workClass // work classes grouped by extension
-	scheds     []string
-	schedStmts []target.Stmt // nil or len(scheds) == 2 (delayload)
-	pkgImps    []gogen.PkgRef
-	pkgPaths   []string
-	autoimps   map[string]pkgImp // auto-import statement in gox.mod
-	gt         *Project
-	hasScheds  bool
-	gameIsPtr  bool
-	isTest     bool
-	hasMain_   bool
+	gameClass_   string       // project class type name
+	game         gogen.Ref    // Game (project base class)
+	works        []*workClass // work classes grouped by extension
+	scheds       []string
+	wrapFuncCall string        // wrapper callable for wrapped function declarations
+	schedStmts   []target.Stmt // nil or len(scheds) == 2 (delayload)
+	pkgImps      []gogen.PkgRef
+	pkgPaths     []string
+	autoimps     map[string]pkgImp // auto-import statement in gox.mod
+	gt           *Project
+	hasScheds    bool
+	gameIsPtr    bool
+	isTest       bool
+	hasMain_     bool
 }
 
 func (p *classProject) embed(chk func(name string) bool, flds []*types.Var, pkg *gogen.Package) []*types.Var {
@@ -305,8 +311,11 @@ func loadClass(ctx *pkgCtx, pkg *gogen.Package, file string, f *ast.File, conf *
 			p.game, p.gameIsPtr = classPkgRef(classPkg, gt.Class)
 			workClassFeatures(p.game, works)
 		}
-		if x := getStringConst(classPkg, "Gop_sched"); x != "" { // keep Gop_sched
+		if x := getStringConst(classPkg, classConstSched); x != "" { // keep Gop_sched
 			p.scheds, p.hasScheds = strings.SplitN(x, ",", 2), true
+		}
+		if x := getStringConst(classPkg, classConstWrapCall); x != "" {
+			p.wrapFuncCall = x
 		}
 	}
 	cls := &classFile{clsfile: clsfile, ext: ext, proj: p}

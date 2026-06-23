@@ -299,6 +299,178 @@ func main() {
 `)
 }
 
+func TestSpxWarpFuncDecl(t *testing.T) {
+	gopSpxTest(t, `
+Warp func setScore(score int, label string) {
+	TestIntValue = score
+}
+
+setScore 7, "ok"
+`, ``, `package main
+
+import "github.com/goplus/xgo/cl/internal/spx"
+
+type bar struct {
+	spx.Sprite
+	*index
+}
+type index struct {
+	*spx.MyGame
+}
+
+func (this *index) setScore(score int, label string) {
+	spx.Warp(func() {
+		spx.TestIntValue = score
+	})
+}
+func (this *index) MainEntry() {
+	this.setScore(7, "ok")
+}
+func (this *index) Main() {
+	spx.Gopt_MyGame_Main(this)
+}
+func (this *bar) Main() {
+}
+func main() {
+	new(index).Main()
+}
+`)
+}
+
+func TestSpxWarpFuncLiteralCall(t *testing.T) {
+	gopSpxTest(t, `
+Warp func() {
+	TestIntValue = 7
+}
+`, ``, `package main
+
+import "github.com/goplus/xgo/cl/internal/spx"
+
+type bar struct {
+	spx.Sprite
+	*index
+}
+type index struct {
+	*spx.MyGame
+}
+
+func (this *index) MainEntry() {
+	spx.Warp(func() {
+		spx.TestIntValue = 7
+	})
+}
+func (this *index) Main() {
+	spx.Gopt_MyGame_Main(this)
+}
+func (this *bar) Main() {
+}
+func main() {
+	new(index).Main()
+}
+`)
+}
+
+func TestSpxWarpFuncShadow(t *testing.T) {
+	gopSpxTest(t, `
+func Warp(fn func()) {
+	fn()
+}
+
+Warp func target(n int) int {
+	return n + 1
+}
+
+x := target(7)
+println x
+`, ``, `package main
+
+import (
+	"fmt"
+	"github.com/goplus/xgo/cl/internal/spx"
+)
+
+type bar struct {
+	spx.Sprite
+	*index
+}
+type index struct {
+	*spx.MyGame
+}
+
+func (this *index) Warp(fn func()) {
+	fn()
+}
+func (this *index) target(n int) int {
+	var __gop_wrap_ret0 int
+	this.Warp(func() {
+		__gop_wrap_ret0 = func() int {
+			return n + 1
+		}()
+	})
+	return __gop_wrap_ret0
+}
+func (this *index) MainEntry() {
+	x := this.target(7)
+	fmt.Println(x)
+}
+func (this *index) Main() {
+	spx.Gopt_MyGame_Main(this)
+}
+func (this *bar) Main() {
+}
+func main() {
+	new(index).Main()
+}
+`)
+}
+
+func TestSpxWarpFuncReturnTempNameCollision(t *testing.T) {
+	gopSpxTest(t, `
+Warp func target(__gop_wrap_ret0 int) int {
+	return __gop_wrap_ret0 + 1
+}
+
+x := target(7)
+println x
+`, ``, `package main
+
+import (
+	"fmt"
+	"github.com/goplus/xgo/cl/internal/spx"
+)
+
+type bar struct {
+	spx.Sprite
+	*index
+}
+type index struct {
+	*spx.MyGame
+}
+
+func (this *index) target(__gop_wrap_ret0 int) int {
+	var __gop_wrap_ret1 int
+	spx.Warp(func() {
+		__gop_wrap_ret1 = func() int {
+			return __gop_wrap_ret0 + 1
+		}()
+	})
+	return __gop_wrap_ret1
+}
+func (this *index) MainEntry() {
+	x := this.target(7)
+	fmt.Println(x)
+}
+func (this *index) Main() {
+	spx.Gopt_MyGame_Main(this)
+}
+func (this *bar) Main() {
+}
+func main() {
+	new(index).Main()
+}
+`)
+}
+
 func TestSpxMethod(t *testing.T) {
 	gopSpxTestEx(t, `
 func onInit() {

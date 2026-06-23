@@ -17,8 +17,9 @@
 package spx4
 
 const (
-	GopPackage = "github.com/goplus/xgo/cl/internal/spx/pkg"
-	Gop_sched  = "Sched,SchedNow"
+	GopPackage   = "github.com/goplus/xgo/cl/internal/spx/pkg"
+	Gop_sched    = "Sched,SchedNow"
+	Gop_wrapCall = "Warp"
 )
 
 type Sound string
@@ -76,6 +77,10 @@ func Sched() {
 }
 
 func SchedNow() {
+}
+
+func Warp(fn func()) {
+	fn()
 }
 
 func Rand__0(int) int {

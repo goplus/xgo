@@ -95,6 +95,7 @@ func (*EnumType) exprNode() {}
 // A FuncDecl node represents a function declaration.
 type FuncDecl struct {
 	Doc      *CommentGroup // associated documentation; or nil
+	Wrap     *Ident        // wrapper modifier before "func"; or nil
 	Recv     *FieldList    // receiver (methods); or nil (functions)
 	Name     *Ident        // function/method name
 	Type     *FuncType     // function signature: parameters, results, and position of "func" keyword
@@ -106,7 +107,12 @@ type FuncDecl struct {
 }
 
 // Pos returns position of first character belonging to the node.
-func (d *FuncDecl) Pos() token.Pos { return d.Type.Pos() }
+func (d *FuncDecl) Pos() token.Pos {
+	if d.Wrap != nil {
+		return d.Wrap.Pos()
+	}
+	return d.Type.Pos()
+}
 
 // End returns position of first character immediately after the node.
 func (d *FuncDecl) End() token.Pos {

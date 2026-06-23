@@ -89,6 +89,30 @@ func bar() {
 	}
 }
 
+func TestWrappedFuncDecl(t *testing.T) {
+	var dst bytes.Buffer
+	fset := token.NewFileSet()
+	if err := format.Node(&dst, fset, &ast.File{
+		Name: &ast.Ident{Name: "main"},
+		Decls: []ast.Decl{
+			&ast.FuncDecl{
+				Wrap: &ast.Ident{Name: "Warp"},
+				Type: &ast.FuncType{Params: &ast.FieldList{}},
+				Name: &ast.Ident{Name: "fast"},
+				Body: &ast.BlockStmt{},
+			},
+		},
+		NoPkgDecl: true,
+	}); err != nil {
+		t.Fatal("format.Node failed:", err)
+	}
+	if dst.String() != `Warp func fast() {
+}
+` {
+		t.Fatal("TestWrappedFuncDecl:", dst.String())
+	}
+}
+
 func diffBytes(t *testing.T, dst, src []byte) {
 	line := 1
 	offs := 0 // line offset
