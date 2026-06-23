@@ -248,15 +248,15 @@ func (p *nodeInterp) ProjFile() *ast.File {
 
 type loader interface {
 	load()
-	pos() token.Pos
+	node() ast.Node
 }
 
 type baseLoader struct {
-	fn    func()
-	start token.Pos
+	fn func()
+	at ast.Node
 }
 
-func initLoader(ctx *pkgCtx, syms map[string]loader, at *ast.Ident, name string, fn func(), genBody bool) bool {
+func initLoader(ctx *pkgCtx, syms map[string]loader, at ast.Node, name string, fn func(), genBody bool) bool {
 	if name == "_" {
 		if genBody {
 			ctx.inits = append(ctx.inits, fn)
@@ -264,12 +264,12 @@ func initLoader(ctx *pkgCtx, syms map[string]loader, at *ast.Ident, name string,
 		return false
 	}
 	if old, ok := syms[name]; ok {
-		oldpos := ctx.Position(old.pos())
+		oldpos := ctx.Position(old.node().Pos())
 		ctx.handleErrorf(
 			at.Pos(), at.End(), "%s redeclared in this block\n\tprevious declaration at %v", name, oldpos)
 		return false
 	}
-	syms[name] = &baseLoader{start: at.Pos(), fn: fn}
+	syms[name] = &baseLoader{at: at, fn: fn}
 	return true
 }
 
@@ -277,39 +277,35 @@ func (p *baseLoader) load() {
 	p.fn()
 }
 
-func (p *baseLoader) pos() token.Pos {
-	return p.start
+func (p *baseLoader) node() ast.Node {
+	return p.at
 }
 
 type typeLoader struct {
 	typ, typInit func()
 	methods      []func()
-	start        token.Pos
+	at           ast.Node
 }
 
-func getTypeLoader(ctx *pkgCtx, syms map[string]loader, start, end token.Pos, name string) *typeLoader {
-	t, ok := syms[name]
-	if ok {
-		if start != token.NoPos {
-			ld := t.(*typeLoader)
-			if ld.start == token.NoPos {
-				ld.start = start
-			} else {
-				ctx.handleErrorf(
-					start, end, "%s redeclared in this block\n\tprevious declaration at %v",
-					name, ctx.Position(ld.pos()))
+func getTypeLoader(ctx *pkgCtx, syms map[string]loader, at ast.Node, name string) *typeLoader {
+	if t, ok := syms[name]; ok {
+		if ld, ok := t.(*typeLoader); ok {
+			if ld.at == nil || at == nil {
+				ld.at = at
+				return ld
 			}
-			return ld
 		}
-	} else {
-		t = &typeLoader{start: start}
-		syms[name] = t
+		panic(ctx.newCodeErrorf(
+			at.Pos(), at.End(), "%s redeclared in this block\n\tprevious declaration at %v",
+			name, ctx.Position(t.node().Pos())))
 	}
-	return t.(*typeLoader)
+	t := &typeLoader{at: at}
+	syms[name] = t
+	return t
 }
 
-func (p *typeLoader) pos() token.Pos {
-	return p.start
+func (p *typeLoader) node() ast.Node {
+	return p.at
 }
 
 func (p *typeLoader) load() {
@@ -349,6 +345,7 @@ type pkgCtx struct {
 	overpos  map[string]token.Pos // overload => pos
 	fset     *token.FileSet
 	syms     map[string]loader
+	consts   map[string]*constNamePosList
 	lbinames []any // names that should load before initXGoPkg (can be string/func or *ast.Ident/type)
 	inits    []func()
 	tylds    []*typeLoader
@@ -503,6 +500,28 @@ func (p *pkgCtx) lookupClassNode(name string) ast.Node {
 	}
 	return nil
 }
+
+type constNamePos struct {
+	spec ast.ValueSpec
+	idx  int
+}
+
+func (p *constNamePos) Pos() token.Pos {
+	return p.spec.Names[p.idx].Pos()
+}
+
+func (p *constNamePos) End() token.Pos {
+	return p.spec.Names[p.idx].End()
+}
+
+type constNamePosList struct {
+	list []*constNamePos
+}
+
+/* TODO(xsw):
+func (p *pkgCtx) addConstNamePos(name string, old, new ast.Node) {
+}
+*/
 
 type visitedT = map[*types.Struct]none
 
@@ -782,8 +801,8 @@ func loadFile(ctx *pkgCtx, f *ast.File) {
 					ctx.loadSymbol(name)
 				}
 			} else {
-				if name, ok := getRecvTypeName(ctx, d.Recv, false); ok {
-					getTypeLoader(ctx, ctx.syms, token.NoPos, token.NoPos, name).load()
+				if trecv, ok := getRecvTypeName(ctx, d.Recv, false); ok {
+					getTypeLoader(ctx, ctx.syms, nil, trecv.Name).load()
 				}
 			}
 		}
@@ -863,7 +882,7 @@ func preloadXGoFile(p *gogen.Package, ctx *blockCtx, file string, f *ast.File, c
 		pos := f.Pos()
 		end := f.End()
 		ctx.classDecl = f.ClassFieldsDecl()
-		ld := getTypeLoader(parent, syms, pos, end, classType)
+		ld := getTypeLoader(parent, syms, f, classType)
 		ld.typ = func() {
 			if debugLoad {
 				log.Println("==> Load > NewType", classType)
@@ -975,7 +994,7 @@ func preloadXGoFile(p *gogen.Package, ctx *blockCtx, file string, f *ast.File, c
 	preloadFile(p, ctx, f, goFile, !conf.Outline)
 	if work != nil && work.feats != 0 {
 		workFeats := work.feats
-		ld := getTypeLoader(parent, parent.syms, token.NoPos, token.NoPos, classType)
+		ld := getTypeLoader(parent, parent.syms, f, classType)
 		if (workFeats & workClassHasName) != 0 { // Classfname() string
 			ld.methods = append(ld.methods, func() {
 				old, _ := p.SetCurFile(goFile, true)
@@ -1055,7 +1074,8 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 					}
 				}
 			}
-		} else if tname, ok := getRecvTypeName(parent, d.Recv, true); ok {
+		} else if trecv, ok := getRecvTypeName(parent, d.Recv, true); ok {
+			tname := trecv.Name
 			if d.Static {
 				if debugLoad {
 					log.Printf("==> Preload static method %s.%s\n", tname, fname)
@@ -1072,7 +1092,7 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 				if debugLoad {
 					log.Printf("==> Preload method %s.%s\n", tname, fname)
 				}
-				ld := getTypeLoader(parent, syms, token.NoPos, token.NoPos, tname)
+				ld := getTypeLoader(parent, syms, nil, tname)
 				fn := func() {
 					old, _ := p.SetCurFile(goFile, true)
 					defer p.RestoreCurFile(old)
@@ -1129,9 +1149,7 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 					if debugLoad {
 						log.Println("==> Preload type", name)
 					}
-					pos := tName.Pos()
-					end := tName.End()
-					ld := getTypeLoader(parent, syms, pos, end, name)
+					ld := getTypeLoader(parent, syms, tName, name)
 					defs := ctx.pkg.NewTypeDefs()
 					if goFile != skippingGoFile { // is XGo file
 						enumType, ok := t.Type.(*ast.EnumType)

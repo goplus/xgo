@@ -496,7 +496,7 @@ func checkClassProjects(pkg *gogen.Package, ctx *pkgCtx) (*classProject, bool) {
 func genClassProjectMain(pkg *gogen.Package, parent *pkgCtx, proj *classProject) {
 	base := proj.game                      // project base class
 	classType := proj.getGameClass(parent) // project class
-	ld := getTypeLoader(parent, parent.syms, token.NoPos, token.NoPos, classType)
+	ld := getTypeLoader(parent, parent.syms, nil, classType)
 	if ld.typ == nil { // no project class, use default
 		ld.typ = func() {
 			if debugLoad {
