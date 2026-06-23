@@ -298,25 +298,33 @@ type constNamePos struct {
 	newName *ast.Ident
 	fn      func()
 	specs   *[]ast.Spec
-	spec    *ast.ValueSpec
+	ispec   int
 	idx     int
 }
 
-func newConstNamePos(specs *[]ast.Spec, spec *ast.ValueSpec, idx int, fn func()) *constNamePos {
-	name := spec.Names[idx]
-	return &constNamePos{specs: specs, spec: spec, name: name, idx: idx, fn: fn}
+func newConstNamePos(specs *[]ast.Spec, ispec, idx int, fn func()) *constNamePos {
+	name := (*specs)[ispec].(*ast.ValueSpec).Names[idx]
+	return &constNamePos{specs: specs, ispec: ispec, name: name, idx: idx, fn: fn}
 }
 
 func (p *constNamePos) rename(newName string) {
-	if pspecs := p.specs; pspecs != nil { // clone before rename
-		p.specs = nil
-		specs := *pspecs
-		newSpecs := make([]ast.Spec, len(specs))
-		copy(newSpecs, specs)
-		*pspecs = newSpecs
-	}
 	p.newName = &ast.Ident{Name: newName}
-	p.spec.Names[p.idx] = p.newName
+
+	pspecs := p.specs
+	specs := *pspecs
+	newSpecs := make([]ast.Spec, len(specs))
+	copy(newSpecs, specs)
+	*pspecs = newSpecs
+
+	spec := newSpecs[p.ispec].(*ast.ValueSpec)
+	newSpec := *spec
+	newSpecs[p.ispec] = &newSpec
+
+	names := newSpec.Names
+	newNames := make([]*ast.Ident, len(names))
+	copy(newNames, names)
+	newSpec.Names = newNames
+	newSpec.Names[p.idx] = p.newName // clone before rename
 }
 
 func (p *constNamePos) Pos() token.Pos {
@@ -1208,7 +1216,7 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 	preloadConst := func(specs []ast.Spec, getEnumTyp func() types.Type) {
 		pkg := ctx.pkg
 		cdecl := pkg.NewConstDefs(pkg.Types.Scope())
-		for _, spec := range specs {
+		for ispec, spec := range specs {
 			vSpec := spec.(*ast.ValueSpec)
 			if debugLoad {
 				log.Println("==> Preload const", vSpec.Names)
@@ -1232,7 +1240,7 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 				ctx.inits = append(ctx.inits, loadConst)
 			}
 			for i, name := range vSpec.Names {
-				at := newConstNamePos(&specs, vSpec, i, loadConst)
+				at := newConstNamePos(&specs, ispec, i, loadConst)
 				initLoader(ctx, at, name.Name, loadConst, true)
 			}
 		}
