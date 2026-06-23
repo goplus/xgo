@@ -297,16 +297,24 @@ type constNamePos struct {
 	name    *ast.Ident
 	newName *ast.Ident
 	fn      func()
+	specs   *[]ast.Spec
 	spec    *ast.ValueSpec
 	idx     int
 }
 
-func newConstNamePos(spec *ast.ValueSpec, idx int, fn func()) *constNamePos {
+func newConstNamePos(specs *[]ast.Spec, spec *ast.ValueSpec, idx int, fn func()) *constNamePos {
 	name := spec.Names[idx]
-	return &constNamePos{spec: spec, name: name, idx: idx, fn: fn}
+	return &constNamePos{specs: specs, spec: spec, name: name, idx: idx, fn: fn}
 }
 
 func (p *constNamePos) rename(newName string) {
+	if pspecs := p.specs; pspecs != nil { // clone before rename
+		p.specs = nil
+		specs := *pspecs
+		newSpecs := make([]ast.Spec, len(specs))
+		copy(newSpecs, specs)
+		*pspecs = newSpecs
+	}
 	p.newName = &ast.Ident{Name: newName}
 	p.spec.Names[p.idx] = p.newName
 }
@@ -1224,7 +1232,7 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 				ctx.inits = append(ctx.inits, loadConst)
 			}
 			for i, name := range vSpec.Names {
-				at := newConstNamePos(vSpec, i, loadConst)
+				at := newConstNamePos(&specs, vSpec, i, loadConst)
 				initLoader(ctx, at, name.Name, loadConst, true)
 			}
 		}
