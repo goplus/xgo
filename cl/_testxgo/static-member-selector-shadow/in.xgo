@@ -1,0 +1,11 @@
+type foo struct {
+	name string
+	count int
+}
+
+const foo.name = "static"
+var foo.count int = 100
+
+foo := foo{name: "local"}
+a := foo.name
+foo.count++
