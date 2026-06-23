@@ -463,17 +463,18 @@ func doInitMethods(ld *typeLoader) {
 
 type pkgCtx struct {
 	*nodeInterp
-	nproj    int                      // number of non-test projects
-	projs    map[string]*classProject // project extension => project
-	classes  map[*ast.File]*classFile
-	overpos  map[string]token.Pos // overload => pos
-	fset     *token.FileSet
-	syms     map[string]loader
-	consts   map[string]*constNameLoader
-	lbinames []any // names that should load before initXGoPkg (can be string/func or *ast.Ident/type)
-	inits    []func()
-	tylds    []*typeLoader
-	errs     errors.List
+	nproj      int                      // number of non-test projects
+	projs      map[string]*classProject // project extension => project
+	classes    map[*ast.File]*classFile
+	classTypes map[*ast.File]string // ast file => generated class type
+	overpos    map[string]token.Pos // overload => pos
+	fset       *token.FileSet
+	syms       map[string]loader
+	consts     map[string]*constNameLoader
+	lbinames   []any // names that should load before initXGoPkg (can be string/func or *ast.Ident/type)
+	inits      []func()
+	tylds      []*typeLoader
+	errs       errors.List
 
 	generics map[string]bool // generic type record
 	idents   []*ast.Ident    // toType ident recored
@@ -711,6 +712,7 @@ func NewPackage(pkgPath string, pkg *ast.Package, conf *Config) (p *gogen.Packag
 		nodeInterp: interp,
 		projs:      make(map[string]*classProject),
 		classes:    make(map[*ast.File]*classFile),
+		classTypes: make(map[*ast.File]string),
 		overpos:    make(map[string]token.Pos),
 		syms:       make(map[string]loader),
 		generics:   make(map[string]bool),
@@ -888,6 +890,11 @@ func initXGoPkg(ctx *pkgCtx, pkg *gogen.Package, gopSyms map[string]bool) {
 
 func loadFile(ctx *pkgCtx, f *ast.File) {
 	bctx := &blockCtx{pkgCtx: ctx}
+	if classType := ctx.classTypes[f]; classType != "" {
+		bctx.classRecv = &ast.FieldList{List: []*ast.Field{{
+			Type: &ast.StarExpr{X: ast.NewIdent(classType)},
+		}}}
+	}
 	for _, decl := range f.Decls {
 		switch d := decl.(type) {
 		case *ast.GenDecl:
@@ -981,6 +988,7 @@ func preloadXGoFile(p *gogen.Package, ctx *blockCtx, file string, f *ast.File, c
 		if debugLoad {
 			log.Println("==> Preload type", classType)
 		}
+		parent.classTypes[f] = classType
 		if proj != nil {
 			ctx.lookups = make([]gogen.PkgRef, len(proj.pkgPaths))
 			for i, pkgPath := range proj.pkgPaths {
@@ -1060,7 +1068,10 @@ func preloadXGoFile(p *gogen.Package, ctx *blockCtx, file string, f *ast.File, c
 						var pos token.Pos
 						var names []string
 						var fldType types.Type
-						spec = v.(*ast.ValueSpec)
+						spec = valueSpecSubset(ctx, v.(*ast.ValueSpec), false)
+						if spec == nil {
+							continue
+						}
 						if spec.Type != nil {
 							fldType = toType(ctx, spec.Type)
 						}
@@ -1342,11 +1353,14 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 			case token.CONST:
 				preloadConst(d.Specs, nil)
 			case token.VAR:
-				if d == classDecl { // skip class fields
-					continue
-				}
 				for _, spec := range d.Specs {
 					vSpec := spec.(*ast.ValueSpec)
+					if d == classDecl {
+						vSpec = valueSpecSubset(ctx, vSpec, true)
+						if vSpec == nil {
+							continue
+						}
+					}
 					if debugLoad {
 						log.Println("==> Preload var", vSpec.Names)
 					}
@@ -1969,6 +1983,9 @@ func valueSpecName(ctx *blockCtx, name string) string {
 }
 
 func staticValueName(ctx *blockCtx, name string) (tname, mname string, ok bool) {
+	if strings.HasPrefix(name, ".") {
+		return classRecvName(ctx), name[1:], name != "."
+	}
 	tname, mname, ok = strings.Cut(name, ".")
 	if !ok || tname == "" || mname == "" {
 		return "", "", false
@@ -2020,6 +2037,51 @@ func lookupPackageTypeName(ctx *blockCtx, name string) *types.TypeName {
 		}
 	}
 	return nil
+}
+
+func classRecvName(ctx *blockCtx) string {
+	t := ctx.classRecv.List[0].Type.(*ast.StarExpr)
+	return t.X.(*ast.Ident).Name
+}
+
+func valueSpecSubset(ctx *blockCtx, v *ast.ValueSpec, wantStatic bool) *ast.ValueSpec {
+	if len(v.Names) == 0 {
+		if wantStatic {
+			return nil
+		}
+		return v
+	}
+	idxs := make([]int, 0, len(v.Names))
+	for i, name := range v.Names {
+		_, _, ok := staticValueName(ctx, name.Name)
+		if ok == wantStatic {
+			idxs = append(idxs, i)
+		}
+	}
+	if len(idxs) == 0 {
+		return nil
+	}
+	if len(idxs) == len(v.Names) {
+		return v
+	}
+	spec := *v
+	spec.Names = make([]*ast.Ident, len(idxs))
+	for i, idx := range idxs {
+		spec.Names[i] = v.Names[idx]
+	}
+	spec.HasStatic = wantStatic
+	if len(v.Values) == len(v.Names) {
+		spec.Values = make([]ast.Expr, len(idxs))
+		for i, idx := range idxs {
+			spec.Values[i] = v.Values[idx]
+		}
+	} else if len(v.Values) != 0 {
+		if wantStatic {
+			ctx.handleErrorf(v.Pos(), v.End(), "cannot split static and non-static names with a shared initializer")
+		}
+		return nil
+	}
+	return &spec
 }
 
 func removeNamedSymbols(syms map[string]loader, names []string) {
