@@ -1,0 +1,41 @@
+package main
+
+file in.xgo
+ast.GenDecl:
+  Tok: type
+  Specs:
+    ast.TypeSpec:
+      Name:
+        ast.Ident:
+          Name: Rect
+      Type:
+        ast.Ident:
+          Name: int
+ast.GenDecl:
+  Tok: const
+  Specs:
+    ast.ValueSpec:
+      Names:
+        ast.Ident:
+          Name: Rect.kind
+        ast.Ident:
+          Name: global
+      Values:
+        ast.BasicLit:
+          Kind: STRING
+          Value: "shape"
+        ast.BasicLit:
+          Kind: STRING
+          Value: "global"
+ast.GenDecl:
+  Tok: var
+  Specs:
+    ast.ValueSpec:
+      Names:
+        ast.Ident:
+          Name: Rect.count
+        ast.Ident:
+          Name: other
+      Type:
+        ast.Ident:
+          Name: int
