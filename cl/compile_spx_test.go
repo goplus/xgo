@@ -416,9 +416,8 @@ func TestSpxRun(t *testing.T) {
 var (
 	Kai Kai
 	t   Sound
+	x   float64 = rand(1.2)
 )
-
-var x float64 = rand(1.2)
 
 run "hzip://open.qiniu.us/weather/res.zip"
 `, `
@@ -438,15 +437,19 @@ type index struct {
 	*spx.MyGame
 	Kai Kai
 	t   spx.Sound
+	x   float64
 }
 
-var x float64 = spx.Rand__1(1.2)
-
 func (this *index) MainEntry() {
+	this.XGo_Init()
 	spx.Gopt_MyGame_Run(this, "hzip://open.qiniu.us/weather/res.zip")
 }
 func (this *index) Main() {
 	spx.Gopt_MyGame_Main(this)
+}
+func (this *index) XGo_Init() *index {
+	this.x = spx.Rand__1(1.2)
+	return this
 }
 func (this *Kai) Main() {
 	fmt.Println("Hi")
@@ -885,7 +888,9 @@ func onInit() {
 }
 `, `
 var (
-	a int
+	a  int
+	m1 = &Mesh{}
+	m2 = &Mesh{}
 )
 
 type Mesh struct {
@@ -894,11 +899,6 @@ type Mesh struct {
 func (p *Mesh) Name() string {
 	return "hello"
 }
-
-var (
-	m1 = &Mesh{}
-	m2 = &Mesh{}
-)
 
 onKey "hello", => {
 }
@@ -934,7 +934,9 @@ type Game struct {
 type Kai struct {
 	spx.Sprite
 	*Game
-	a int
+	a  int
+	m1 *Mesh
+	m2 *Mesh
 }
 
 func (this *Game) onInit() {
@@ -949,11 +951,8 @@ func (this *Game) Main() {
 func (p *Mesh) Name() string {
 	return "hello"
 }
-
-var m1 = &Mesh{}
-var m2 = &Mesh{}
-
 func (this *Kai) Main() {
+	this.XGo_Init()
 	spx.Gopt_Sprite_OnKey__0(this, "hello", func() {
 	})
 	spx.Gopt_Sprite_OnKey__1(this, "hello", func(key string) {
@@ -962,19 +961,24 @@ func (this *Kai) Main() {
 	})
 	spx.Gopt_Sprite_OnKey__3(this, []string{"2"}, func(key string) {
 	})
-	spx.Gopt_Sprite_OnKey__4(this, []spx.Mesher{m1, m2}, func() {
+	spx.Gopt_Sprite_OnKey__4(this, []spx.Mesher{this.m1, this.m2}, func() {
 	})
-	spx.Gopt_Sprite_OnKey__5(this, []spx.Mesher{m1, m2}, func(key spx.Mesher) {
+	spx.Gopt_Sprite_OnKey__5(this, []spx.Mesher{this.m1, this.m2}, func(key spx.Mesher) {
 	})
 	spx.Gopt_Sprite_OnKey__6(this, []string{"a"}, []string{"b"}, func(key string) {
 	})
-	spx.Gopt_Sprite_OnKey__7(this, []string{"a"}, []spx.Mesher{m1, m2}, func(key string) {
+	spx.Gopt_Sprite_OnKey__7(this, []string{"a"}, []spx.Mesher{this.m1, this.m2}, func(key string) {
 	})
 	spx.Gopt_Sprite_OnKey__6(this, []string{"a"}, nil, func(key string) {
 	})
 	spx.Gopt_Sprite_OnKey__8(this, 100, 200)
 	spx.Gopt_Sprite_OnKey2(this, "hello", func(key string) {
 	})
+}
+func (this *Kai) XGo_Init() *Kai {
+	this.m1 = &Mesh{}
+	this.m2 = &Mesh{}
+	return this
 }
 func main() {
 	new(Game).Main()

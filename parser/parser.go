@@ -92,7 +92,7 @@ type parser struct {
 	syncPos token.Pos // last synchronization position
 	syncCnt int       // number of parser.advance calls without progress
 
-	varDeclCnt int // number of var decl
+	classVarDecl token.Pos // first top-level var declaration in a classfile
 
 	// Non-syntactic parser control
 	exprLev int  // < 0: in control clause, >= 0: in expression
@@ -709,15 +709,47 @@ func (p *parser) parseIdent() *ast.Ident {
 	return &ast.Ident{NamePos: pos, Name: name}
 }
 
-func (p *parser) parseIdentList() (list []*ast.Ident) {
-	if p.trace {
-		defer un(trace(p, "IdentList"))
+func (p *parser) parseValueName(allowDot bool) (*ast.Ident, bool) {
+	if allowDot && p.tok == token.PERIOD {
+		dot := p.pos
+		p.next()
+		name := p.parseIdent()
+		p.checkStaticValueNameSpacing(token.NoPos, dot, name.Pos())
+		name.NamePos = dot
+		name.Name = "." + name.Name
+		return name, true
 	}
+	name := p.parseIdent()
+	if p.tok != token.PERIOD {
+		return name, false
+	}
+	dot := p.pos
+	p.next()
+	sel := p.parseIdent()
+	p.checkStaticValueNameSpacing(name.End(), dot, sel.Pos())
+	name.Name += "." + sel.Name
+	return name, true
+}
 
-	list = append(list, p.parseIdent())
+func (p *parser) checkStaticValueNameSpacing(leftEnd, dot, right token.Pos) {
+	const msg = "whitespace is not allowed in static value name"
+	if leftEnd.IsValid() && leftEnd != dot {
+		p.error(dot, msg)
+	}
+	if right != dot+1 {
+		p.error(right, msg)
+	}
+}
+
+func (p *parser) parseValueNameList(allowDot bool) (list []*ast.Ident, hasStatic bool) {
+	name, static := p.parseValueName(allowDot)
+	list = append(list, name)
+	hasStatic = static
 	for p.tok == token.COMMA {
 		p.next()
-		list = append(list, p.parseIdent())
+		name, static = p.parseValueName(allowDot)
+		list = append(list, name)
+		hasStatic = hasStatic || static
 	}
 	return
 }
@@ -3950,45 +3982,58 @@ func (p *parser) inClassFile() bool {
 	return p.mode&ParseXGoClass != 0
 }
 
-func (p *parser) parseValueSpec(doc *ast.CommentGroup, keyword token.Token, iota int) ast.Spec {
-	if p.trace {
-		defer un(trace(p, keyword.String()+"Spec"))
+func (p *parser) parseClassValueSpec() (idents []*ast.Ident, typ ast.Expr, tag *ast.BasicLit, values []ast.Expr, hasStatic bool) {
+	var starPos token.Pos
+	if p.tok == token.MUL {
+		starPos = p.pos
+		p.next()
 	}
-
-	pos := p.pos
-	var idents []*ast.Ident
-	var typ ast.Expr
-	var tag *ast.BasicLit
-	var values []ast.Expr
-	if p.inClassFile() && p.topScope == p.pkgScope && keyword == token.VAR && p.varDeclCnt == 1 {
-		var starPos token.Pos
-		if p.tok == token.MUL {
-			starPos = p.pos
+	if p.tok == token.PERIOD && starPos == token.NoPos {
+		idents, hasStatic = p.parseValueNameList(true)
+		typ = p.tryType()
+		if p.tok == token.ASSIGN {
 			p.next()
+			values = p.parseRHSList()
 		}
+	} else {
 		ident := p.parseIdent()
 		if p.tok == token.PERIOD {
+			dot := p.pos
 			p.next()
-			typ = &ast.SelectorExpr{
-				X:   ident,
-				Sel: p.parseIdent(),
-			}
-			if starPos != token.NoPos {
-				typ = &ast.StarExpr{
-					Star: starPos,
-					X:    typ,
+			selOK := p.tok == token.IDENT
+			sel := p.parseIdent()
+			if selOK && starPos == token.NoPos &&
+				p.tok != token.SEMICOLON && p.tok != token.STRING && p.tok != token.RPAREN {
+				p.checkStaticValueNameSpacing(ident.End(), dot, sel.Pos())
+				ident.Name += "." + sel.Name
+				idents = append(idents, ident)
+				hasStatic = true
+				for p.tok == token.COMMA {
+					p.next()
+					name, static := p.parseValueName(true)
+					idents = append(idents, name)
+					hasStatic = hasStatic || static
+				}
+				typ = p.tryType()
+				if p.tok == token.ASSIGN {
+					p.next()
+					values = p.parseRHSList()
+				}
+			} else {
+				typ = &ast.SelectorExpr{X: ident, Sel: sel}
+				if starPos != token.NoPos {
+					typ = &ast.StarExpr{Star: starPos, X: typ}
 				}
 			}
 		} else if starPos != token.NoPos {
-			typ = &ast.StarExpr{
-				Star: starPos,
-				X:    ident,
-			}
+			typ = &ast.StarExpr{Star: starPos, X: ident}
 		} else {
 			idents = append(idents, ident)
 			for p.tok == token.COMMA {
 				p.next()
-				idents = append(idents, p.parseIdent())
+				name, static := p.parseValueName(true)
+				idents = append(idents, name)
+				hasStatic = hasStatic || static
 			}
 			typ = p.tryType()
 			if p.tok == token.ASSIGN {
@@ -3999,13 +4044,30 @@ func (p *parser) parseValueSpec(doc *ast.CommentGroup, keyword token.Token, iota
 				idents = nil
 			}
 		}
-		if p.tok == token.STRING {
-			tag = &ast.BasicLit{ValuePos: p.pos, Kind: p.tok, Value: p.lit}
-			p.next()
-		}
-		p.expect(token.SEMICOLON)
+	}
+	if p.tok == token.STRING {
+		tag = &ast.BasicLit{ValuePos: p.pos, Kind: p.tok, Value: p.lit}
+		p.next()
+	}
+	p.expect(token.SEMICOLON)
+	return
+}
+
+func (p *parser) parseValueSpec(doc *ast.CommentGroup, keyword token.Token, iota int) ast.Spec {
+	if p.trace {
+		defer un(trace(p, keyword.String()+"Spec"))
+	}
+
+	pos := p.pos
+	var idents []*ast.Ident
+	var typ ast.Expr
+	var tag *ast.BasicLit
+	var values []ast.Expr
+	var hasStatic bool
+	if p.inClassFile() && p.topScope == p.pkgScope && keyword == token.VAR {
+		idents, typ, tag, values, hasStatic = p.parseClassValueSpec()
 	} else {
-		idents = p.parseIdentList()
+		idents, hasStatic = p.parseValueNameList(p.inClassFile())
 		typ = p.tryType()
 		// always permit optional initialization for more tolerant parsing
 		if p.tok == token.ASSIGN {
@@ -4030,12 +4092,13 @@ func (p *parser) parseValueSpec(doc *ast.CommentGroup, keyword token.Token, iota
 	// the end of the innermost containing block.
 	// (Global identifiers are resolved in a separate phase after parsing.)
 	spec := &ast.ValueSpec{
-		Doc:     doc,
-		Names:   idents,
-		Type:    typ,
-		Tag:     tag,
-		Values:  values,
-		Comment: p.lineComment,
+		Doc:       doc,
+		Names:     idents,
+		Type:      typ,
+		Tag:       tag,
+		Values:    values,
+		Comment:   p.lineComment,
+		HasStatic: hasStatic,
 	}
 	kind := ast.Con
 	if keyword == token.VAR {
@@ -4109,11 +4172,15 @@ func (p *parser) parseGenDecl(keyword token.Token, f parseSpecFunction) *ast.Gen
 	if p.trace {
 		defer un(trace(p, "GenDecl("+keyword.String()+")"))
 	}
-	if keyword == token.VAR {
-		p.varDeclCnt++
-	}
 	doc := p.leadComment
 	pos := p.expect(keyword)
+	if keyword == token.VAR && p.inClassFile() && p.topScope == p.pkgScope {
+		if p.classVarDecl.IsValid() {
+			p.error(pos, "multiple top-level var declarations in classfile")
+		} else {
+			p.classVarDecl = pos
+		}
+	}
 	var lparen, rparen token.Pos
 	var list []ast.Spec
 	if p.tok == token.LPAREN {
