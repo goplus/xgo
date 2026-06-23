@@ -117,6 +117,9 @@ func compileIdent(ctx *blockCtx, lhs int, ident *ast.Ident, flags int) (pkg goge
 			tryMember(cb, lhs, recv, ident, flags) {
 			return
 		}
+		if tryStaticMemberIdent(ctx, lhs, ident, flags) {
+			return
+		}
 	}
 
 	// global object
@@ -186,6 +189,97 @@ find:
 		rec.recordIdent(ident, o)
 	}
 	return
+}
+
+func tryStaticMemberIdent(ctx *blockCtx, lhs int, ident *ast.Ident, flags int) bool {
+	if (flags & clIdentSelectorExpr) != 0 {
+		return false
+	}
+	for _, tname := range staticMemberRecvNames(ctx) {
+		if (flags & clIdentLHS) != 0 {
+			if tryStaticMemberRef(ctx, ident, nil, tname, ident.Name, ident) {
+				return true
+			}
+		} else if tryStaticMemberName(ctx, lhs, ident, nil, tname, ident.Name) {
+			return true
+		}
+	}
+	return false
+}
+
+func canUseStaticMemberSelector(ctx *blockCtx, x *ast.Ident) bool {
+	name := x.Name
+	scope := ctx.pkg.Types.Scope()
+	if at, o := ctx.cb.Scope().LookupParent(name, token.NoPos); o != nil {
+		if at != scope {
+			return false
+		}
+		_, ok := o.(*types.TypeName)
+		return ok
+	}
+	return lookupPackageTypeName(ctx, name) != nil
+}
+
+func staticMemberRecvNames(ctx *blockCtx) []string {
+	var names []string
+	if name := classRecvName(ctx); name != "" {
+		names = append(names, name)
+	}
+	if ctx.proj != nil {
+		if name := ctx.proj.getGameClass(ctx.pkgCtx); name != "" {
+			for _, old := range names {
+				if old == name {
+					return names
+				}
+			}
+			names = append(names, name)
+		}
+	}
+	return names
+}
+
+func tryStaticMemberName(ctx *blockCtx, lhs int, ident, recv *ast.Ident, tname, name string) bool {
+	sname := staticMember(tname, exportStaticMemberName(name))
+	scope := ctx.pkg.Types.Scope()
+	o := scope.Lookup(sname)
+	if o == nil && ctx.hasSymbol(sname) && ctx.loadSymbol(sname) {
+		o = scope.Lookup(sname)
+	}
+	if o == nil {
+		return false
+	}
+	ctx.cb.Val(o, ident)
+	if rec := ctx.recorder(); rec != nil {
+		recordStaticMemberUse(rec, ctx, ident, recv, tname, o)
+	}
+	return true
+}
+
+func tryStaticMemberRef(ctx *blockCtx, ident, recv *ast.Ident, tname, name string, src ast.Node) bool {
+	sname := staticMember(tname, exportStaticMemberName(name))
+	scope := ctx.pkg.Types.Scope()
+	o := scope.Lookup(sname)
+	if o == nil && ctx.hasSymbol(sname) && ctx.loadSymbol(sname) {
+		o = scope.Lookup(sname)
+	}
+	if o == nil {
+		return false
+	}
+	ctx.cb.VarRef(o, src)
+	if rec := ctx.recorder(); rec != nil {
+		recordStaticMemberUse(rec, ctx, ident, recv, tname, o)
+	}
+	return true
+}
+
+func recordStaticMemberUse(rec *goxRecorder, ctx *blockCtx, ident, recv *ast.Ident, tname string, obj types.Object) {
+	rec.recordIdent(ident, obj)
+	if recv == nil {
+		return
+	}
+	if ro := ctx.pkg.Types.Scope().Lookup(tname); ro != nil {
+		rec.Use(recv, ro)
+	}
 }
 
 func tryMember(cb *gogen.CodeBuilder, lhs int, recv types.Object, ident *ast.Ident, flags int) bool {
@@ -509,6 +603,9 @@ func compileSliceExpr(ctx *blockCtx, v *ast.SliceExpr) { // x[i:j:k]
 func compileSelectorExprLHS(ctx *blockCtx, v *ast.SelectorExpr) {
 	switch x := v.X.(type) {
 	case *ast.Ident:
+		if canUseStaticMemberSelector(ctx, x) && tryStaticMemberRef(ctx, v.Sel, x, x.Name, v.Sel.Name, v) {
+			return
+		}
 		if at, kind := compileIdent(ctx, 1, x, clIdentLHS|clIdentSelectorExpr); kind != objNormal {
 			ctx.cb.VarRef(at.Ref(v.Sel.Name))
 			return
@@ -625,6 +722,9 @@ func convMapToNodeSet(cb *gogen.CodeBuilder) {
 func compileSelectorExpr(ctx *blockCtx, lhs int, v *ast.SelectorExpr, flags int) {
 	switch x := v.X.(type) {
 	case *ast.Ident:
+		if (flags&clIdentLHS) == 0 && canUseStaticMemberSelector(ctx, x) && tryStaticMemberName(ctx, lhs, v.Sel, x, x.Name, v.Sel.Name) {
+			return
+		}
 		if at, kind := compileIdent(ctx, 1, x, flags|clIdentCanAutoCall|clIdentSelectorExpr); kind != objNormal {
 			if compilePkgRef(ctx, 1, at, v.Sel, flags, kind) {
 				return
