@@ -281,6 +281,10 @@ func TestErrStaticMember(t *testing.T) {
 )
 `, `/foo/bar.gox:2:4: whitespace is not allowed in static member name`, ``)
 	testErrCode(t, `var (
+	.B int
+)
+`, `/foo/bar.xgo:2:2: expected 'IDENT', found '.' (and 1 more errors)`, ``)
+	testErrCode(t, `var (
 	A. B int
 )
 `, `/foo/bar.xgo:2:5: whitespace is not allowed in static member name`, ``)
