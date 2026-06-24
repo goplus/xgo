@@ -433,14 +433,14 @@ t.run "foo -10", t => {
 
 ## Existing Class Frameworks
 
-| Framework | Domain | File Suffix |
+| Framework | Domain | File Pattern |
 |---|---|---|
-| [spx](https://github.com/goplus/spx) | 2D game engine (STEM) | `.spx` |
+| [spx](https://github.com/goplus/spx) | 2D game engine (STEM) | `*.spx` |
 | [mcp](https://github.com/goplus/mcp) | MCP server (AI) | `*_mcp.gox`, `*_tool.gox`, etc. |
 | [mcptest](https://github.com/goplus/mcp/tree/main/mtest) | MCP testing | `*_mtest.gox` |
-| [yap](https://github.com/goplus/yap) | HTTP web framework | `.yap` |
+| [yap](https://github.com/goplus/yap) | HTTP web framework | `*.yap` |
 | [yaptest](https://github.com/goplus/yap/tree/main/ytest) | HTTP test framework | `*_ytest.gox` |
 | [ydb](https://github.com/goplus/yap/tree/main/ydb) | Database framework | `*_ydb.gox` |
 | [cobra](https://github.com/goplus/cobra) | CLI framework | `*_app.gox`, `*_cmd.gox` |
-| [gsh](https://github.com/qiniu/x/tree/main/gsh) | Shell scripting | `*_gsh.gox` |
+| [gsh](https://github.com/qiniu/x/tree/main/gsh) | Shell scripting | `*.gsh` |
 | *(built-in)* | Unit testing | `*_test.gox` |
