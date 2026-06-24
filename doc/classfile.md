@@ -104,7 +104,7 @@ func main() {
 
 ## The Template Recv Method
 
-The **Template Recv Method** is the hook a framework author writes to receive control after the compiler has assembled everything. Its name follows the convention `XGot_<BaseType>_Main` (historically also `Gopt_<BaseType>_Main`).
+The **[Template Recv Method](template-recv-method.md)** is the hook a framework author writes to receive control after the compiler has assembled everything. Its name follows the convention `XGot_<BaseType>_Main` (historically also `Gopt_<BaseType>_Main`).
 
 Its signature encodes the framework's structural contract:
 
