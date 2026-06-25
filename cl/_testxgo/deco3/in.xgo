@@ -15,3 +15,8 @@ func (s *Service) call(req string) (resp string, err error) {
 	resp = s.name + ":" + req
 	return
 }
+
+@retry(2)
+func (*Service) get(req string) (resp string, err error) {
+	return req, nil
+}
