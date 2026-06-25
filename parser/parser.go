@@ -4253,7 +4253,7 @@ func (p *parser) parseOverloadDecl(decl *ast.OverloadFuncDecl) *ast.OverloadFunc
 // `func (recv) identOrOp(params) results { ... }`
 // `func (T).identOrOp = (overloadFuncs)`
 // `func (params) results { ... }()`
-func (p *parser) parseFuncDeclOrCall() (ast.Decl, *ast.CallExpr) {
+func (p *parser) parseFuncDeclOrCall(decs []*ast.FuncDecorator) (ast.Decl, *ast.CallExpr) {
 	if p.trace {
 		defer un(trace(p, "FunctionDeclOrCall"))
 	}
@@ -4387,9 +4387,10 @@ func (p *parser) parseFuncDeclOrCall() (ast.Decl, *ast.CallExpr) {
 	}
 
 	decl := &ast.FuncDecl{
-		Doc:  doc,
-		Recv: recv,
-		Name: ident,
+		Doc:        doc,
+		Decorators: decs,
+		Recv:       recv,
+		Name:       ident,
 		Type: &ast.FuncType{
 			Func:    pos,
 			Params:  params,
@@ -4420,6 +4421,7 @@ func (p *parser) parseDecl(sync map[token.Token]bool) ast.Decl {
 	if p.trace {
 		defer un(trace(p, "Declaration"))
 	}
+	var decs []*ast.FuncDecorator
 	var f parseSpecFunction
 	pos := p.pos
 	switch p.tok {
@@ -4427,8 +4429,15 @@ func (p *parser) parseDecl(sync map[token.Token]bool) ast.Decl {
 		f = p.parseValueSpec
 	case token.TYPE:
 		f = p.parseTypeSpec
+	case token.AT:
+		decs = p.parseDecorators()
+		if p.tok != token.FUNC {
+			p.errorExpected(p.pos, "'func'", 2)
+			return &ast.BadDecl{From: pos, To: p.pos}
+		}
+		fallthrough
 	case token.FUNC:
-		decl, call := p.parseFuncDeclOrCall()
+		decl, call := p.parseFuncDeclOrCall(decs)
 		if decl != nil {
 			if p.errors.Len() != 0 {
 				p.advance(sync)
@@ -4440,6 +4449,30 @@ func (p *parser) parseDecl(sync map[token.Token]bool) ast.Decl {
 		return p.parseGlobalStmts(sync, pos)
 	}
 	return p.parseGenDecl(p.tok, f)
+}
+
+// parseDecorators parses one or more `@name` or `@name(args...)` decorators.
+// It is called when the current token is token.AT.
+func (p *parser) parseDecorators() []*ast.FuncDecorator {
+	var decs []*ast.FuncDecorator
+	for p.tok == token.AT {
+		dec := &ast.FuncDecorator{At: p.pos}
+		p.next() // consume '@'
+		name := p.parseIdent()
+		if p.tok == token.LPAREN {
+			dec.CallExpr = *p.parseCallOrConversion(name, false)
+		} else {
+			dec.Fun, dec.NoParenEnd = name, name.End()
+		}
+		decs = append(decs, dec)
+		// Consume the implicit semicolon inserted after the decorator name/call
+		// (the scanner inserts a semicolon after identifiers and closing parens
+		// when followed by a newline).
+		if p.tok == token.SEMICOLON && p.lit == "\n" {
+			p.next()
+		}
+	}
+	return decs
 }
 
 func (p *parser) parseGlobalStmts(sync map[token.Token]bool, pos token.Pos, stmts ...ast.Stmt) *ast.FuncDecl {

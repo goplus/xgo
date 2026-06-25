@@ -1,0 +1,29 @@
+package foo
+
+file decorator.xgo
+ast.FuncDecl:
+  Decorators:
+    ast.FuncDecorator:
+      CallExpr:
+        ast.CallExpr:
+          Fun:
+            ast.Ident:
+              Name: decoratorA
+    ast.FuncDecorator:
+      CallExpr:
+        ast.CallExpr:
+          Fun:
+            ast.Ident:
+              Name: decoratorB
+          Args:
+            ast.Ident:
+              Name: x
+  Name:
+    ast.Ident:
+      Name: Foo
+  Type:
+    ast.FuncType:
+      Params:
+        ast.FieldList:
+  Body:
+    ast.BlockStmt:

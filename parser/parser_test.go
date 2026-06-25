@@ -396,6 +396,11 @@ func TestErrTupleType(t *testing.T) {
 `, `/foo/bar.xgo:1:8: mixed named and unnamed fields in tuple type`, ``)
 }
 
+func TestErrFuncDecorator(t *testing.T) {
+	testErrCode(t, `@foo
+`, `/foo/bar.xgo:1:6: expected 'func', found 'EOF'`, ``)
+}
+
 func TestErrFuncDecl(t *testing.T) {
 	testErrCode(t, `func test()
 {

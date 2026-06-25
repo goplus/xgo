@@ -1,0 +1,6 @@
+package foo
+
+@decoratorA
+@decoratorB(x)
+func Foo() {
+}

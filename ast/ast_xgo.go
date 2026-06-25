@@ -92,21 +92,42 @@ func (*EnumType) exprNode() {}
 
 // -----------------------------------------------------------------------------
 
-// A FuncDecl node represents a function declaration.
-type FuncDecl struct {
-	Doc      *CommentGroup // associated documentation; or nil
-	Recv     *FieldList    // receiver (methods); or nil (functions)
-	Name     *Ident        // function/method name
-	Type     *FuncType     // function signature: parameters, results, and position of "func" keyword
-	Body     *BlockStmt    // function body; or nil for external (non-Go) function
-	Operator bool          // is operator or not
-	Shadow   bool          // is a shadow entry
-	IsClass  bool          // recv set by class
-	Static   bool          // recv is static (class method)
+// A FuncDecorator node represents a single decorator applied to a function.
+// It corresponds to `@name` or `@name(args...)` preceding a function declaration.
+type FuncDecorator struct {
+	At       token.Pos // position of "@"
+	CallExpr           // decorator call
 }
 
 // Pos returns position of first character belonging to the node.
-func (d *FuncDecl) Pos() token.Pos { return d.Type.Pos() }
+func (d *FuncDecorator) Pos() token.Pos { return d.At }
+
+// End returns position of first character immediately after the node.
+func (d *FuncDecorator) End() token.Pos {
+	return d.CallExpr.End()
+}
+
+// A FuncDecl node represents a function declaration.
+type FuncDecl struct {
+	Doc        *CommentGroup    // associated documentation; or nil
+	Decorators []*FuncDecorator // decorators applied to this function; or nil
+	Recv       *FieldList       // receiver (methods); or nil (functions)
+	Name       *Ident           // function/method name
+	Type       *FuncType        // function signature: parameters, results, and position of "func" keyword
+	Body       *BlockStmt       // function body; or nil for external (non-Go) function
+	Operator   bool             // is operator or not
+	Shadow     bool             // is a shadow entry
+	IsClass    bool             // recv set by class
+	Static     bool             // recv is static (class method)
+}
+
+// Pos returns position of first character belonging to the node.
+func (d *FuncDecl) Pos() token.Pos {
+	if len(d.Decorators) > 0 {
+		return d.Decorators[0].Pos()
+	}
+	return d.Type.Pos()
+}
 
 // End returns position of first character immediately after the node.
 func (d *FuncDecl) End() token.Pos {
