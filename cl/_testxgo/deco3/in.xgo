@@ -15,6 +15,3 @@ func (s *Service) call(req string) (resp string, err error) {
 	resp = s.name + ":" + req
 	return
 }
-
-var svc = &Service{name: "test"}
-svc.call("ping")

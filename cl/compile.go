@@ -1660,7 +1660,11 @@ func genDecoratedFunc(ctx *blockCtx, name string, fnDeco *gogen.Func, d *ast.Fun
 			for i := range nret {
 				cb.VarRef(rets.At(i))
 			}
-			cb.Val(fnDeco.Func)
+			if recv == nil {
+				cb.Val(fnDeco.Func)
+			} else {
+				cb.Val(recv).MemberVal(fnDeco.Func.Name(), 1)
+			}
 			for i := range nparam {
 				cb.Val(params.At(i))
 			}

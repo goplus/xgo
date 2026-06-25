@@ -22,9 +22,3 @@ func retry(times int, fn func() error) {
 		}
 	}
 }
-
-var svc = &Service{name: "test"}
-
-func main() {
-	svc.call("ping")
-}
