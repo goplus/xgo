@@ -1,0 +1,9 @@
+func wrap(fn func()) {
+	fn()
+}
+
+@wrap
+func process() {
+}
+
+process()

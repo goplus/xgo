@@ -1,0 +1,15 @@
+func retry(times int, fn func() error) {
+	for i := 0; i < times; i++ {
+		if fn() == nil {
+			return
+		}
+	}
+}
+
+@retry(3)
+func fetchData(url string) (data string, err error) {
+	data = url
+	return
+}
+
+fetchData("http://example.com")

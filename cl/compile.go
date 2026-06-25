@@ -1572,6 +1572,10 @@ func loadFunc(ctx *blockCtx, recv *types.Var, name string, d *ast.FuncDecl, genB
 			log.Printf("==> Load method %v.%s\n", recv.Type(), name)
 		}
 	}
+	if len(d.Decorators) > 0 {
+		loadDecoratedFunc(ctx, recv, name, d, genBody)
+		return
+	}
 	var pkg = ctx.pkg
 	var initClass bool
 	var sigBase *types.Signature

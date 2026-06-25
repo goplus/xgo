@@ -1,0 +1,11 @@
+func timeIt(fn func()) {
+	fn()
+}
+
+@timeIt
+func compute(x int) (result int) {
+	result = x * 2
+	return
+}
+
+compute(21)

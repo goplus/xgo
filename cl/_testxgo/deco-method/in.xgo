@@ -1,0 +1,20 @@
+type Service struct {
+	name string
+}
+
+func retry(times int, fn func() error) {
+	for i := 0; i < times; i++ {
+		if fn() == nil {
+			return
+		}
+	}
+}
+
+@retry(2)
+func (s *Service) call(req string) (resp string, err error) {
+	resp = s.name + ":" + req
+	return
+}
+
+var svc = &Service{name: "test"}
+svc.call("ping")
