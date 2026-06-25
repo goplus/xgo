@@ -32,6 +32,41 @@ import (
 
 // -----------------------------------------------------------------------------
 
+const (
+	fnArgPrefix = "_xgo_arg"
+	fnRetPrefix = "_xgo_ret"
+)
+
+func cloneParams(pkg *types.Package, in *types.Tuple, namePrefix string) *types.Tuple {
+	nin := in.Len()
+	params := make([]*types.Var, nin)
+	for i := range nin {
+		paramName := namePrefix + strconv.Itoa(i)
+		params[i] = types.NewParam(token.NoPos, pkg, paramName, in.At(i).Type())
+	}
+	return types.NewTuple(params...)
+}
+
+func cloneParamsIf(pkg *types.Package, in *types.Tuple, namePrefix string) *types.Tuple {
+	nin := in.Len()
+	params := make([]*types.Var, nin)
+	changed := false
+	for i := range nin {
+		param := in.At(i)
+		if name := param.Name(); name == "_" || name == "" {
+			param = types.NewParam(token.NoPos, pkg, namePrefix+strconv.Itoa(i), param.Type())
+			changed = true
+		}
+		params[i] = param
+	}
+	if changed {
+		return types.NewTuple(params...)
+	}
+	return in
+}
+
+// -----------------------------------------------------------------------------
+
 func toRecv(ctx *blockCtx, recv *ast.FieldList) *types.Var {
 	v := recv.List[0]
 	var name string

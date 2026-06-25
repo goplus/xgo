@@ -1,0 +1,18 @@
+func log(fn func() error) {
+	fn()
+}
+
+func retry(times int, fn func() error) {
+	for i := 0; i < times; i++ {
+		if fn() == nil {
+			return
+		}
+	}
+}
+
+@log
+@retry(3)
+func fetch(urls ...string) (results []string, err error) {
+	results = urls
+	return
+}

@@ -1108,6 +1108,28 @@ func _() {
 `)
 }
 
+func TestFuncDecoratorError(t *testing.T) {
+	codeErrorTest(t, "bar.xgo:4:2: decorator `wrap` expects 0 arguments, got 1", `
+func wrap(fn func()) {}
+
+@wrap(1)
+func process() {
+}
+`)
+	codeErrorTest(t, "bar.xgo:4:2: invalid decorator `wrap`", `
+func wrap() {}
+
+@wrap
+func process() {
+}
+`)
+	codeErrorTest(t, "bar.xgo:2:2: undefined: wrap", `
+@wrap
+func process() {
+}
+`)
+}
+
 func TestOverloadFuncDecl(t *testing.T) {
 	codeErrorTest(t, "bar.xgo:3:2: invalid func (foo).mulInt", `
 func mul = (
