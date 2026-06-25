@@ -1572,8 +1572,8 @@ func genDecoratedFunc(ctx *blockCtx, name string, fnDeco *gogen.Func, d *ast.Fun
 	if recv != nil && recv.Name() == "" {
 		recv = types.NewParam(recv.Pos(), pkgTypes, "this", recv.Type())
 	}
-	params := cloneParams(pkgTypes, sig.Params(), fnArgPrefix)
-	rets := cloneParams(pkgTypes, sig.Results(), fnRetPrefix)
+	params := cloneParamsIf(pkgTypes, sig.Params(), fnArgPrefix)
+	rets := cloneParamsIf(pkgTypes, sig.Results(), fnRetPrefix)
 	sig = types.NewSignatureType(recv, nil, nil, params, rets, sig.Variadic()) // TODO(xsw): template
 	fn, err := pkg.NewFuncWith(d.Name.Pos(), name, sig, func() token.Pos {
 		return d.Recv.List[0].Type.Pos()

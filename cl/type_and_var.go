@@ -40,9 +40,22 @@ const (
 func cloneParams(pkg *types.Package, in *types.Tuple, namePrefix string) *types.Tuple {
 	nin := in.Len()
 	params := make([]*types.Var, nin)
-	for i := 0; i < nin; i++ {
+	for i := range nin {
 		paramName := namePrefix + strconv.Itoa(i)
 		params[i] = types.NewParam(token.NoPos, pkg, paramName, in.At(i).Type())
+	}
+	return types.NewTuple(params...)
+}
+
+func cloneParamsIf(pkg *types.Package, in *types.Tuple, namePrefix string) *types.Tuple {
+	nin := in.Len()
+	params := make([]*types.Var, nin)
+	for i := range nin {
+		param := in.At(i)
+		if name := param.Name(); name == "_" || name == "" {
+			param = types.NewParam(token.NoPos, pkg, namePrefix+strconv.Itoa(i), param.Type())
+		}
+		params[i] = param
 	}
 	return types.NewTuple(params...)
 }
