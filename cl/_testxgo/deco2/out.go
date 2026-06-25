@@ -1,5 +1,8 @@
 package main
 
+func log(fn func() error) {
+	fn()
+}
 func retry(times int, fn func() error) {
 	for i := 0; i < times; i++ {
 		if fn() == nil {
@@ -7,17 +10,17 @@ func retry(times int, fn func() error) {
 		}
 	}
 }
-func _xgodeco_fetchData(url string) (data string, err error) {
-	data = url
+func _xgodeco_fetch(urls ...string) (results []string, err error) {
+	results = urls
 	return
 }
-func fetchData(url string) (data string, err error) {
-	retry(3, func() error {
-		data, err = _xgodeco_fetchData(url)
+func fetch(urls ...string) (results []string, err error) {
+	log(func() error {
+		retry(3, func() error {
+			results, err = _xgodeco_fetch(urls...)
+			return err
+		})
 		return err
 	})
 	return
-}
-func main() {
-	fetchData("http://example.com")
 }
