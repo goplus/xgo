@@ -462,9 +462,6 @@ func Walk(v Visitor, node Node) {
 		if n.Doc != nil {
 			Walk(v, n.Doc)
 		}
-		for _, d := range n.Decorators {
-			Walk(v, d)
-		}
 		if n.Recv != nil {
 			Walk(v, n.Recv)
 		}
@@ -483,10 +480,9 @@ func Walk(v Visitor, node Node) {
 		Walk(v, n.Cond)
 
 	case *FuncDecorator:
-		Walk(v, n.Name)
-		if n.Call != nil {
-			Walk(v, n.Call)
-		}
+		Walk(v, n.Fun)
+		walkList(v, n.Args)
+		walkList(v, n.Kwargs)
 
 	default:
 		panic(fmt.Sprintf("ast.Walk: unexpected node type %T", n))

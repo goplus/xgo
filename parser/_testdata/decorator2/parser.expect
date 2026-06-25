@@ -4,10 +4,7 @@ file decorator.xgo
 ast.FuncDecl:
   Decorators:
     ast.FuncDecorator:
-      Name:
-        ast.Ident:
-          Name: retry
-      Call:
+      CallExpr:
         ast.CallExpr:
           Fun:
             ast.Ident:

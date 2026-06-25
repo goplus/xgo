@@ -2114,11 +2114,7 @@ func (p *printer) funcDecl(d *ast.FuncDecl) {
 
 	for _, dec := range d.Decorators {
 		p.print(dec.At, token.AT)
-		if dec.Call != nil {
-			p.expr(dec.Call) // prints name(args...)
-		} else {
-			p.expr(dec.Name)
-		}
+		p.expr(&dec.CallExpr)
 		p.print(newline)
 	}
 
@@ -2154,16 +2150,6 @@ func (p *printer) overloadFuncDecl(d *ast.OverloadFuncDecl) {
 		log.Println("==> Format OverloadFunc", d.Name.Name)
 	}
 	p.setComment(d.Doc)
-
-	for _, dec := range d.Decorators {
-		p.print(dec.At, token.AT)
-		if dec.Call != nil {
-			p.expr(dec.Call) // prints name(args...)
-		} else {
-			p.expr(dec.Name)
-		}
-		p.print(newline)
-	}
 
 	pos := d.Func
 	p.print(pos, token.FUNC, blank)

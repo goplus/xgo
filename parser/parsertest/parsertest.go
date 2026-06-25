@@ -51,6 +51,7 @@ var (
 	tyToken     = reflect.TypeOf(token.Token(0))
 	tyObjectPtr = reflect.TypeOf((*ast.Object)(nil))
 	tyScopePtr  = reflect.TypeOf((*ast.Scope)(nil))
+	tyCallExpr  = reflect.TypeOf((*ast.CallExpr)(nil)).Elem()
 	tplToken    = reflect.TypeOf(tpltoken.Token(0))
 )
 
@@ -66,7 +67,7 @@ func FprintNode(w io.Writer, lead string, v any, prefix, indent string) {
 		for i := 0; i < n; i++ {
 			FprintNode(w, "", val.Index(i).Interface(), prefix, indent)
 		}
-	case reflect.Ptr:
+	case reflect.Pointer:
 		t := val.Type()
 		if val.IsNil() || t == tyObjectPtr || t == tyScopePtr {
 			return
@@ -81,7 +82,8 @@ func FprintNode(w io.Writer, lead string, v any, prefix, indent string) {
 			prefix += indent
 			for i := 0; i < n; i++ {
 				sf := tyElem.Field(i)
-				sfv := elem.Field(i).Interface()
+				sfv1 := elem.Field(i)
+				sfv := sfv1.Interface()
 				switch sf.Type {
 				case tyString, tyToken, tplToken:
 					fmt.Fprintf(w, "%s%v: %v\n", prefix, sf.Name, sfv)
@@ -92,6 +94,9 @@ func FprintNode(w io.Writer, lead string, v any, prefix, indent string) {
 							fmt.Fprintf(w, "%s%v: true\n", prefix, sf.Name)
 						}
 					} else {
+						if sf.Type == tyCallExpr {
+							sfv = sfv1.Addr().Interface()
+						}
 						FprintNode(w, fmt.Sprintf("%s%v:\n", prefix, sf.Name), sfv, prefix+indent, indent)
 					}
 				}
