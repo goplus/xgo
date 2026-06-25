@@ -11,5 +11,3 @@ func fetchData(url string) (data string, err error) {
 	data = url
 	return
 }
-
-fetchData("http://example.com")

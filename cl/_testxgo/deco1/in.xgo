@@ -5,5 +5,3 @@ func wrap(fn func()) {
 @wrap
 func process() {
 }
-
-process()

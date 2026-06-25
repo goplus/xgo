@@ -1991,8 +1991,7 @@ func comprehensionKind(v *ast.ComprehensionExpr) int {
 // {kexpr: vexpr for k, v in container, cond}
 func compileComprehensionExpr(ctx *blockCtx, lhs int, v *ast.ComprehensionExpr) {
 	const (
-		nameOk  = "_xgo_ok"
-		nameRet = "_xgo_ret"
+		nameOk = "_xgo_ok"
 	)
 	kind := comprehensionKind(v)
 	pkg, cb := ctx.pkg, ctx.cb
@@ -2004,7 +2003,7 @@ func compileComprehensionExpr(ctx *blockCtx, lhs int, v *ast.ComprehensionExpr) 
 		results = types.NewTuple(boolean)
 	} else {
 		// use tyInvalid as unbounded return type
-		ret = types.NewParam(token.NoPos, pkgTypes, nameRet, types.Typ[types.Invalid])
+		ret = types.NewParam(token.NoPos, pkgTypes, fnRetPrefix, types.Typ[types.Invalid])
 		if kind == comprehensionSelect && lhs == 2 {
 			boolean := types.NewParam(token.NoPos, pkgTypes, nameOk, types.Typ[types.Bool])
 			results = types.NewTuple(ret, boolean)
@@ -2050,7 +2049,7 @@ func compileComprehensionExpr(ctx *blockCtx, lhs int, v *ast.ComprehensionExpr) 
 		// _xgo_ret = append(_xgo_ret, elt)
 		compileExpr(ctx, 1, v.Elt)
 		e := stk.Pop()
-		*ret = *types.NewVar(token.NoPos, pkgTypes, nameRet, types.NewSlice(e.Type))
+		*ret = *types.NewVar(token.NoPos, pkgTypes, fnRetPrefix, types.NewSlice(e.Type))
 		cb.VarRef(ret)
 		cb.Val(pkg.Builtin().Ref("append"))
 		cb.Val(ret)
@@ -2063,7 +2062,7 @@ func compileComprehensionExpr(ctx *blockCtx, lhs int, v *ast.ComprehensionExpr) 
 		key := stk.Pop()
 		compileExpr(ctx, 1, kv.Value)
 		val := stk.Pop()
-		*ret = *types.NewVar(token.NoPos, pkgTypes, nameRet, types.NewMap(key.Type, val.Type))
+		*ret = *types.NewVar(token.NoPos, pkgTypes, fnRetPrefix, types.NewMap(key.Type, val.Type))
 		cb.Val(ret)
 		stk.Push(key)
 		cb.IndexRef(1)
@@ -2078,7 +2077,7 @@ func compileComprehensionExpr(ctx *blockCtx, lhs int, v *ast.ComprehensionExpr) 
 			// return elt, true
 			compileExpr(ctx, 1, v.Elt)
 			e := stk.Get(-1)
-			*ret = *types.NewVar(token.NoPos, pkgTypes, nameRet, e.Type)
+			*ret = *types.NewVar(token.NoPos, pkgTypes, fnRetPrefix, e.Type)
 			n := 1
 			if lhs == 2 {
 				cb.Val(true)
@@ -2107,7 +2106,6 @@ var (
 func compileErrWrapExpr(ctx *blockCtx, lhs int, v *ast.ErrWrapExpr, inFlags int) {
 	const (
 		nameErr = "_xgo_err"
-		nameRet = "_xgo_ret"
 	)
 	pkg, cb := ctx.pkg, ctx.cb
 	useClosure := v.Tok == token.NOT || v.Default != nil
@@ -2130,7 +2128,7 @@ func compileErrWrapExpr(ctx *blockCtx, lhs int, v *ast.ErrWrapExpr, inFlags int)
 	var ret []*types.Var
 	if n > 0 {
 		pkgTypes := pkg.Types
-		i, retName := 0, nameRet
+		i, retName := 0, fnRetPrefix
 		ret = make([]*types.Var, n)
 		for {
 			ret[i] = types.NewParam(token.NoPos, pkgTypes, retName, results.At(i).Type())
@@ -2138,7 +2136,7 @@ func compileErrWrapExpr(ctx *blockCtx, lhs int, v *ast.ErrWrapExpr, inFlags int)
 			if i >= n {
 				break
 			}
-			retName = nameRet + strconv.Itoa(i+1)
+			retName = fnRetPrefix + strconv.Itoa(i+1)
 		}
 	}
 	sig := types.NewSignatureType(nil, nil, nil, nil, types.NewTuple(ret...), false)

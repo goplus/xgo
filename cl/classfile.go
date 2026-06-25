@@ -670,19 +670,9 @@ func findMethodByType(typ types.Type, name string) *types.Func {
 }
 
 func makeMainSig(recv *types.Var, f *types.Func) *types.Signature {
-	const (
-		namePrefix = "_xgo_arg"
-	)
 	sig := f.Type().(*types.Signature)
-	in := sig.Params()
-	nin := in.Len()
-	pkg := recv.Pkg()
-	params := make([]*types.Var, nin)
-	for i := 0; i < nin; i++ {
-		paramName := namePrefix + strconv.Itoa(i)
-		params[i] = types.NewParam(token.NoPos, pkg, paramName, in.At(i).Type())
-	}
-	return types.NewSignatureType(recv, nil, nil, types.NewTuple(params...), sig.Results(), false)
+	params := cloneParams(recv.Pkg(), sig.Params(), fnArgPrefix)
+	return types.NewSignatureType(recv, nil, nil, params, sig.Results(), false)
 }
 
 func genClassfname(ctx *blockCtx, c *classFile) {
@@ -695,15 +685,12 @@ func genClassfname(ctx *blockCtx, c *classFile) {
 }
 
 func genClassclone(ctx *blockCtx, classclone *types.Signature) {
-	const (
-		nameRet = "_xgo_ret"
-	)
 	pkg := ctx.pkg
 	recv := toRecv(ctx, ctx.classRecv)
 	ret := classclone.Results()
 	pkg.NewFunc(recv, "Classclone", nil, ret, false).BodyStart(pkg).
-		DefineVarStart(token.NoPos, nameRet).VarVal("this").Elem().EndInit(1).
-		VarVal(nameRet).UnaryOp(gotoken.AND).Return(1).
+		DefineVarStart(token.NoPos, fnRetPrefix).VarVal("this").Elem().EndInit(1).
+		VarVal(fnRetPrefix).UnaryOp(gotoken.AND).Return(1).
 		End()
 }
 

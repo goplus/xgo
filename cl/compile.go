@@ -1564,6 +1564,48 @@ func aliasType(ctx *blockCtx, pkg *types.Package, pos token.Pos, name string, t 
 	pkg.Scope().Insert(o.Obj())
 }
 
+func genDecoratedFunc(ctx *blockCtx, name string, fnDeco *gogen.Func, d *ast.FuncDecl) {
+	pkg := ctx.pkg
+	pkgTypes := pkg.Types
+	sig := fnDeco.Type().(*types.Signature)
+	recv := sig.Recv()
+	if recv != nil && recv.Name() == "" {
+		recv = types.NewParam(recv.Pos(), pkgTypes, "this", recv.Type())
+	}
+	params := cloneParams(pkgTypes, sig.Params(), fnArgPrefix)
+	rets := cloneParams(pkgTypes, sig.Results(), fnRetPrefix)
+	sig = types.NewSignatureType(recv, nil, nil, params, rets, sig.Variadic()) // TODO(xsw): template
+	fn, err := pkg.NewFuncWith(d.Name.Pos(), name, sig, func() token.Pos {
+		return d.Recv.List[0].Type.Pos()
+	})
+	if err != nil {
+		ctx.handleErr(err)
+		return
+	}
+	commentFunc(ctx, fn, d)
+	if rec := ctx.recorder(); rec != nil {
+		rec.Def(d.Name, fn.Func)
+		if recv == nil && name != "_" {
+			ctx.fileScope.Insert(fn.Func)
+		}
+	}
+	cb := fn.BodyStart(pkg, d.Body)
+	nparam := params.Len()
+	nret := rets.Len()
+	for i := range nret {
+		cb.VarRef(rets.At(i))
+	}
+	cb.Val(fnDeco.Func)
+	for i := range nparam {
+		cb.Val(params.At(i))
+	}
+	cb.Call(nparam, sig.Variadic())
+	if nret > 0 {
+		cb.Assign(nret, 1)
+	}
+	cb.EndStmt().Return(0).End()
+}
+
 func loadFunc(ctx *blockCtx, recv *types.Var, name string, d *ast.FuncDecl, genBody bool) {
 	if debugLoad {
 		if recv == nil {
@@ -1572,13 +1614,16 @@ func loadFunc(ctx *blockCtx, recv *types.Var, name string, d *ast.FuncDecl, genB
 			log.Printf("==> Load method %v.%s\n", recv.Type(), name)
 		}
 	}
-	if len(d.Decorators) > 0 {
-		loadDecoratedFunc(ctx, recv, name, d, genBody)
-		return
-	}
 	var pkg = ctx.pkg
 	var initClass bool
 	var sigBase *types.Signature
+	var originName string
+	var hasDecorator = genBody && len(d.Decorators) > 0
+	if hasDecorator {
+		const decoPrefix = "_xgodeco_"
+		originName = name
+		name = decoPrefix + name
+	}
 	if d.Shadow {
 		if recv != nil && (name == "Main" || name == "MainEntry") {
 			initClass = true // should call XGo_Init method
@@ -1615,11 +1660,15 @@ func loadFunc(ctx *blockCtx, recv *types.Var, name string, d *ast.FuncDecl, genB
 		ctx.handleErr(err)
 		return
 	}
-	commentFunc(ctx, fn, d)
-	if rec := ctx.recorder(); rec != nil {
-		rec.Def(d.Name, fn.Func)
-		if recv == nil && name != "_" {
-			ctx.fileScope.Insert(fn.Func)
+	if hasDecorator {
+		genDecoratedFunc(ctx, originName, fn, d)
+	} else {
+		commentFunc(ctx, fn, d)
+		if rec := ctx.recorder(); rec != nil {
+			rec.Def(d.Name, fn.Func)
+			if recv == nil && name != "_" {
+				ctx.fileScope.Insert(fn.Func)
+			}
 		}
 	}
 	if genBody {
