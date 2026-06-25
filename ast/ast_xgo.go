@@ -92,21 +92,46 @@ func (*EnumType) exprNode() {}
 
 // -----------------------------------------------------------------------------
 
-// A FuncDecl node represents a function declaration.
-type FuncDecl struct {
-	Doc      *CommentGroup // associated documentation; or nil
-	Recv     *FieldList    // receiver (methods); or nil (functions)
-	Name     *Ident        // function/method name
-	Type     *FuncType     // function signature: parameters, results, and position of "func" keyword
-	Body     *BlockStmt    // function body; or nil for external (non-Go) function
-	Operator bool          // is operator or not
-	Shadow   bool          // is a shadow entry
-	IsClass  bool          // recv set by class
-	Static   bool          // recv is static (class method)
+// A FuncDecorator node represents a single decorator applied to a function.
+// It corresponds to `@name` or `@name(args...)` preceding a function declaration.
+type FuncDecorator struct {
+	At   token.Pos // position of "@"
+	Name *Ident    // decorator name
+	Call *CallExpr // decorator call with arguments; or nil for bare @name
 }
 
 // Pos returns position of first character belonging to the node.
-func (d *FuncDecl) Pos() token.Pos { return d.Type.Pos() }
+func (d *FuncDecorator) Pos() token.Pos { return d.At }
+
+// End returns position of first character immediately after the node.
+func (d *FuncDecorator) End() token.Pos {
+	if d.Call != nil {
+		return d.Call.End()
+	}
+	return d.Name.End()
+}
+
+// A FuncDecl node represents a function declaration.
+type FuncDecl struct {
+	Doc        *CommentGroup    // associated documentation; or nil
+	Decorators []*FuncDecorator // decorators applied to this function; or nil
+	Recv       *FieldList       // receiver (methods); or nil (functions)
+	Name       *Ident           // function/method name
+	Type       *FuncType        // function signature: parameters, results, and position of "func" keyword
+	Body       *BlockStmt       // function body; or nil for external (non-Go) function
+	Operator   bool             // is operator or not
+	Shadow     bool             // is a shadow entry
+	IsClass    bool             // recv set by class
+	Static     bool             // recv is static (class method)
+}
+
+// Pos returns position of first character belonging to the node.
+func (d *FuncDecl) Pos() token.Pos {
+	if len(d.Decorators) > 0 {
+		return d.Decorators[0].Pos()
+	}
+	return d.Type.Pos()
+}
 
 // End returns position of first character immediately after the node.
 func (d *FuncDecl) End() token.Pos {
@@ -131,20 +156,24 @@ func (*FuncDecl) declNode() {}
 // `funcName`
 // `(*T).methodName`
 type OverloadFuncDecl struct {
-	Doc      *CommentGroup // associated documentation; or nil
-	Func     token.Pos     // position of "func" keyword
-	Recv     *FieldList    // receiver (methods); or nil (functions)
-	Name     *Ident        // function/method name
-	Assign   token.Pos     // position of token "="
-	Lparen   token.Pos     // position of "("
-	Funcs    []Expr        // overload functions. here `Expr` can be *FuncLit, *Ident or *SelectorExpr
-	Rparen   token.Pos     // position of ")"
-	Operator bool          // is operator or not
-	IsClass  bool          // recv set by class
+	Doc        *CommentGroup    // associated documentation; or nil
+	Decorators []*FuncDecorator // decorators applied to this function; or nil
+	Func       token.Pos        // position of "func" keyword
+	Recv       *FieldList       // receiver (methods); or nil (functions)
+	Name       *Ident           // function/method name
+	Assign     token.Pos        // position of token "="
+	Lparen     token.Pos        // position of "("
+	Funcs      []Expr           // overload functions. here `Expr` can be *FuncLit, *Ident or *SelectorExpr
+	Rparen     token.Pos        // position of ")"
+	Operator   bool             // is operator or not
+	IsClass    bool             // recv set by class
 }
 
 // Pos - position of first character belonging to the node.
 func (p *OverloadFuncDecl) Pos() token.Pos {
+	if len(p.Decorators) > 0 {
+		return p.Decorators[0].Pos()
+	}
 	return p.Func
 }
 

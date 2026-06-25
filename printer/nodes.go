@@ -2112,7 +2112,17 @@ func (p *printer) funcDecl(d *ast.FuncDecl) {
 		return
 	}
 
-	pos := d.Pos()
+	for _, dec := range d.Decorators {
+		p.print(dec.At, token.AT)
+		if dec.Call != nil {
+			p.expr(dec.Call) // prints name(args...)
+		} else {
+			p.expr(dec.Name)
+		}
+		p.print(newline)
+	}
+
+	pos := d.Type.Pos()
 	p.print(pos, token.FUNC, blank)
 	// We have to save startCol only after emitting FUNC; otherwise it can be on a
 	// different line (all whitespace preceding the FUNC is emitted only when the
@@ -2145,7 +2155,17 @@ func (p *printer) overloadFuncDecl(d *ast.OverloadFuncDecl) {
 	}
 	p.setComment(d.Doc)
 
-	pos := d.Pos()
+	for _, dec := range d.Decorators {
+		p.print(dec.At, token.AT)
+		if dec.Call != nil {
+			p.expr(dec.Call) // prints name(args...)
+		} else {
+			p.expr(dec.Name)
+		}
+		p.print(newline)
+	}
+
+	pos := d.Func
 	p.print(pos, token.FUNC, blank)
 	if d.Recv != nil && !d.IsClass {
 		p.parameters(d.Recv) // method: print receiver

@@ -1,0 +1,5 @@
+package foo
+
+@retry
+func Foo() {
+}

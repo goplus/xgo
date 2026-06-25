@@ -4253,7 +4253,7 @@ func (p *parser) parseOverloadDecl(decl *ast.OverloadFuncDecl) *ast.OverloadFunc
 // `func (recv) identOrOp(params) results { ... }`
 // `func (T).identOrOp = (overloadFuncs)`
 // `func (params) results { ... }()`
-func (p *parser) parseFuncDeclOrCall() (ast.Decl, *ast.CallExpr) {
+func (p *parser) parseFuncDeclOrCall(decorators ...[]*ast.FuncDecorator) (ast.Decl, *ast.CallExpr) {
 	if p.trace {
 		defer un(trace(p, "FunctionDeclOrCall"))
 	}
@@ -4266,6 +4266,10 @@ func (p *parser) parseFuncDeclOrCall() (ast.Decl, *ast.CallExpr) {
 	var ident *ast.Ident
 	var isOp, isStatic, isFunLit, ok bool
 
+	var decs []*ast.FuncDecorator
+	if len(decorators) > 0 {
+		decs = decorators[0]
+	}
 	switch p.tok {
 	case token.LPAREN:
 		// method: `func (recv) identOrOp(params) results { ... }`
@@ -4280,11 +4284,12 @@ func (p *parser) parseFuncDeclOrCall() (ast.Decl, *ast.CallExpr) {
 			// func (T).identOrOp = (overloadFuncs)
 			ident, isOp = p.parseIdentOrOp()
 			return p.parseOverloadDecl(&ast.OverloadFuncDecl{
-				Doc:      doc,
-				Func:     pos,
-				Recv:     params,
-				Name:     ident,
-				Operator: isOp,
+				Doc:        doc,
+				Decorators: decs,
+				Func:       pos,
+				Recv:       params,
+				Name:       ident,
+				Operator:   isOp,
 			}), nil
 		} else if isOp = isOverloadOp(p.tok); isOp {
 			oldtok, oldpos, oldlit := p.tok, p.pos, p.lit
@@ -4347,10 +4352,11 @@ func (p *parser) parseFuncDeclOrCall() (ast.Decl, *ast.CallExpr) {
 		case token.ASSIGN:
 			// func identOrOp = (overloadFuncs)
 			return p.parseOverloadDecl(&ast.OverloadFuncDecl{
-				Doc:      doc,
-				Func:     pos,
-				Name:     ident,
-				Operator: isOp,
+				Doc:        doc,
+				Decorators: decs,
+				Func:       pos,
+				Name:       ident,
+				Operator:   isOp,
 			}), nil
 		case token.PERIOD:
 			// func T.ident(...) results
@@ -4387,9 +4393,10 @@ func (p *parser) parseFuncDeclOrCall() (ast.Decl, *ast.CallExpr) {
 	}
 
 	decl := &ast.FuncDecl{
-		Doc:  doc,
-		Recv: recv,
-		Name: ident,
+		Doc:        doc,
+		Decorators: decs,
+		Recv:       recv,
+		Name:       ident,
 		Type: &ast.FuncType{
 			Func:    pos,
 			Params:  params,
@@ -4427,6 +4434,20 @@ func (p *parser) parseDecl(sync map[token.Token]bool) ast.Decl {
 		f = p.parseValueSpec
 	case token.TYPE:
 		f = p.parseTypeSpec
+	case token.AT:
+		decs := p.parseDecorators()
+		if p.tok != token.FUNC {
+			p.errorExpected(p.pos, "'func'", 2)
+			return p.parseGlobalStmts(sync, pos)
+		}
+		decl, call := p.parseFuncDeclOrCall(decs)
+		if decl != nil {
+			if p.errors.Len() != 0 {
+				p.advance(sync)
+			}
+			return decl
+		}
+		return p.parseGlobalStmts(sync, pos, &ast.ExprStmt{X: call})
 	case token.FUNC:
 		decl, call := p.parseFuncDeclOrCall()
 		if decl != nil {
@@ -4440,6 +4461,29 @@ func (p *parser) parseDecl(sync map[token.Token]bool) ast.Decl {
 		return p.parseGlobalStmts(sync, pos)
 	}
 	return p.parseGenDecl(p.tok, f)
+}
+
+// parseDecorators parses one or more `@name` or `@name(args...)` decorators.
+// It is called when the current token is token.AT.
+func (p *parser) parseDecorators() []*ast.FuncDecorator {
+	var decs []*ast.FuncDecorator
+	for p.tok == token.AT {
+		atPos := p.pos
+		p.next() // consume '@'
+		name := p.parseIdent()
+		dec := &ast.FuncDecorator{At: atPos, Name: name}
+		if p.tok == token.LPAREN {
+			dec.Call = p.parseCallOrConversion(name, false)
+		}
+		decs = append(decs, dec)
+		// Consume the implicit semicolon inserted after the decorator name/call
+		// (the scanner inserts a semicolon after identifiers and closing parens
+		// when followed by a newline).
+		if p.tok == token.SEMICOLON && p.lit == "\n" {
+			p.next()
+		}
+	}
+	return decs
 }
 
 func (p *parser) parseGlobalStmts(sync map[token.Token]bool, pos token.Pos, stmts ...ast.Stmt) *ast.FuncDecl {

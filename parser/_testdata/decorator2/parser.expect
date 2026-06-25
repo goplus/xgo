@@ -1,0 +1,27 @@
+package foo
+
+file decorator.xgo
+ast.FuncDecl:
+  Decorators:
+    ast.FuncDecorator:
+      Name:
+        ast.Ident:
+          Name: retry
+      Call:
+        ast.CallExpr:
+          Fun:
+            ast.Ident:
+              Name: retry
+          Args:
+            ast.BasicLit:
+              Kind: INT
+              Value: 3
+  Name:
+    ast.Ident:
+      Name: Foo
+  Type:
+    ast.FuncType:
+      Params:
+        ast.FieldList:
+  Body:
+    ast.BlockStmt:
