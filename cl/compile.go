@@ -1564,6 +1564,57 @@ func aliasType(ctx *blockCtx, pkg *types.Package, pos token.Pos, name string, t 
 	pkg.Scope().Insert(o.Obj())
 }
 
+const (
+	decoInvalid   = iota - 1
+	decoFunc      // func()
+	decoFuncError // func() error
+)
+
+var (
+	sigDecoFunc      = types.NewSignatureType(nil, nil, nil, nil, nil, false)     // func()
+	sigDecoFuncError = types.NewSignatureType(nil, nil, nil, nil, types.NewTuple( // func() error
+		types.NewParam(token.NoPos, nil, "", gogen.TyError)), false)
+
+	sigDecoFuncs = [...]*types.Signature{sigDecoFunc, sigDecoFuncError}
+)
+
+func getDecoratorForm(decoTyp types.Type) (int, int) {
+	if decoSig, ok := decoTyp.(*types.Signature); ok {
+		params := decoSig.Params()
+		if n := params.Len(); n > 0 {
+			if fnSig, ok := params.At(n - 1).Type().(*types.Signature); ok {
+				if fnSig.Params().Len() == 0 {
+					results := fnSig.Results()
+					switch results.Len() {
+					case 0:
+						return n - 1, decoFunc // func()
+					case 1:
+						if results.At(0).Type() == gogen.TyError {
+							return n - 1, decoFuncError // func() error
+						}
+					}
+				}
+			}
+		}
+	}
+	return 0, decoInvalid
+}
+
+func compileDecoratedFun(ctx *blockCtx, deco *ast.FuncDecorator) int {
+	decoName := deco.Fun.(*ast.Ident)
+	if _, kind := compileIdent(ctx, 0, decoName, 0); kind == objNormal {
+		cb := ctx.cb
+		decoNArg, decoKind := getDecoratorForm(cb.Get(-1).Type)
+		if decoKind != decoInvalid {
+			if len(deco.Args) != decoNArg {
+				panic(ctx.newCodeErrorf(decoName.Pos(), decoName.End(), "decorator `%v` expects %d arguments, got %d", decoName, decoNArg, len(deco.Args)))
+			}
+			return decoKind
+		}
+	}
+	panic(ctx.newCodeErrorf(decoName.Pos(), decoName.End(), "invalid decorator `%v`", decoName))
+}
+
 func genDecoratedFunc(ctx *blockCtx, name string, fnDeco *gogen.Func, d *ast.FuncDecl) {
 	pkg := ctx.pkg
 	pkgTypes := pkg.Types
@@ -1590,20 +1641,45 @@ func genDecoratedFunc(ctx *blockCtx, name string, fnDeco *gogen.Func, d *ast.Fun
 		}
 	}
 	cb := fn.BodyStart(pkg, d.Body)
+	decorators := d.Decorators
+	last := len(decorators) - 1
+	decoKinds := make([]int, len(decorators))
+	for i, deco := range decorators {
+		decoKind := compileDecoratedFun(ctx, deco)
+		for _, arg := range deco.Args {
+			compileExpr(ctx, 1, arg)
+		}
+		cb.NewClosureWith(sigDecoFuncs[decoKind]).BodyStart(pkg)
+		decoKinds[i] = decoKind
+	}
 	nparam := params.Len()
 	nret := rets.Len()
-	for i := range nret {
-		cb.VarRef(rets.At(i))
+	for i := last; i >= 0; i-- {
+		decoKind := decoKinds[i]
+		if i == last {
+			for i := range nret {
+				cb.VarRef(rets.At(i))
+			}
+			cb.Val(fnDeco.Func)
+			for i := range nparam {
+				cb.Val(params.At(i))
+			}
+			cb.Call(nparam, sig.Variadic())
+			if nret > 0 {
+				cb.Assign(nret, 1)
+			}
+			cb.EndStmt()
+		}
+		if decoKind == decoFuncError {
+			errRet := rets.At(nret - 1)
+			cb.Val(errRet)
+		}
+		cb.Return(decoKind)
+		cb.End() // end closure
+		cb.Call(len(decorators[i].Args) + 1).EndStmt()
 	}
-	cb.Val(fnDeco.Func)
-	for i := range nparam {
-		cb.Val(params.At(i))
-	}
-	cb.Call(nparam, sig.Variadic())
-	if nret > 0 {
-		cb.Assign(nret, 1)
-	}
-	cb.EndStmt().Return(0).End()
+	cb.Return(0)
+	cb.End() // end func
 }
 
 func loadFunc(ctx *blockCtx, recv *types.Var, name string, d *ast.FuncDecl, genBody bool) {

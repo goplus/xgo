@@ -50,14 +50,19 @@ func cloneParams(pkg *types.Package, in *types.Tuple, namePrefix string) *types.
 func cloneParamsIf(pkg *types.Package, in *types.Tuple, namePrefix string) *types.Tuple {
 	nin := in.Len()
 	params := make([]*types.Var, nin)
+	changed := false
 	for i := range nin {
 		param := in.At(i)
 		if name := param.Name(); name == "_" || name == "" {
 			param = types.NewParam(token.NoPos, pkg, namePrefix+strconv.Itoa(i), param.Type())
+			changed = true
 		}
 		params[i] = param
 	}
-	return types.NewTuple(params...)
+	if changed {
+		return types.NewTuple(params...)
+	}
+	return in
 }
 
 // -----------------------------------------------------------------------------
