@@ -17,6 +17,6 @@ func (s *Service) call(req string) (resp string, err error) {
 }
 
 @retry(2)
-func (*Service) get(req string) (resp string, err error) {
-	return req, nil
+func (*Service) get(string) (resp string, err error) {
+	return "", nil
 }

@@ -22,12 +22,12 @@ func retry(times int, fn func() error) {
 		}
 	}
 }
-func (*Service) _xgodeco_get(req string) (resp string, err error) {
-	return req, nil
+func (*Service) _xgodeco_get(string) (resp string, err error) {
+	return "", nil
 }
-func (_xgo_this *Service) get(req string) (resp string, err error) {
+func (_xgo_this *Service) get(_xgo_arg0 string) (resp string, err error) {
 	retry(2, func() error {
-		resp, err = _xgo_this._xgodeco_get(req)
+		resp, err = _xgo_this._xgodeco_get(_xgo_arg0)
 		return err
 	})
 	return
