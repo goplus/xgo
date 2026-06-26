@@ -81,12 +81,10 @@ type classProject struct {
 	pkgPaths   []string
 	autoimps   map[string]pkgImp // auto-import statement in gox.mod
 	gt         *Project
-	flatFrags  []string // flat mode: names of _xgo_workfrag_N methods (one per fragment file)
 	hasScheds  bool
 	gameIsPtr  bool
 	isTest     bool
 	hasMain_   bool
-	flat       bool // flat mode: all matching files are fragments of the project class
 }
 
 func (p *classProject) embed(chk func(name string) bool, flds []*types.Var, pkg *gogen.Package) []*types.Var {
@@ -289,58 +287,53 @@ func loadClass(ctx *pkgCtx, pkg *gogen.Package, file string, f *ast.File, conf *
 		}
 
 		classPkg := p.pkgImps[0]
-		nWork := len(gt.Works)
-		works := make([]*workClass, nWork)
-		for i, v := range gt.Works {
-			if nWork > 1 && v.Proto == "" {
-				panic("should have prototype if there are multiple work classes")
+		if gt.Flat {
+			if gt.Class != "" {
+				p.game, p.gameIsPtr = classPkgRef(classPkg, gt.Class)
 			}
-			obj, _ := classPkgRef(classPkg, v.Class)
-			work := &workClass{obj: obj, ext: v.Ext, proto: v.Proto, prefix: v.Prefix}
-			if v.Embedded {
-				work.feats |= workClassEmbedded
+		} else {
+			nWork := len(gt.Works)
+			works := make([]*workClass, nWork)
+			for i, v := range gt.Works {
+				if nWork > 1 && v.Proto == "" {
+					panic("should have prototype if there are multiple work classes")
+				}
+				obj, _ := classPkgRef(classPkg, v.Class)
+				work := &workClass{obj: obj, ext: v.Ext, proto: v.Proto, prefix: v.Prefix}
+				if v.Embedded {
+					work.feats |= workClassEmbedded
+				}
+				works[i] = work
 			}
-			works[i] = work
-		}
-		p.works = works
-		if gt.Class != "" {
-			p.game, p.gameIsPtr = classPkgRef(classPkg, gt.Class)
-			if !gt.Flat { // flat mode has no work classes; skip work class feature detection
+			p.works = works
+			if gt.Class != "" {
+				p.game, p.gameIsPtr = classPkgRef(classPkg, gt.Class)
 				workClassFeatures(p.game, works)
 			}
 		}
 		if x := getStringConst(classPkg, "Gop_sched"); x != "" { // keep Gop_sched
 			p.scheds, p.hasScheds = strings.SplitN(x, ",", 2), true
 		}
-		p.flat = gt.Flat
 	}
 	cls := &classFile{clsfile: clsfile, ext: ext, proj: p}
 	if f.IsProj {
 		if p.gameClass_ != "" {
-			if p.flat {
-				// flat mode: this is a fragment file, not a new project class
-				fragIdx := len(p.flatFrags)
-				fragEntry := "_xgo_workfrag_" + strconv.Itoa(fragIdx)
-				f.IsFlatFrag = true
-				f.FlatFragEntry = fragEntry
-				p.flatFrags = append(p.flatFrags, fragEntry)
-				// cls.name = "" so cls.getName() returns the project class name
-			} else {
-				panic("multiple project files found: " + tname + ", " + p.gameClass_)
-			}
-		} else {
-			if tname != "main" {
-				tname = sanitizeClassTypeName(tname)
-			}
-			p.gameClass_ = tname
-			p.hasMain_ = f.HasShadowEntry()
-			if !p.isTest {
-				ctx.nproj++
-			}
-			if tname != "main" {
-				cls.name = tname
-			}
+			panic("multiple project files found: " + tname + ", " + p.gameClass_)
 		}
+		if tname != "main" {
+			tname = sanitizeClassTypeName(tname)
+		}
+		p.gameClass_ = tname
+		p.hasMain_ = f.HasShadowEntry()
+		if !p.isTest {
+			ctx.nproj++
+		}
+		if tname != "main" {
+			cls.name = tname
+		}
+	} else if gt.Flat {
+		// no work class for flat project
+		// no class name
 	} else {
 		work := getWorkClass(p, ext)
 		tname := workClassName(work, tname)
@@ -543,34 +536,6 @@ func genClassProjectMain(pkg *gogen.Package, parent *pkgCtx, proj *classProject)
 			parent.tylds = append(parent.tylds, ld)
 		}
 	}
-	// flat mode: synthesize _xgo_WorkMain that calls all fragment methods in order
-	if proj.flat && len(proj.flatFrags) > 0 {
-		ld.methods = append(ld.methods, func() {
-			old, _ := pkg.SetCurFile(defaultGoFile, true)
-			defer pkg.RestoreCurFile(old)
-			doInitType(ld)
-
-			t := pkg.Ref(classType).Type()
-			recv := types.NewParam(token.NoPos, pkg.Types, "this", types.NewPointer(t))
-			sig := types.NewSignatureType(recv, nil, nil, nil, nil, false)
-			fn, err := pkg.NewFuncWith(token.NoPos, "_xgo_WorkMain", sig, nil)
-			if err != nil {
-				panic(err)
-			}
-
-			parent.inits = append(parent.inits, func() {
-				old, _ := pkg.SetCurFile(defaultGoFile, true)
-				defer pkg.RestoreCurFile(old)
-
-				cb := fn.BodyStart(pkg)
-				cb.SetComments(nil, false)
-				for _, fragEntry := range proj.flatFrags {
-					cb.Val(recv).MemberVal(fragEntry, 0).Call(0).EndStmt()
-				}
-				cb.End()
-			})
-		})
-	}
 	ld.methods = append(ld.methods, func() {
 		old, _ := pkg.SetCurFile(defaultGoFile, true)
 		defer pkg.RestoreCurFile(old)
@@ -611,12 +576,11 @@ func genClassProjectMain(pkg *gogen.Package, parent *pkgCtx, proj *classProject)
 
 			iobj := 0
 			narg := sigParams.Len()
-			if proj.flat {
+			if proj.gt.Flat {
 				// flat mode: pass this._xgo_WorkMain or nil as workMain
-				src := parent.lookupClassNode(proj.gameClass_)
 				callMain()
-				if len(proj.flatFrags) > 0 {
-					cb.Val(recv, src).MemberVal("_xgo_WorkMain", 0)
+				if len(parent.workEntries) > 0 && false {
+					cb.Val(recv).MemberVal("_xgo_WorkMain", 0)
 				} else {
 					cb.Val(nil)
 				}
@@ -774,8 +738,6 @@ func astEmptyEntrypoint(f *ast.File) {
 
 func getEntrypoint(f *ast.File) string {
 	switch {
-	case f.IsFlatFrag:
-		return f.FlatFragEntry
 	case f.IsProj:
 		return "MainEntry"
 	case f.IsClass:

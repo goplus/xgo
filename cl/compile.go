@@ -472,6 +472,8 @@ type pkgCtx struct {
 	tylds    []*typeLoader
 	errs     errors.List
 
+	workEntries []*ast.FuncDecl // available when flat project
+
 	generics map[string]bool // generic type record
 	idents   []*ast.Ident    // toType ident recored
 	inInst   int             // toType in generic instance
@@ -795,7 +797,7 @@ func NewPackage(pkgPath string, pkg *ast.Package, conf *Config) (p *gogen.Packag
 			pkg: p, pkgCtx: ctx, cb: p.CB(), relBaseDir: relBaseDir,
 			imports: make(map[string]pkgImp),
 		}
-		preloadFile(p, ctx, f, skippingGoFile, false)
+		preloadFile(p, ctx, f, skippingGoFile, false, false)
 	}
 
 	initXGoPkg(ctx, p, gopSyms)
@@ -929,6 +931,7 @@ func preloadXGoFile(p *gogen.Package, ctx *blockCtx, file string, f *ast.File, c
 	var baseTypeName string
 	var baseType types.Type
 	var work *workClass
+	var flatWorkClass bool
 	var goxTestFile bool
 	var parent = ctx.pkgCtx
 	if f.IsClass {
@@ -951,7 +954,8 @@ func preloadXGoFile(p *gogen.Package, ctx *blockCtx, file string, f *ast.File, c
 					classType = casePrefix + testNameSuffix(testType)
 				}
 			}
-			if f.IsProj {
+			if f.IsProj || c.work == nil {
+				flatWorkClass = !f.IsProj
 				classType = gameClass
 				o := proj.game
 				ctx.baseClass = o
@@ -969,22 +973,20 @@ func preloadXGoFile(p *gogen.Package, ctx *blockCtx, file string, f *ast.File, c
 	}
 	goFile := genGoFile(file, goxTestFile)
 	if classType != "" {
-		if debugLoad {
-			log.Println("==> Preload type", classType)
-		}
-		if proj != nil {
-			ctx.lookups = make([]gogen.PkgRef, len(proj.pkgPaths))
-			for i, pkgPath := range proj.pkgPaths {
-				ctx.lookups[i] = p.Import(pkgPath)
+		if !flatWorkClass {
+			if debugLoad {
+				log.Println("==> Preload type", classType)
 			}
-		}
-		syms := parent.syms
-		pos := f.Pos()
-		end := f.End()
-		ctx.classDecl = f.ClassFieldsDecl()
-		if f.IsFlatFrag {
-			// flat fragment: type already defined by primary; just set receiver context
-		} else {
+			if proj != nil {
+				ctx.lookups = make([]gogen.PkgRef, len(proj.pkgPaths))
+				for i, pkgPath := range proj.pkgPaths {
+					ctx.lookups[i] = p.Import(pkgPath)
+				}
+			}
+			syms := parent.syms
+			pos := f.Pos()
+			end := f.End()
+			ctx.classDecl = f.ClassFieldsDecl()
 			ld := getTypeLoader(parent, syms, f, classType)
 			ld.typ = func() {
 				if debugLoad {
@@ -1073,11 +1075,9 @@ func preloadXGoFile(p *gogen.Package, ctx *blockCtx, file string, f *ast.File, c
 				}
 				parent.tylds = append(parent.tylds, ld)
 			}
-
 			// bugfix: see TestGoxNoFunc
 			parent.lbinames = append(parent.lbinames, classType)
 		}
-
 		ctx.classRecv = &ast.FieldList{List: []*ast.Field{{
 			Names: []*ast.Ident{
 				{NamePos: f.Pos(), Name: "this"},
@@ -1089,13 +1089,18 @@ func preloadXGoFile(p *gogen.Package, ctx *blockCtx, file string, f *ast.File, c
 		}}}
 	}
 
-	if d := f.ShadowEntry; d != nil {
-		d.Name.Name = getEntrypoint(f)
-	} else if baseTypeName != "" { // isClass && not isNormalGox
-		astEmptyEntrypoint(f)
+	shadowEntry := f.ShadowEntry
+	if flatWorkClass {
+		ctx.workEntries = append(ctx.workEntries, shadowEntry)
+	} else {
+		if shadowEntry != nil {
+			shadowEntry.Name.Name = getEntrypoint(f)
+		} else if baseTypeName != "" { // isClass && not isNormalGox
+			astEmptyEntrypoint(f)
+		}
 	}
 
-	preloadFile(p, ctx, f, goFile, !conf.Outline)
+	preloadFile(p, ctx, f, goFile, !conf.Outline, flatWorkClass)
 	if work != nil && work.feats != 0 {
 		workFeats := work.feats
 		ld := getTypeLoader(parent, parent.syms, nil, classType)
@@ -1139,7 +1144,7 @@ retry:
 	panic("TODO: parseTypeEmbedName unexpected")
 }
 
-func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, genFnBody bool) {
+func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, genFnBody, flatWorkClass bool) {
 	parent := ctx.pkgCtx
 	classDecl := ctx.classDecl
 	syms := parent.syms
@@ -1362,6 +1367,9 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 			}
 
 		case *ast.FuncDecl:
+			if d.Shadow && flatWorkClass {
+				continue // skip shadowEntry in flat work class
+			}
 			preloadFuncDecl(d)
 
 		case *ast.OverloadFuncDecl:
