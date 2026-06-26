@@ -68,6 +68,12 @@ class   [flags] <filePattern> <BaseType> [ProtocolType]
 | `-embed` | Auto-declare each work class instance as a named field on the project class struct |
 | `-prefix=<P>` | Prepend `P` to the generated type name of every work class in this kind |
 
+### File Pattern Constraint
+
+The `<filePattern>` used in `gox.mod` must be a **dedicated suffix** for the framework — either a custom extension (e.g. `*.spx`, `*.yap`) or the `*_<class>.gox` form (e.g. `*_script.gox`). Using the bare `*.gox` pattern is not permitted, because `.gox` is a shared suffix that multiple class frameworks may register simultaneously in the same project. A dedicated suffix guarantees unambiguous ownership of all matching files by a single framework.
+
+When a framework defines **multiple work class kinds**, each `class` directive carries a `ProtocolType` argument — an interface that identifies instances of that kind. The compiler uses this to route instances into the correct parameter of the Template Recv Method (see below).
+
 ---
 
 ## What the Compiler Generates
