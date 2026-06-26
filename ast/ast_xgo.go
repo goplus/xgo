@@ -722,14 +722,16 @@ type File struct {
 	Name    *Ident        // package name
 	Decls   []Decl        // top-level declarations; or nil
 
-	Imports     []*ImportSpec   // imports in this file
-	Comments    []*CommentGroup // list of all comments in the source file
-	Code        []byte
-	ShadowEntry *FuncDecl // indicate the module entry point.
-	NoPkgDecl   bool      // no `package xxx` declaration
-	IsClass     bool      // is a classfile (including normal .gox file)
-	IsProj      bool      // is a project classfile
-	IsNormalGox bool      // is a normal .gox file
+	Imports       []*ImportSpec   // imports in this file
+	Comments      []*CommentGroup // list of all comments in the source file
+	Code          []byte
+	ShadowEntry   *FuncDecl // indicate the module entry point.
+	NoPkgDecl     bool      // no `package xxx` declaration
+	IsClass       bool      // is a classfile (including normal .gox file)
+	IsProj        bool      // is a project classfile
+	IsNormalGox   bool      // is a normal .gox file
+	IsFlatFrag    bool      // is a flat-mode fragment file (not the primary project file)
+	FlatFragEntry string    // unique method name for this fragment's shadow entry
 }
 
 // There is no entrypoint func to indicate the module entry point.

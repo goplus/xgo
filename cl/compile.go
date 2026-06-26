@@ -982,97 +982,101 @@ func preloadXGoFile(p *gogen.Package, ctx *blockCtx, file string, f *ast.File, c
 		pos := f.Pos()
 		end := f.End()
 		ctx.classDecl = f.ClassFieldsDecl()
-		ld := getTypeLoader(parent, syms, f, classType)
-		ld.typ = func() {
-			if debugLoad {
-				log.Println("==> Load > NewType", classType)
-			}
-			old, _ := p.SetCurFile(goFile, true)
-			defer p.RestoreCurFile(old)
-
-			decl := p.NewTypeDefs().NewType(classType)
-			ld.typInit = func() { // decycle
+		if f.IsFlatFrag {
+			// flat fragment: type already defined by primary; just set receiver context
+		} else {
+			ld := getTypeLoader(parent, syms, f, classType)
+			ld.typ = func() {
 				if debugLoad {
-					log.Println("==> Load > InitType", classType)
+					log.Println("==> Load > NewType", classType)
 				}
 				old, _ := p.SetCurFile(goFile, true)
 				defer p.RestoreCurFile(old)
 
-				pkg := p.Types
-				var flds []*types.Var
-				var tags []string
-				chk := newCheckRedecl()
-				if baseTypeName != "" { // base class (not normal classfile)
-					flds = append(flds, types.NewField(pos, pkg, baseTypeName, baseType, true))
-					tags = append(tags, "")
-					chk.chkRedecl(ctx, baseTypeName, pos, end, fieldKindClass)
-					if work != nil { // for work class
-						if !goxTestFile && gameClass != "" { // has project class
-							typ := toType(ctx, &ast.Ident{Name: gameClass})
-							getUnderlying(ctx, typ) // ensure type is loaded
-							typ = types.NewPointer(typ)
-							name := getTypeName(typ)
-							if !chk.chkRedecl(ctx, name, pos, end, fieldKindClass) {
-								fld := types.NewField(pos, pkg, name, typ, true)
-								flds = append(flds, fld)
-								tags = append(tags, "")
-							}
-						}
-					} else { // embed work classes for project class
-						flds = proj.embed(func(name string) bool {
-							return chk.chkRedecl(ctx, name, pos, end, fieldKindClass)
-						}, flds, p)
+				decl := p.NewTypeDefs().NewType(classType)
+				ld.typInit = func() { // decycle
+					if debugLoad {
+						log.Println("==> Load > InitType", classType)
 					}
-				}
-				rec := ctx.recorder()
-				if classDecl := ctx.classDecl; classDecl != nil {
-					var spec *ast.ValueSpec
-					recvType := types.NewPointer(decl.Type())
-					recv := types.NewParam(token.NoPos, pkg, "this", recvType)
-					defs := p.ClassDefsStart(recv, func(idx int, name string, typ types.Type, embed bool) {
-						var id *ast.Ident
-						if embed {
-							id = parseTypeEmbedName(spec.Type)
-						} else {
-							id = spec.Names[idx]
-						}
-						pos := id.Pos()
-						if chk.chkRedecl(ctx, name, pos, id.End(), fieldKindUser) {
-							return
-						}
-						fld := types.NewField(pos, pkg, name, typ, embed)
-						if rec != nil {
-							rec.Def(id, fld)
-						}
-						flds = append(flds, fld)
-						tags = append(tags, toFieldTag(spec.Tag))
-					})
-					for _, v := range classDecl.Specs {
-						var pos token.Pos
-						var names []string
-						var fldType types.Type
-						spec = v.(*ast.ValueSpec)
-						if spec.Type != nil {
-							fldType = toType(ctx, spec.Type)
-						}
-						if specNames := spec.Names; len(specNames) > 0 {
-							names = makeNames(specNames)
-							pos = specNames[0].Pos()
-						} else {
-							pos = spec.Type.Pos()
-						}
-						initExpr := makeInitExpr(ctx, spec, fldType, names)
-						defs.NewAndInit(initExpr, pos, fldType, names...)
-					}
-					defs.End()
-				}
-				decl.InitType(p, types.NewStruct(flds, tags))
-			}
-			parent.tylds = append(parent.tylds, ld)
-		}
+					old, _ := p.SetCurFile(goFile, true)
+					defer p.RestoreCurFile(old)
 
-		// bugfix: see TestGoxNoFunc
-		parent.lbinames = append(parent.lbinames, classType)
+					pkg := p.Types
+					var flds []*types.Var
+					var tags []string
+					chk := newCheckRedecl()
+					if baseTypeName != "" { // base class (not normal classfile)
+						flds = append(flds, types.NewField(pos, pkg, baseTypeName, baseType, true))
+						tags = append(tags, "")
+						chk.chkRedecl(ctx, baseTypeName, pos, end, fieldKindClass)
+						if work != nil { // for work class
+							if !goxTestFile && gameClass != "" { // has project class
+								typ := toType(ctx, &ast.Ident{Name: gameClass})
+								getUnderlying(ctx, typ) // ensure type is loaded
+								typ = types.NewPointer(typ)
+								name := getTypeName(typ)
+								if !chk.chkRedecl(ctx, name, pos, end, fieldKindClass) {
+									fld := types.NewField(pos, pkg, name, typ, true)
+									flds = append(flds, fld)
+									tags = append(tags, "")
+								}
+							}
+						} else { // embed work classes for project class
+							flds = proj.embed(func(name string) bool {
+								return chk.chkRedecl(ctx, name, pos, end, fieldKindClass)
+							}, flds, p)
+						}
+					}
+					rec := ctx.recorder()
+					if classDecl := ctx.classDecl; classDecl != nil {
+						var spec *ast.ValueSpec
+						recvType := types.NewPointer(decl.Type())
+						recv := types.NewParam(token.NoPos, pkg, "this", recvType)
+						defs := p.ClassDefsStart(recv, func(idx int, name string, typ types.Type, embed bool) {
+							var id *ast.Ident
+							if embed {
+								id = parseTypeEmbedName(spec.Type)
+							} else {
+								id = spec.Names[idx]
+							}
+							pos := id.Pos()
+							if chk.chkRedecl(ctx, name, pos, id.End(), fieldKindUser) {
+								return
+							}
+							fld := types.NewField(pos, pkg, name, typ, embed)
+							if rec != nil {
+								rec.Def(id, fld)
+							}
+							flds = append(flds, fld)
+							tags = append(tags, toFieldTag(spec.Tag))
+						})
+						for _, v := range classDecl.Specs {
+							var pos token.Pos
+							var names []string
+							var fldType types.Type
+							spec = v.(*ast.ValueSpec)
+							if spec.Type != nil {
+								fldType = toType(ctx, spec.Type)
+							}
+							if specNames := spec.Names; len(specNames) > 0 {
+								names = makeNames(specNames)
+								pos = specNames[0].Pos()
+							} else {
+								pos = spec.Type.Pos()
+							}
+							initExpr := makeInitExpr(ctx, spec, fldType, names)
+							defs.NewAndInit(initExpr, pos, fldType, names...)
+						}
+						defs.End()
+					}
+					decl.InitType(p, types.NewStruct(flds, tags))
+				}
+				parent.tylds = append(parent.tylds, ld)
+			}
+
+			// bugfix: see TestGoxNoFunc
+			parent.lbinames = append(parent.lbinames, classType)
+		}
 
 		ctx.classRecv = &ast.FieldList{List: []*ast.Field{{
 			Names: []*ast.Ident{

@@ -81,10 +81,12 @@ type classProject struct {
 	pkgPaths   []string
 	autoimps   map[string]pkgImp // auto-import statement in gox.mod
 	gt         *Project
+	flatFrags  []string // flat mode: names of _xgo_workfrag_N methods (one per fragment file)
 	hasScheds  bool
 	gameIsPtr  bool
 	isTest     bool
 	hasMain_   bool
+	flat       bool // flat mode: all matching files are fragments of the project class
 }
 
 func (p *classProject) embed(chk func(name string) bool, flds []*types.Var, pkg *gogen.Package) []*types.Var {
@@ -303,27 +305,41 @@ func loadClass(ctx *pkgCtx, pkg *gogen.Package, file string, f *ast.File, conf *
 		p.works = works
 		if gt.Class != "" {
 			p.game, p.gameIsPtr = classPkgRef(classPkg, gt.Class)
-			workClassFeatures(p.game, works)
+			if !gt.Flat { // flat mode has no work classes; skip work class feature detection
+				workClassFeatures(p.game, works)
+			}
 		}
 		if x := getStringConst(classPkg, "Gop_sched"); x != "" { // keep Gop_sched
 			p.scheds, p.hasScheds = strings.SplitN(x, ",", 2), true
 		}
+		p.flat = gt.Flat
 	}
 	cls := &classFile{clsfile: clsfile, ext: ext, proj: p}
 	if f.IsProj {
 		if p.gameClass_ != "" {
-			panic("multiple project files found: " + tname + ", " + p.gameClass_)
-		}
-		if tname != "main" {
-			tname = sanitizeClassTypeName(tname)
-		}
-		p.gameClass_ = tname
-		p.hasMain_ = f.HasShadowEntry()
-		if !p.isTest {
-			ctx.nproj++
-		}
-		if tname != "main" {
-			cls.name = tname
+			if p.flat {
+				// flat mode: this is a fragment file, not a new project class
+				fragIdx := len(p.flatFrags)
+				fragEntry := "_xgo_workfrag_" + strconv.Itoa(fragIdx)
+				f.IsFlatFrag = true
+				f.FlatFragEntry = fragEntry
+				p.flatFrags = append(p.flatFrags, fragEntry)
+				// cls.name = "" so cls.getName() returns the project class name
+			} else {
+				panic("multiple project files found: " + tname + ", " + p.gameClass_)
+			}
+		} else {
+			if tname != "main" {
+				tname = sanitizeClassTypeName(tname)
+			}
+			p.gameClass_ = tname
+			p.hasMain_ = f.HasShadowEntry()
+			if !p.isTest {
+				ctx.nproj++
+			}
+			if tname != "main" {
+				cls.name = tname
+			}
 		}
 	} else {
 		work := getWorkClass(p, ext)
@@ -527,6 +543,34 @@ func genClassProjectMain(pkg *gogen.Package, parent *pkgCtx, proj *classProject)
 			parent.tylds = append(parent.tylds, ld)
 		}
 	}
+	// flat mode: synthesize _xgo_WorkMain that calls all fragment methods in order
+	if proj.flat && len(proj.flatFrags) > 0 {
+		ld.methods = append(ld.methods, func() {
+			old, _ := pkg.SetCurFile(defaultGoFile, true)
+			defer pkg.RestoreCurFile(old)
+			doInitType(ld)
+
+			t := pkg.Ref(classType).Type()
+			recv := types.NewParam(token.NoPos, pkg.Types, "this", types.NewPointer(t))
+			sig := types.NewSignatureType(recv, nil, nil, nil, nil, false)
+			fn, err := pkg.NewFuncWith(token.NoPos, "_xgo_WorkMain", sig, nil)
+			if err != nil {
+				panic(err)
+			}
+
+			parent.inits = append(parent.inits, func() {
+				old, _ := pkg.SetCurFile(defaultGoFile, true)
+				defer pkg.RestoreCurFile(old)
+
+				cb := fn.BodyStart(pkg)
+				cb.SetComments(nil, false)
+				for _, fragEntry := range proj.flatFrags {
+					cb.Val(recv).MemberVal(fragEntry, 0).Call(0).EndStmt()
+				}
+				cb.End()
+			})
+		})
+	}
 	ld.methods = append(ld.methods, func() {
 		old, _ := pkg.SetCurFile(defaultGoFile, true)
 		defer pkg.RestoreCurFile(old)
@@ -567,7 +611,16 @@ func genClassProjectMain(pkg *gogen.Package, parent *pkgCtx, proj *classProject)
 
 			iobj := 0
 			narg := sigParams.Len()
-			if narg > 1 {
+			if proj.flat {
+				// flat mode: pass this._xgo_WorkMain or nil as workMain
+				src := parent.lookupClassNode(proj.gameClass_)
+				callMain()
+				if len(proj.flatFrags) > 0 {
+					cb.Val(recv, src).MemberVal("_xgo_WorkMain", 0)
+				} else {
+					cb.Val(nil)
+				}
+			} else if narg > 1 {
 				works := proj.works
 				if len(works) == 1 && works[0].proto == "" { // no work class prototype
 					work := works[0]
@@ -721,6 +774,8 @@ func astEmptyEntrypoint(f *ast.File) {
 
 func getEntrypoint(f *ast.File) string {
 	switch {
+	case f.IsFlatFrag:
+		return f.FlatFragEntry
 	case f.IsProj:
 		return "MainEntry"
 	case f.IsClass:
