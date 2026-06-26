@@ -1,0 +1,12 @@
+type foo int
+
+func Name() string {
+	return foo.name
+}
+
+func Inc() {
+	foo.count++
+}
+
+const foo.name = "xgo"
+var foo.count int = 100

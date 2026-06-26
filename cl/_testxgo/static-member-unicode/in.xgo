@@ -1,0 +1,5 @@
+type foo int
+
+const foo.π = 3
+
+a := foo.π

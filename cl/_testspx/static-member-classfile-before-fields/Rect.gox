@@ -1,0 +1,8 @@
+var (
+	.count int = 100
+	width int = 10
+)
+
+func Get() int {
+	return width
+}

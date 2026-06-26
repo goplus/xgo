@@ -801,6 +801,16 @@ func TestErrNoEntrypoint(t *testing.T) {
 		`bar.xgo:1:9: undefined: abc`,
 		`println abc
 `)
+	codeErrorTest(t, `bar.xgo:1:7: undefined: Missing`, `const Missing.name = "xgo"`)
+	codeErrorTest(t, `bar.xgo:1:5: undefined: Missing`, `var Missing.count int`)
+	codeErrorTest(t, `bar.xgo:3:6: undefined: Missing`, `type foo int
+
+a := Missing.name
+`)
+	codeErrorTest(t, `bar.xgo:3:7: value is not a type`, `const value = 1
+
+const value.name = "xgo"
+`)
 	codeErrorTestEx(t, "bar", "bar.xgo",
 		`bar.xgo:2:9: undefined: abc`,
 		`package bar
@@ -1001,6 +1011,12 @@ var (
 )
 type A struct{}
 println "hello"
+`)
+	codeErrorTestEx(t, "main", "Rect.gox",
+		`Rect.gox:3:2: cannot split static and non-static names with a shared initializer`, `
+var (
+	.count, width int = 100
+)
 `)
 }
 

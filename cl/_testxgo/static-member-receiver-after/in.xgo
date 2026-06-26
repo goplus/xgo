@@ -1,0 +1,7 @@
+const foo.name = "xgo"
+var foo.count int = 100
+
+type foo int
+
+a := foo.name
+foo.count++
