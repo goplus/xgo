@@ -254,7 +254,7 @@ func TestErrPreloadFile(t *testing.T) {
 		decls := []ast.Decl{
 			&ast.BadDecl{},
 		}
-		preloadFile(pkg, ctx, &ast.File{Decls: decls}, "", true, false)
+		preloadFile(pkg, ctx, &ast.File{Decls: decls}, "", true)
 	})
 }
 

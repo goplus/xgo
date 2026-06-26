@@ -472,7 +472,7 @@ type pkgCtx struct {
 	tylds    []*typeLoader
 	errs     errors.List
 
-	workEntries []*ast.FuncDecl // available when flat project
+	flatFrags []string // available when flat project
 
 	generics map[string]bool // generic type record
 	idents   []*ast.Ident    // toType ident recored
@@ -797,7 +797,7 @@ func NewPackage(pkgPath string, pkg *ast.Package, conf *Config) (p *gogen.Packag
 			pkg: p, pkgCtx: ctx, cb: p.CB(), relBaseDir: relBaseDir,
 			imports: make(map[string]pkgImp),
 		}
-		preloadFile(p, ctx, f, skippingGoFile, false, false)
+		preloadFile(p, ctx, f, skippingGoFile, false)
 	}
 
 	initXGoPkg(ctx, p, gopSyms)
@@ -931,7 +931,7 @@ func preloadXGoFile(p *gogen.Package, ctx *blockCtx, file string, f *ast.File, c
 	var baseTypeName string
 	var baseType types.Type
 	var work *workClass
-	var flatWorkClass bool
+	var iFlatFrag int // index of flat fragment
 	var goxTestFile bool
 	var parent = ctx.pkgCtx
 	if f.IsClass {
@@ -954,8 +954,8 @@ func preloadXGoFile(p *gogen.Package, ctx *blockCtx, file string, f *ast.File, c
 					classType = casePrefix + testNameSuffix(testType)
 				}
 			}
-			if f.IsProj || c.work == nil {
-				flatWorkClass = !f.IsProj
+			iFlatFrag = c.iFrag
+			if f.IsProj || iFlatFrag > 0 {
 				classType = gameClass
 				o := proj.game
 				ctx.baseClass = o
@@ -973,7 +973,7 @@ func preloadXGoFile(p *gogen.Package, ctx *blockCtx, file string, f *ast.File, c
 	}
 	goFile := genGoFile(file, goxTestFile)
 	if classType != "" {
-		if !flatWorkClass {
+		if iFlatFrag == 0 { // not flat fragment
 			if debugLoad {
 				log.Println("==> Preload type", classType)
 			}
@@ -1089,18 +1089,20 @@ func preloadXGoFile(p *gogen.Package, ctx *blockCtx, file string, f *ast.File, c
 		}}}
 	}
 
-	shadowEntry := f.ShadowEntry
-	if flatWorkClass {
-		ctx.workEntries = append(ctx.workEntries, shadowEntry)
-	} else {
-		if shadowEntry != nil {
-			shadowEntry.Name.Name = getEntrypoint(f)
-		} else if baseTypeName != "" { // isClass && not isNormalGox
-			astEmptyEntrypoint(f)
+	if d := f.ShadowEntry; d != nil {
+		var entry string
+		if iFlatFrag > 0 {
+			entry = "_xgofrag_" + strconv.Itoa(iFlatFrag)
+			parent.flatFrags = append(parent.flatFrags, entry)
+		} else {
+			entry = getEntrypoint(f)
 		}
+		d.Name.Name = entry
+	} else if baseTypeName != "" && iFlatFrag == 0 { // isClass && not isNormalGox && not flagFrag
+		astEmptyEntrypoint(f)
 	}
 
-	preloadFile(p, ctx, f, goFile, !conf.Outline, flatWorkClass)
+	preloadFile(p, ctx, f, goFile, !conf.Outline)
 	if work != nil && work.feats != 0 {
 		workFeats := work.feats
 		ld := getTypeLoader(parent, parent.syms, nil, classType)
@@ -1144,7 +1146,7 @@ retry:
 	panic("TODO: parseTypeEmbedName unexpected")
 }
 
-func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, genFnBody, flatWorkClass bool) {
+func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, genFnBody bool) {
 	parent := ctx.pkgCtx
 	classDecl := ctx.classDecl
 	syms := parent.syms
@@ -1367,9 +1369,6 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 			}
 
 		case *ast.FuncDecl:
-			if d.Shadow && flatWorkClass {
-				continue // skip shadowEntry in flat work class
-			}
 			preloadFuncDecl(d)
 
 		case *ast.OverloadFuncDecl:
@@ -1583,11 +1582,11 @@ const (
 )
 
 var (
-	sigDecoFunc      = types.NewSignatureType(nil, nil, nil, nil, nil, false)     // func()
+	sigMainFunc      = types.NewSignatureType(nil, nil, nil, nil, nil, false)     // func()
 	sigDecoFuncError = types.NewSignatureType(nil, nil, nil, nil, types.NewTuple( // func() error
 		types.NewParam(token.NoPos, nil, "", gogen.TyError)), false)
 
-	sigDecoFuncs = [...]*types.Signature{sigDecoFunc, sigDecoFuncError}
+	sigDecoFuncs = [...]*types.Signature{sigMainFunc, sigDecoFuncError}
 )
 
 func getDecoratorForm(decoTyp types.Type) (int, int) {

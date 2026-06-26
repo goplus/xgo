@@ -42,6 +42,7 @@ type classFile struct {
 	ext     string
 	proj    *classProject
 	work    *workClass
+	iFrag   int // index of flat fragment, 0 for main (not fragment)
 }
 
 func (p *classFile) getName(ctx *pkgCtx) string {
@@ -81,6 +82,7 @@ type classProject struct {
 	pkgPaths   []string
 	autoimps   map[string]pkgImp // auto-import statement in gox.mod
 	gt         *Project
+	flatFrags  int // number of flat fragments, 0 for non-flat project
 	hasScheds  bool
 	gameIsPtr  bool
 	isTest     bool
@@ -334,6 +336,8 @@ func loadClass(ctx *pkgCtx, pkg *gogen.Package, file string, f *ast.File, conf *
 	} else if gt.Flat {
 		// no work class for flat project
 		// no class name
+		p.flatFrags++
+		cls.iFrag = p.flatFrags
 	} else {
 		work := getWorkClass(p, ext)
 		tname := workClassName(work, tname)
@@ -502,6 +506,24 @@ func checkClassProjects(pkg *gogen.Package, ctx *pkgCtx) (*classProject, bool) {
 	return projNoMain, multiNoMain
 }
 
+const (
+	nameWorkMain = "_xgo_WorkMain"
+)
+
+func genWorkMain(pkg *gogen.Package, recv *types.Var, flagFrags []string) {
+	sig := types.NewSignatureType(recv, nil, nil, nil, nil, false)
+	fn, err := pkg.NewFuncWith(token.NoPos, nameWorkMain, sig, nil)
+	if err != nil {
+		panic(err)
+	}
+	cb := fn.BodyStart(pkg)
+	cb.SetComments(nil, false)
+	for _, flatFrag := range flagFrags {
+		cb.Val(recv).MemberVal(flatFrag, 0).Call(0).EndStmt()
+	}
+	cb.End()
+}
+
 func genClassProjectMain(pkg *gogen.Package, parent *pkgCtx, proj *classProject) {
 	base := proj.game                      // project base class
 	classType := proj.getGameClass(parent) // project class
@@ -579,8 +601,9 @@ func genClassProjectMain(pkg *gogen.Package, parent *pkgCtx, proj *classProject)
 			if proj.gt.Flat {
 				// flat mode: pass this._xgo_WorkMain or nil as workMain
 				callMain()
-				if len(parent.workEntries) > 0 && false {
-					cb.Val(recv).MemberVal("_xgo_WorkMain", 0)
+				if len(parent.flatFrags) > 0 {
+					genWorkMain(pkg, recv, parent.flatFrags)
+					cb.Val(recv).MemberVal(nameWorkMain, 0)
 				} else {
 					cb.Val(nil)
 				}
