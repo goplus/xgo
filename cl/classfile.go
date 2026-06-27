@@ -607,6 +607,7 @@ func genClassProjectMain(pkg *gogen.Package, parent *pkgCtx, proj *classProject)
 				} else {
 					cb.Val(nil)
 				}
+				narg = 2
 			} else if narg > 1 {
 				works := proj.works
 				if len(works) == 1 && works[0].proto == "" { // no work class prototype
