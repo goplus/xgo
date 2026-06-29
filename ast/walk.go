@@ -90,15 +90,8 @@ func Walk(v Visitor, node Node) {
 
 	case *DomainTextLit:
 		Walk(v, n.Domain)
-		if e := n.Extra; e != nil {
-			switch e := e.(type) {
-			case *StringLitEx:
-				for _, part := range e.Parts {
-					if e, ok := part.(Expr); ok {
-						Walk(v, e)
-					}
-				}
-			}
+		if e, ok := n.Extra.(*DomainTextLitEx); ok {
+			walkList(v, e.Args)
 		}
 
 	case *Ellipsis:
@@ -336,6 +329,9 @@ func Walk(v Visitor, node Node) {
 			Walk(v, n.Type)
 		}
 		walkList(v, n.Values)
+		if n.Tag != nil {
+			Walk(v, n.Tag)
+		}
 		if n.Comment != nil {
 			Walk(v, n.Comment)
 		}
@@ -405,6 +401,14 @@ func Walk(v Visitor, node Node) {
 	case *TupleLit:
 		walkList(v, n.Elts)
 
+	case *MatrixLit:
+		for _, row := range n.Elts {
+			walkList(v, row)
+		}
+
+	case *ElemEllipsis:
+		Walk(v, n.Elt)
+
 	case *LambdaExpr:
 		walkList(v, n.Lhs)
 		walkList(v, n.Rhs)
@@ -420,13 +424,13 @@ func Walk(v Visitor, node Node) {
 		if n.Value != nil {
 			Walk(v, n.Value)
 		}
+		Walk(v, n.X)
 		if n.Init != nil {
 			Walk(v, n.Init)
 		}
 		if n.Cond != nil {
 			Walk(v, n.Cond)
 		}
-		Walk(v, n.X)
 
 	case *ComprehensionExpr:
 		if n.Elt != nil {

@@ -22,6 +22,7 @@ import (
 	"reflect"
 
 	"github.com/goplus/xgo/ast"
+	tplast "github.com/goplus/xgo/tpl/ast"
 )
 
 // -----------------------------------------------------------------------------
@@ -49,12 +50,17 @@ func formatType(ctx *formatCtx, typ ast.Expr, ref *ast.Expr) {
 		formatFuncType(ctx, t)
 	case *ast.Ellipsis:
 		formatType(ctx, t.Elt, &t.Elt)
+	case *ast.TupleType:
+		formatFields(ctx, t.Fields)
+	case *ast.EnumType:
+		formatEnumType(ctx, t)
 	default:
 		log.Panicln("TODO: format -", reflect.TypeOf(typ))
 	}
 }
 
 func formatFuncType(ctx *formatCtx, t *ast.FuncType) {
+	formatFields(ctx, t.TypeParams)
 	formatFields(ctx, t.Params)
 	formatFields(ctx, t.Results)
 }
@@ -81,7 +87,9 @@ func formatExprs(ctx *formatCtx, exprs []ast.Expr) {
 
 func formatExpr(ctx *formatCtx, expr ast.Expr, ref *ast.Expr) {
 	switch v := expr.(type) {
-	case *ast.Ident, *ast.BasicLit, *ast.BadExpr, nil:
+	case *ast.Ident, *ast.BadExpr, nil:
+	case *ast.BasicLit:
+		formatBasicLit(ctx, v)
 	case *ast.BinaryExpr:
 		formatExpr(ctx, v.X, &v.X)
 		formatExpr(ctx, v.Y, &v.Y)
@@ -91,13 +99,24 @@ func formatExpr(ctx *formatCtx, expr ast.Expr, ref *ast.Expr) {
 		formatCallExpr(ctx, v)
 	case *ast.SelectorExpr:
 		formatSelectorExpr(ctx, v, ref)
+	case *ast.AnySelectorExpr:
+		formatExpr(ctx, v.X, &v.X)
 	case *ast.SliceExpr:
 		formatSliceExpr(ctx, v)
 	case *ast.IndexExpr:
 		formatExpr(ctx, v.X, &v.X)
 		formatExpr(ctx, v.Index, &v.Index)
+	case *ast.IndexListExpr:
+		formatExpr(ctx, v.X, &v.X)
+		formatExprs(ctx, v.Indices)
 	case *ast.SliceLit:
 		formatExprs(ctx, v.Elts)
+	case *ast.TupleLit:
+		formatExprs(ctx, v.Elts)
+	case *ast.MatrixLit:
+		for _, row := range v.Elts {
+			formatExprs(ctx, row)
+		}
 	case *ast.CompositeLit:
 		formatType(ctx, v.Type, &v.Type)
 		formatExprs(ctx, v.Elts)
@@ -106,6 +125,8 @@ func formatExpr(ctx *formatCtx, expr ast.Expr, ref *ast.Expr) {
 	case *ast.KeyValueExpr:
 		formatExpr(ctx, v.Key, &v.Key)
 		formatExpr(ctx, v.Value, &v.Value)
+	case *ast.KwargExpr:
+		formatCallArg(ctx, &v.Value)
 	case *ast.FuncLit:
 		formatFuncType(ctx, v.Type)
 		formatBlockStmt(ctx, v.Body)
@@ -120,6 +141,8 @@ func formatExpr(ctx *formatCtx, expr ast.Expr, ref *ast.Expr) {
 		formatRangeExpr(ctx, v)
 	case *ast.ComprehensionExpr:
 		formatComprehensionExpr(ctx, v)
+	case *ast.ForPhrase:
+		formatForPhrase(ctx, v)
 	case *ast.ErrWrapExpr:
 		formatExpr(ctx, v.X, &v.X)
 		formatExpr(ctx, v.Default, &v.Default)
@@ -127,9 +150,97 @@ func formatExpr(ctx *formatCtx, expr ast.Expr, ref *ast.Expr) {
 		formatExpr(ctx, v.X, &v.X)
 	case *ast.Ellipsis:
 		formatExpr(ctx, v.Elt, &v.Elt)
+	case *ast.ElemEllipsis:
+		formatExpr(ctx, v.Elt, &v.Elt)
+	case *ast.DomainTextLit:
+		switch lit := v.Extra.(type) {
+		case *ast.DomainTextLitEx:
+			for _, arg := range lit.Args {
+				markExprImports(ctx, arg)
+			}
+		case *tplast.File:
+			markTplRetProcImports(ctx, lit)
+		}
+	case *ast.NumberUnitLit, *ast.EnvExpr:
+	case *ast.CondExpr:
+		formatExpr(ctx, v.X, &v.X)
+		formatExpr(ctx, v.Cond, &v.Cond)
 	default:
 		formatType(ctx, expr, ref)
 	}
+}
+
+func formatEnumType(ctx *formatCtx, v *ast.EnumType) {
+	for _, spec := range v.Specs {
+		if value, ok := spec.(*ast.ValueSpec); ok {
+			formatValueSpec(ctx, value)
+		}
+	}
+}
+
+func formatBasicLit(ctx *formatCtx, v *ast.BasicLit) {
+	if v == nil || v.Extra == nil {
+		return
+	}
+	for _, part := range v.Extra.Parts {
+		if expr, ok := part.(ast.Expr); ok {
+			markExprImports(ctx, expr)
+		}
+	}
+}
+
+func markExprImports(ctx *formatCtx, expr ast.Expr) {
+	if expr == nil {
+		return
+	}
+	ast.Inspect(expr, func(node ast.Node) bool {
+		if sel, ok := node.(*ast.SelectorExpr); ok {
+			markSelectorImport(ctx, sel)
+		}
+		return true
+	})
+}
+
+func markTplRetProcImports(ctx *formatCtx, file *tplast.File) {
+	for _, decl := range file.Decls {
+		rule, ok := decl.(*tplast.Rule)
+		if !ok {
+			continue
+		}
+		expr, ok := rule.RetProc.(ast.Expr)
+		if !ok {
+			continue
+		}
+		markExprImports(ctx, expr)
+	}
+}
+
+func markSelectorImport(ctx *formatCtx, v *ast.SelectorExpr) {
+	name, ok := selectorImportName(v.X)
+	if !ok {
+		return
+	}
+	if imp, ok := unshadowedImport(ctx, name); ok {
+		imp.isUsed = true
+	}
+}
+
+func selectorImportName(expr ast.Expr) (string, bool) {
+	switch x := expr.(type) {
+	case *ast.Ident:
+		return x.Name, true
+	case *ast.ParenExpr:
+		return selectorImportName(x.X)
+	}
+	return "", false
+}
+
+func unshadowedImport(ctx *formatCtx, name string) (*importCtx, bool) {
+	if _, o := ctx.scope.LookupParent(name, token.NoPos); o != nil {
+		return nil, false
+	}
+	imp, ok := ctx.imports[name]
+	return imp, ok
 }
 
 func formatRangeExpr(ctx *formatCtx, v *ast.RangeExpr) {
@@ -168,27 +279,32 @@ func formatSliceExpr(ctx *formatCtx, v *ast.SliceExpr) {
 func formatCallExpr(ctx *formatCtx, v *ast.CallExpr) {
 	formatExpr(ctx, v.Fun, &v.Fun)
 	fncallStartingLowerCase(v)
-	for i, arg := range v.Args {
-		if fn, ok := arg.(*ast.FuncLit); ok {
-			funcLitToLambdaExpr(fn, &v.Args[i])
-		}
+	for i := range v.Args {
+		formatCallArg(ctx, &v.Args[i])
 	}
-	formatExprs(ctx, v.Args)
+	for _, arg := range v.Kwargs {
+		formatCallArg(ctx, &arg.Value)
+	}
+}
+
+func formatCallArg(ctx *formatCtx, arg *ast.Expr) {
+	if fn, ok := (*arg).(*ast.FuncLit); ok {
+		funcLitToLambdaExpr(fn, arg)
+	}
+	formatExpr(ctx, *arg, arg)
 }
 
 func formatSelectorExpr(ctx *formatCtx, v *ast.SelectorExpr, ref *ast.Expr) {
-	switch x := v.X.(type) {
-	case *ast.Ident:
-		if _, o := ctx.scope.LookupParent(x.Name, token.NoPos); o != nil {
-			break
-		}
-		if imp, ok := ctx.imports[x.Name]; ok {
-			if !fmtToBuiltin(imp, v.Sel, ref) {
-				imp.isUsed = true
-			}
-		}
-	default:
-		formatExpr(ctx, x, &v.X)
+	if name, ok := selectorImportName(v.X); ok {
+		formatImportSelector(ctx, name, v.Sel, ref)
+		return
+	}
+	formatExpr(ctx, v.X, &v.X)
+}
+
+func formatImportSelector(ctx *formatCtx, name string, sel *ast.Ident, ref *ast.Expr) {
+	if imp, ok := unshadowedImport(ctx, name); ok && !fmtToBuiltin(imp, sel, ref) {
+		imp.isUsed = true
 	}
 }
 
@@ -259,6 +375,14 @@ func formatStmt(ctx *formatCtx, stmt ast.Stmt) {
 	}
 }
 
+func formatHeaderStmt(ctx *formatCtx, stmt ast.Stmt) {
+	if exprStmt, ok := stmt.(*ast.ExprStmt); ok {
+		formatExpr(ctx, exprStmt.X, &exprStmt.X)
+		return
+	}
+	formatStmt(ctx, stmt)
+}
+
 func formatExprStmt(ctx *formatCtx, v *ast.ExprStmt) {
 	switch x := v.X.(type) {
 	case *ast.CallExpr:
@@ -276,7 +400,7 @@ func formatSwitchStmt(ctx *formatCtx, v *ast.SwitchStmt) {
 	old := ctx.enterBlock()
 	defer ctx.leaveBlock(old)
 
-	formatStmt(ctx, v.Init)
+	formatHeaderStmt(ctx, v.Init)
 	formatExpr(ctx, v.Tag, &v.Tag)
 	formatBlockStmt(ctx, v.Body)
 }
@@ -285,8 +409,8 @@ func formatTypeSwitchStmt(ctx *formatCtx, v *ast.TypeSwitchStmt) {
 	old := ctx.enterBlock()
 	defer ctx.leaveBlock(old)
 
-	formatStmt(ctx, v.Init)
-	formatStmt(ctx, v.Assign)
+	formatHeaderStmt(ctx, v.Init)
+	formatHeaderStmt(ctx, v.Assign)
 	formatBlockStmt(ctx, v.Body)
 }
 
@@ -294,7 +418,7 @@ func formatIfStmt(ctx *formatCtx, v *ast.IfStmt) {
 	old := ctx.enterBlock()
 	defer ctx.leaveBlock(old)
 
-	formatStmt(ctx, v.Init)
+	formatHeaderStmt(ctx, v.Init)
 	formatExpr(ctx, v.Cond, &v.Cond)
 	formatBlockStmt(ctx, v.Body)
 	formatStmt(ctx, v.Else)
@@ -322,8 +446,9 @@ func formatForStmt(ctx *formatCtx, v *ast.ForStmt) {
 	old := ctx.enterBlock()
 	defer ctx.leaveBlock(old)
 
-	formatStmt(ctx, v.Init)
+	formatHeaderStmt(ctx, v.Init)
 	formatExpr(ctx, v.Cond, &v.Cond)
+	formatHeaderStmt(ctx, v.Post)
 	formatBlockStmt(ctx, v.Body)
 }
 

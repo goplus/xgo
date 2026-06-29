@@ -2536,6 +2536,7 @@ func (p *parser) checkExpr(x ast.Expr) ast.Expr {
 	case *ast.LambdaExpr:
 	case *ast.LambdaExpr2:
 	case *ast.TupleLit:
+	case *ast.MatrixLit:
 	case *ast.EnvExpr:
 	case *ast.CondExpr:
 	case *ast.ElemEllipsis:
