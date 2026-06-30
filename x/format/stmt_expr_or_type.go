@@ -166,13 +166,13 @@ func formatSliceExpr(ctx *formatCtx, v *ast.SliceExpr) {
 }
 
 func formatCallExpr(ctx *formatCtx, v *ast.CallExpr) {
-	formatExpr(ctx, v.Fun, &v.Fun)
 	fncallStartingLowerCase(v)
 	for i, arg := range v.Args {
 		if fn, ok := arg.(*ast.FuncLit); ok {
 			funcLitToLambdaExpr(fn, &v.Args[i])
 		}
 	}
+	formatExpr(ctx, v.Fun, &v.Fun)
 	formatExprs(ctx, v.Args)
 }
 
@@ -180,6 +180,10 @@ func formatSelectorExpr(ctx *formatCtx, v *ast.SelectorExpr, ref *ast.Expr) {
 	switch x := v.X.(type) {
 	case *ast.Ident:
 		if _, o := ctx.scope.LookupParent(x.Name, token.NoPos); o != nil {
+			break
+		}
+		if ctx.classCfg != nil && (x.Name == ctx.funcRecv || x.Name == ctx.classPkg) {
+			*ref = v.Sel
 			break
 		}
 		if imp, ok := ctx.imports[x.Name]; ok {
@@ -202,8 +206,25 @@ func formatBlockStmt(ctx *formatCtx, stmt *ast.BlockStmt) {
 	}
 }
 
+func isClassSched(ctx *formatCtx, stmt ast.Stmt) bool {
+	if expr, ok := stmt.(*ast.ExprStmt); ok {
+		if v, ok := expr.X.(*ast.CallExpr); ok {
+			if sel, ok := v.Fun.(*ast.SelectorExpr); ok && sel.Sel.Name == "Sched" {
+				if ident, ok := sel.X.(*ast.Ident); ok && ident.Name == ctx.classPkg {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
 func formatStmts(ctx *formatCtx, stmts []ast.Stmt) {
-	for _, stmt := range stmts {
+	for i, stmt := range stmts {
+		if ctx.classCfg != nil && isClassSched(ctx, stmt) {
+			stmts[i] = &ast.EmptyStmt{}
+			continue
+		}
 		formatStmt(ctx, stmt)
 	}
 }
@@ -262,6 +283,23 @@ func formatStmt(ctx *formatCtx, stmt ast.Stmt) {
 func formatExprStmt(ctx *formatCtx, v *ast.ExprStmt) {
 	switch x := v.X.(type) {
 	case *ast.CallExpr:
+		if ctx.classCfg != nil {
+			if sel, ok := x.Fun.(*ast.SelectorExpr); ok {
+				if name, ok := ctx.classCfg.Overload[sel.Sel.Name]; ok {
+					sel.Sel.Name = name
+				} else if ident, ok := sel.X.(*ast.Ident); ok && ident.Name == ctx.classPkg {
+					if name, ok := ctx.classCfg.Gopt[sel.Sel.Name]; ok {
+						if len(x.Args) > 0 {
+							x.Fun = &ast.SelectorExpr{
+								X:   x.Args[0],
+								Sel: ast.NewIdent(name),
+							}
+							x.Args = x.Args[1:]
+						}
+					}
+				}
+			}
+		}
 		commandStyleFirst(x)
 	}
 	formatExpr(ctx, v.X, &v.X)
