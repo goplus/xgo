@@ -378,6 +378,7 @@ func TestCheckExpr(t *testing.T) {
 	p.init(token.NewFileSet(), "/foo/bar.xgo", []byte(``), 0)
 	p.checkExpr(&ast.Ellipsis{})
 	p.checkExpr(&ast.ElemEllipsis{})
+	p.checkExpr(&ast.MatrixLit{})
 	p.checkExpr(&ast.StarExpr{})
 	p.checkExpr(&ast.IndexListExpr{})
 	p.checkExpr(&ast.FuncType{})

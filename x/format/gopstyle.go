@@ -176,7 +176,7 @@ func (ctx *formatCtx) leaveBlock(old *types.Scope) {
 }
 
 func formatFile(file *ast.File) {
-	var funcs []*ast.FuncDecl
+	var funcs []ast.Decl
 	ctx := &formatCtx{
 		imports: make(map[string]*importCtx),
 		scope:   types.NewScope(nil, token.NoPos, token.NoPos, ""),
@@ -185,6 +185,8 @@ func formatFile(file *ast.File) {
 		switch v := decl.(type) {
 		case *ast.FuncDecl:
 			// delay the process, because package level vars need to be processed first.
+			funcs = append(funcs, v)
+		case *ast.OverloadFuncDecl:
 			funcs = append(funcs, v)
 		case *ast.GenDecl:
 			switch v.Tok {
@@ -210,7 +212,12 @@ func formatFile(file *ast.File) {
 	}
 
 	for _, fn := range funcs {
-		formatFuncDecl(ctx, fn)
+		switch v := fn.(type) {
+		case *ast.FuncDecl:
+			formatFuncDecl(ctx, v)
+		case *ast.OverloadFuncDecl:
+			formatOverloadFuncDecl(ctx, v)
+		}
 	}
 	for _, imp := range ctx.imports {
 		if imp.pkgPath == "fmt" && !imp.isUsed {
@@ -228,8 +235,7 @@ func formatGenDecl(ctx *formatCtx, v *ast.GenDecl) {
 	case token.VAR, token.CONST:
 		for _, item := range v.Specs {
 			spec := item.(*ast.ValueSpec)
-			formatType(ctx, spec.Type, &spec.Type)
-			formatExprs(ctx, spec.Values)
+			formatValueSpec(ctx, spec)
 			for _, name := range spec.Names {
 				ctx.insert(name.Name)
 			}
@@ -242,9 +248,24 @@ func formatGenDecl(ctx *formatCtx, v *ast.GenDecl) {
 	}
 }
 
+func formatValueSpec(ctx *formatCtx, spec *ast.ValueSpec) {
+	formatType(ctx, spec.Type, &spec.Type)
+	formatBasicLit(ctx, spec.Tag)
+	formatExprs(ctx, spec.Values)
+}
+
 func formatFuncDecl(ctx *formatCtx, v *ast.FuncDecl) {
+	for _, dec := range v.Decorators {
+		formatCallExpr(ctx, &dec.CallExpr)
+	}
+	formatFields(ctx, v.Recv)
 	formatFuncType(ctx, v.Type)
 	formatBlockStmt(ctx, v.Body)
+}
+
+func formatOverloadFuncDecl(ctx *formatCtx, v *ast.OverloadFuncDecl) {
+	formatFields(ctx, v.Recv)
+	formatExprs(ctx, v.Funcs)
 }
 
 /*

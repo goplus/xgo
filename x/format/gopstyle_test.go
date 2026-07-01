@@ -123,6 +123,190 @@ func f() {
 `)
 }
 
+func TestMatrixLit(t *testing.T) {
+	testFormat(t, "matrix literal", `package main
+
+import "fmt"
+
+func main() {
+	fmt.Println([
+		fmt.Sprint(1), 2
+		3, 4
+	])
+}
+`, `echo [
+	sprint(1), 2
+	3, 4
+]
+`)
+}
+
+func TestEnumType(t *testing.T) {
+	testFormat(t, "enum type", `package main
+
+import "fmt"
+
+type Status const (
+	Started = fmt.Sprint(1)
+	Stopped = fmt.Sprintf("%d", 2)
+)
+`, `type Status const (
+	Started = sprint(1)
+	Stopped = sprintf("%d", 2)
+)
+`)
+}
+
+func TestTupleType(t *testing.T) {
+	testFormat(t, "tuple type", `package main
+
+import "fmt"
+
+var _ (fmt.Stringer, int)
+`, `import "fmt"
+
+var _ (fmt.Stringer, int)
+`)
+}
+
+func TestTupleLit(t *testing.T) {
+	testFormat(t, "tuple literal", `package main
+
+import "fmt"
+
+var _ = (fmt.Sprint(1), fmt.Sprintf("%d", 2))
+`, `var _ = (sprint(1), sprintf("%d", 2))
+`)
+}
+
+func TestIndexListExpr(t *testing.T) {
+	testFormat(t, "index list expression", `package main
+
+import "fmt"
+
+func f() {
+	_ = values[fmt.Stringer, fmt.GoStringer]
+}
+`, `import "fmt"
+
+func f() {
+	_ = values[fmt.Stringer, fmt.GoStringer]
+}
+`)
+}
+
+func TestCallKwargs(t *testing.T) {
+	testFormat(t, "call kwargs", `package main
+
+import "fmt"
+
+func f() {
+	_ = render(msg=fmt.Sprint(1))
+	_ = render(msg=fmt.Sprint(1), cb=func() string {
+		return fmt.Sprint(2)
+	})
+}
+`, `func f() {
+	_ = render(msg = sprint(1))
+	_ = render(msg = sprint(1), cb = => sprint(2))
+}
+`)
+}
+
+func TestForStmtPost(t *testing.T) {
+	testFormat(t, "for statement post", `package main
+
+import "fmt"
+
+func f() {
+	for i := 0; i < 1; fmt.Sprint(i) {
+	}
+}
+`, `func f() {
+	for i := 0; i < 1; sprint(i) {
+	}
+}
+`)
+}
+
+func TestOverloadFuncDecl(t *testing.T) {
+	testFormat(t, "overload function declaration", `package main
+
+import "fmt"
+
+func F = (
+	(fmt).Sprint
+)
+`, `func F = (
+	sprint
+)
+`)
+}
+
+func TestCondExpr(t *testing.T) {
+	testFormat(t, "cond expr", `package main
+
+import "fmt"
+
+var _ = fmt.Sprint(1) @(fmt.Sprintf("%d", 2))
+`, `var _ = sprint(1)@(sprintf("%d", 2))
+`)
+}
+
+func TestStringLitExKeepsFmtImport(t *testing.T) {
+	testFormat(t, "string literal extra import", `package main
+
+import "fmt"
+
+var _ = "${fmt.Sprint(1)}"
+`, `import "fmt"
+
+var _ = "${fmt.Sprint(1)}"
+`)
+}
+
+func TestDomainTextLitExKeepsFmtImport(t *testing.T) {
+	src := "package main\n\nimport \"fmt\"\n\nvar _ = txt`> fmt.Sprint(1)\nbody\n`\n"
+	expect := "import \"fmt\"\n\nvar _ = txt`> fmt.Sprint(1)\nbody\n`\n"
+	testFormat(t, "domain text literal extra import", src, expect)
+}
+
+func TestTplLitRetProcKeepsFmtImport(t *testing.T) {
+	src := "package main\n\nimport \"fmt\"\n\nvar _ = tpl`\nexpr = INT => {\n\treturn fmt.Sprint(this)\n}\n`\n"
+	expect := "import \"fmt\"\n\nvar _ = tpl`\nexpr = INT => {\n\treturn fmt.Sprint(this)\n}\n`\n"
+	testFormat(t, "tpl literal return procedure import", src, expect)
+}
+
+func TestFuncDecoratorArgs(t *testing.T) {
+	testFormat(t, "func decorator args", `package main
+
+import "fmt"
+
+@retry(fmt.Sprint(1), func() string {
+	return fmt.Sprintln("x")
+})
+func f() {
+}
+`, `@retry(sprint(1), => sprintln("x"))
+func f() {
+}
+`)
+}
+
+func TestFuncReceiverKeepImport(t *testing.T) {
+	testFormat(t, "func receiver import", `package main
+
+import "fmt"
+
+func (v fmt.Stringer) f() {
+}
+`, `import "fmt"
+
+func (v fmt.Stringer) f() {
+}
+`)
+}
+
 func TestPrintln(t *testing.T) {
 	testFormat(t, "print", `package main
 

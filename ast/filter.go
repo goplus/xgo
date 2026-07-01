@@ -194,6 +194,9 @@ func filterType(typ Expr, f Filter, export bool) bool {
 			// Note: TupleType doesn't have an Incomplete field like StructType
 		}
 		return t.Fields != nil && len(t.Fields.List) > 0
+	case *EnumType:
+		t.Specs = filterSpecList(t.Specs, f, export)
+		return len(t.Specs) > 0
 	}
 	return false
 }

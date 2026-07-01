@@ -13,12 +13,13 @@ When implementing new language syntax, follow this three-phase approach:
 - Allows grammar to be reviewed independently from implementation details
 
 #### Phase 1: Grammar Definition (First Pull Request)
-**Scope**: AST, parser, and printer modifications ONLY
+**Scope**: AST, parser, printer, and required AST consumer modifications ONLY
 - **AST**: Define new node types in `ast/` directory (if needed - often existing nodes can be reused)
 - **Parser**: Implement parsing rules in `parser/` directory to recognize the new syntax
 - **Printer**: Add formatting support for new syntax (inverse of parsing) in `printer/` directory
-- **Testing**: Add test cases in `parser/_testdata/` for new syntax
-  - **Note**: Printer shares test cases with parser - do NOT create separate test files in `printer/_testdata/`
+- **AST Consumers**: Audit manually maintained consumers such as `ast.Walk`, `ast/filter.go`, parser expression validation, and `x/format`
+- **Testing**: Add test cases in `parser/_testdata/` for new syntax and focused unit tests for affected AST consumers
+  - **Note**: Printer reuses parser test cases and also has printer-specific cases in `printer/_testdata/`
 - **What NOT to include**: Do NOT add any code generation or semantic logic in `cl/` package - that belongs in Phase 2
 
 #### Phase 2: Semantic Implementation (Second Pull Request)
@@ -71,7 +72,7 @@ When submitting a new PR to the `gogen` repository for a change, also submit a P
 
 ### Testing Requirements
 
-- **Phase 1**: 100% test coverage for new syntax parsing in `parser/_testdata/`
+- **Phase 1**: 100% test coverage for new syntax parsing in `parser/_testdata/` and focused tests for affected AST consumers
 - **Phase 2**: Comprehensive test coverage for semantic implementation in `cl/_testxgo/` covering:
   - Common usage scenarios
   - Edge cases and error conditions
