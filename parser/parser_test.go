@@ -18,6 +18,7 @@ package parser
 
 import (
 	"io/fs"
+	"strings"
 	"testing"
 
 	"github.com/goplus/xgo/ast"
@@ -62,6 +63,80 @@ func TestAssert(t *testing.T) {
 		}
 	}()
 	assert(false, "panic msg")
+}
+
+func TestStaticValueSpecs(t *testing.T) {
+	fset := token.NewFileSet()
+	f, err := ParseEntry(fset, "/foo/Rect.gox", `const global = 1
+const .kind, Rect.name = "shape", "rect"
+var (
+	.count int = 1
+	Rect.total, .extra int = 2, 3
+	width int
+)
+`, Config{Mode: ParseXGoClass | AllErrors})
+	if err != nil {
+		t.Fatal("ParseEntry:", err)
+	}
+	for i, want := range []struct {
+		names     []string
+		hasStatic bool
+	}{
+		{[]string{"global"}, false},
+		{[]string{".kind", "Rect.name"}, true},
+		{[]string{".count"}, true},
+		{[]string{"Rect.total", ".extra"}, true},
+		{[]string{"width"}, false},
+	} {
+		decl := f.Decls[2]
+		specIndex := i - 2
+		if i < 2 {
+			decl = f.Decls[i]
+			specIndex = 0
+		}
+		spec := decl.(*ast.GenDecl).Specs[specIndex].(*ast.ValueSpec)
+		if spec.HasStatic != want.hasStatic || len(spec.Names) != len(want.names) {
+			t.Fatalf("spec %d = %#v", i, spec)
+		}
+		for j, name := range want.names {
+			if spec.Names[j].Name != name {
+				t.Fatalf("spec %d name %d = %q, want %q", i, j, spec.Names[j].Name, name)
+			}
+		}
+	}
+	if got := f.ClassFieldsDecl(); got != f.Decls[2] {
+		t.Fatalf("ClassFieldsDecl = %p, want %p", got, f.Decls[2])
+	}
+}
+
+func TestStaticValueSpecWhitespaceErrors(t *testing.T) {
+	for _, test := range []struct {
+		name string
+		code string
+	}{
+		{"before dot", "var (\nRect .count int\n)\n"},
+		{"after shorthand dot", "var (\n. count int\n)\n"},
+		{"after receiver dot", "var (\nRect. count int\n)\n"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			fset := token.NewFileSet()
+			_, err := ParseEntry(fset, "/foo/Rect.gox", test.code, Config{
+				Mode: ParseXGoClass | AllErrors,
+			})
+			if err == nil || !strings.Contains(err.Error(), "whitespace is not allowed in static value name") {
+				t.Fatalf("ParseEntry error = %v", err)
+			}
+		})
+	}
+	t.Run("qualified embedded type", func(t *testing.T) {
+		fset := token.NewFileSet()
+		_, err := ParseEntry(fset, "/foo/Rect.gox", "var (\npkg . Type\n)\n", Config{
+			Mode: ParseXGoClass | AllErrors,
+		})
+		if err != nil {
+			t.Fatalf("ParseEntry error = %v", err)
+		}
+	})
 }
 
 func panicMsg(e any) string {
@@ -242,12 +317,6 @@ func TestErrInFunc(t *testing.T) {
 
 func TestClassErrCode(t *testing.T) {
 	testClassErrCode(t, `var (
-	x int
-)
-
-var y int
-`, `/foo/bar.gox:5:1: multiple top-level var declarations in classfile`, ``)
-	testClassErrCode(t, `var (
 	A,B
 	v int
 )
@@ -256,7 +325,7 @@ var y int
 	A.*B
 	v int
 )
-`, `/foo/bar.gox:2:4: expected 'IDENT', found '*'`, ``)
+`, `/foo/bar.gox:2:4: expected 'IDENT', found '*' (and 2 more errors)`, ``)
 	testClassErrCode(t, `var (
 	[]A
 	v int
@@ -279,7 +348,7 @@ func TestErrStaticMember(t *testing.T) {
 	testClassErrCode(t, `var (
 	. B int
 )
-`, `/foo/bar.gox:2:4: whitespace is not allowed in static member name`, ``)
+`, `/foo/bar.gox:2:4: whitespace is not allowed in static value name`, ``)
 	testErrCode(t, `var (
 	.B int
 )
@@ -287,11 +356,11 @@ func TestErrStaticMember(t *testing.T) {
 	testErrCode(t, `var (
 	A. B int
 )
-`, `/foo/bar.xgo:2:5: whitespace is not allowed in static member name`, ``)
+`, `/foo/bar.xgo:2:5: whitespace is not allowed in static value name`, ``)
 	testErrCode(t, `var (
 	A .B int
 )
-`, `/foo/bar.xgo:2:4: whitespace is not allowed in static member name`, ``)
+`, `/foo/bar.xgo:2:4: whitespace is not allowed in static value name`, ``)
 }
 
 func TestErrGlobal(t *testing.T) {
