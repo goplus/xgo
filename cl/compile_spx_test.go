@@ -19,10 +19,14 @@
 package cl_test
 
 import (
+	"bytes"
+	"strings"
 	"testing"
 
+	"github.com/goplus/mod/modfile"
 	"github.com/goplus/xgo/cl"
 	"github.com/goplus/xgo/cl/cltest"
+	"github.com/goplus/xgo/parser"
 	"github.com/goplus/xgo/parser/fsx/memfs"
 )
 
@@ -189,6 +193,205 @@ func main() {
 	new(index).Main()
 }
 `)
+}
+
+func TestSpxWorkClassFieldInitUsesProjectMember(t *testing.T) {
+	projectless := &modfile.Project{
+		Works: []*modfile.Class{
+			{Ext: "_prompt.gox", Class: "Prompt", Embedded: true},
+		},
+		PkgPaths: []string{"github.com/goplus/xgo/cl/internal/mcp"},
+	}
+
+	for _, tt := range []struct {
+		name        string
+		dirs        map[string][]string
+		srcs        map[string]string
+		lookupClass func(ext string) (*modfile.Project, bool)
+		wantCode    string
+		notWantCode string
+		wantErr     string
+	}{
+		{
+			name: "WorkClassReceiver",
+			dirs: map[string][]string{
+				"/foo": {"Game._mcp.gox", "Alpha._prompt.gox", "Beta._prompt.gox"},
+			},
+			srcs: map[string]string{
+				"/foo/Game._mcp.gox": ``,
+				"/foo/Alpha._prompt.gox": `
+type prompt interface {
+	Main(*Tool) string
+}
+
+var prompts []prompt = [Beta_]
+
+func Main(tool *Tool) string {
+	return ""
+}
+`,
+				"/foo/Beta._prompt.gox": `
+func Main(tool *Tool) string {
+	return ""
+}
+`,
+			},
+			wantCode:    "this.prompts = []prompt{this.Game_.Beta_}",
+			notWantCode: "this.prompts = []prompt{Beta_}",
+		},
+		{
+			name: "ProjectClassReceiver",
+			dirs: map[string][]string{
+				"/foo": {"Game._mcp.gox", "Beta._prompt.gox"},
+			},
+			srcs: map[string]string{
+				"/foo/Game._mcp.gox": `
+type prompt interface {
+	Main(*Tool) string
+}
+
+var prompts []prompt = [Beta_]
+`,
+				"/foo/Beta._prompt.gox": `
+func Main(tool *Tool) string {
+	return ""
+}
+`,
+			},
+			wantCode:    "this.prompts = []prompt{this.Beta_}",
+			notWantCode: "this.prompts = []prompt{this.Game_.Beta_}",
+		},
+		{
+			name: "SelectorAssignmentReceiver",
+			dirs: map[string][]string{
+				"/foo": {"Game._mcp.gox", "Alpha._prompt.gox", "Beta._prompt.gox"},
+			},
+			srcs: map[string]string{
+				"/foo/Game._mcp.gox": ``,
+				"/foo/Alpha._prompt.gox": `
+var fn func() = => {
+	Beta_.X = 1
+}
+
+func Main(tool *Tool) string {
+	return ""
+}
+`,
+				"/foo/Beta._prompt.gox": `
+var X int
+
+func Main(tool *Tool) string {
+	return ""
+}
+`,
+			},
+			wantCode: "this.Game_.Beta_.X = 1",
+		},
+		{
+			name: "OrdinaryReceiver",
+			dirs: map[string][]string{
+				"/foo": {"Game._mcp.gox", "Beta._prompt.gox"},
+			},
+			srcs: map[string]string{
+				"/foo/Game._mcp.gox": `
+type Foo struct{}
+
+func (f *Foo) Bar() any {
+	return Beta_
+}
+`,
+				"/foo/Beta._prompt.gox": `
+func Main(tool *Tool) string {
+	return ""
+}
+`,
+			},
+			wantErr: "unreachable",
+		},
+		{
+			name: "ProjectlessClassGroup",
+			dirs: map[string][]string{
+				"/foo": {"Alpha._prompt.gox", "Beta._prompt.gox"},
+			},
+			srcs: map[string]string{
+				"/foo/Alpha._prompt.gox": `
+type prompt interface {
+	Main(*Tool) string
+}
+
+var prompts []prompt = [Beta_]
+
+func Main(tool *Tool) string {
+	return ""
+}
+`,
+				"/foo/Beta._prompt.gox": `
+func Main(tool *Tool) string {
+	return ""
+}
+`,
+			},
+			lookupClass: func(ext string) (*modfile.Project, bool) {
+				if ext == "_prompt.gox" {
+					return projectless, true
+				}
+				return nil, false
+			},
+			notWantCode: "this..Beta_",
+			wantErr:     "unreachable",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := compileMCPClassFiles(t, tt.dirs, tt.srcs, tt.lookupClass)
+			if tt.wantErr != "" {
+				if err == nil {
+					t.Fatalf("compileMCPClassFiles succeeded unexpectedly:\n%s", got)
+				}
+				if !strings.Contains(err.Error(), tt.wantErr) {
+					t.Fatalf("compileMCPClassFiles error = %v, want containing %q", err, tt.wantErr)
+				}
+			} else if err != nil {
+				t.Fatal(err)
+			} else if tt.wantCode != "" && !strings.Contains(got, tt.wantCode) {
+				t.Fatalf("generated code does not contain %q:\n%s", tt.wantCode, got)
+			}
+			if tt.notWantCode != "" && strings.Contains(got, tt.notWantCode) {
+				t.Fatalf("generated code contains %q:\n%s", tt.notWantCode, got)
+			}
+		})
+	}
+}
+
+func compileMCPClassFiles(t *testing.T, dirs map[string][]string, srcs map[string]string, lookupClass func(ext string) (*modfile.Project, bool)) (string, error) {
+	t.Helper()
+	if lookupClass == nil {
+		lookupClass = cltest.LookupClass
+	}
+	conf := *cltest.Conf
+	conf.LookupClass = lookupClass
+
+	pkgs, err := parser.ParseFSDir(conf.Fset, memfs.New(dirs, srcs), "/foo", parser.Config{
+		ClassKind: func(fname string) (isProj bool, ok bool) {
+			ext := modfile.ClassExt(fname)
+			c, ok := lookupClass(ext)
+			if !ok {
+				return false, false
+			}
+			return c.IsProj(ext, fname), true
+		},
+	})
+	if err != nil {
+		return "", err
+	}
+	pkg, err := cl.NewPackage("", pkgs["main"], &conf)
+	if err != nil {
+		return "", err
+	}
+	var out bytes.Buffer
+	if err := pkg.WriteTo(&out); err != nil {
+		return out.String(), err
+	}
+	return out.String(), nil
 }
 
 func TestEnvOp(t *testing.T) {

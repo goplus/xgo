@@ -29,6 +29,7 @@ import (
 	"syscall"
 
 	"github.com/goplus/gogen"
+	"github.com/goplus/gogen/target"
 	"github.com/goplus/xgo/ast"
 	"github.com/goplus/xgo/printer"
 	"github.com/goplus/xgo/token"
@@ -117,6 +118,9 @@ func compileIdent(ctx *blockCtx, lhs int, ident *ast.Ident, flags int) (pkg goge
 			tryMember(cb, lhs, recv, ident, flags) {
 			return
 		}
+		if tryProjectWorkClassMember(ctx, recv, ident, flags) {
+			return
+		}
 	}
 
 	// global object
@@ -199,6 +203,71 @@ func tryMember(cb *gogen.CodeBuilder, lhs int, recv types.Object, ident *ast.Ide
 	}
 	cb.InternalStack().PopN(1)
 	return false
+}
+
+// tryProjectWorkClassMember resolves embedded project work classes while the
+// current class receiver type is still being initialized.
+func tryProjectWorkClassMember(ctx *blockCtx, recv *types.Var, ident *ast.Ident, flags int) bool {
+	if recv == nil || ctx.proj == nil {
+		return false
+	}
+	if flags&clIdentLHS != 0 && flags&clIdentSelectorExpr == 0 {
+		return false
+	}
+	name := ident.Name
+	if !ctx.proj.hasWorkClassType(name, workClassEmbedded) {
+		return false
+	}
+	gameClass := ctx.proj.getGameClass(ctx.pkgCtx)
+	if gameClass == "" {
+		return false
+	}
+	if !ctx.loadSymbol(name) {
+		return false
+	}
+	typeName, ok := ctx.pkg.Types.Scope().Lookup(name).(*types.TypeName)
+	if !ok {
+		return false
+	}
+	named, ok := typeName.Type().(*types.Named)
+	if !ok {
+		return false
+	}
+	recvExpr, ok := projectWorkClassRecvExpr(ctx, recv, gameClass)
+	if !ok {
+		return false
+	}
+	ptr := types.NewPointer(named)
+	if rec := ctx.recorder(); rec != nil {
+		fld := types.NewField(token.NoPos, ctx.pkg.Types, name, ptr, false)
+		rec.Member(ident, fld)
+	}
+	ctx.cb.InternalStack().Push(&gogen.Element{
+		Val: &target.SelectorExpr{
+			X:   recvExpr,
+			Sel: &target.Ident{Name: name},
+		},
+		Type: ptr,
+		Src:  ident,
+	})
+	return true
+}
+
+// projectWorkClassRecvExpr returns the receiver expression for selecting a
+// project work class member.
+func projectWorkClassRecvExpr(ctx *blockCtx, recv *types.Var, gameClass string) (target.Expr, bool) {
+	recvExpr := target.Expr(&target.Ident{Name: recv.Name()})
+	recvType := getTypeName(recv.Type())
+	if recvType == gameClass {
+		return recvExpr, true
+	}
+	if ctx.proj.isTest || !ctx.proj.hasWorkClassType(recvType, 0) {
+		return nil, false
+	}
+	return &target.SelectorExpr{
+		X:   recvExpr,
+		Sel: &target.Ident{Name: gameClass},
+	}, true
 }
 
 /*
