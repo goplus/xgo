@@ -135,7 +135,7 @@ func workClassFeatures(game gogen.Ref, works []*workClass) {
 				sig = t.Func.Type().(*types.Signature)
 			}
 		}
-		if n := len(works); n == 1 && sig.Variadic() {
+		if len(works) == 1 && sig.Variadic() {
 			// single work class
 			in := sig.Params()
 			last := in.At(in.Len() - 1)
