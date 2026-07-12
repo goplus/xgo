@@ -614,12 +614,12 @@ func buildURL(base string, params map[string]any) string {
     if params.len == 0 {
         return base
     }
-    
+
     queryParts := []
     for key, value in params {
         queryParts = append(queryParts, "${key}=${value}")
     }
-    
+
     return "${base}?${queryParts.join("&")}"
 }
 
@@ -634,12 +634,12 @@ echo url  // https://api.example.com/search?q=xgo&page=1&limit=20
 func buildReport(title string, items []string) string {
     separator := "=".repeat(50)
     header := "${separator}\n${title}\n${separator}"
-    
+
     itemList := []
     for i, item in items {
         itemList = append(itemList, "${i+1}. ${item}")
     }
-    
+
     return "${header}\n${itemList.join("\n")}"
 }
 
@@ -671,7 +671,7 @@ echo report
    for i := 0; i < 1000; i++ {
        result += "item${i},"
    }
-   
+
    // More efficient
    parts := []
    for i := 0; i < 1000; i++ {
@@ -684,7 +684,7 @@ echo report
    ```go
    // Less efficient
    message := "Hello, " + name + "! You are " + age.string + " years old."
-   
+
    // More efficient
    message := "Hello, ${name}! You are ${age} years old."
    ```

@@ -167,8 +167,8 @@ func New(query string) (*Query, error) {
 import "myproject/sql"
 
 query := sql`
-SELECT id, name, email 
-FROM users 
+SELECT id, name, email
+FROM users
 WHERE active = true
 `!
 ```

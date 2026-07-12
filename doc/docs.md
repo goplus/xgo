@@ -169,7 +169,7 @@ See https://tutorial.xgo.dev/hello-world for more details.
 
 ## Running a project folder with several files
 
-Suppose you have a folder with several .xgo files in it, and you want 
+Suppose you have a folder with several .xgo files in it, and you want
 to compile them all into one program. Just do: `xgo run .`.
 
 Passing parameters also works, so you can do:

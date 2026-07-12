@@ -22,7 +22,7 @@ Is it possible to minimize the complexity of engineering and present it in a low
 XGo's core design philosophy is to "enable everyone to become a builder of the world". This is reflected in three key design goals:
 
 - **For engineering**: working in the simplest language that can be mastered by children
-- **For STEM education**: studying an engineering language that can be used for work in the future  
+- **For STEM education**: studying an engineering language that can be used for work in the future
 - **For data science**: communicating with engineers in the same language
 
 ### Go: An Engineering Language for Systems Programming
@@ -33,7 +33,7 @@ Go's design focus is on engineering practices for systems programming, emphasizi
 
 ### XGo: Specific Domain Friendliness (SDF)
 
-XGo adopts a unique design philosophy: instead of creating Domain Specific Languages (DSL), it provides domain-friendly support. 
+XGo adopts a unique design philosophy: instead of creating Domain Specific Languages (DSL), it provides domain-friendly support.
 
 The core of this design philosophy is:
 - Don't define a language for specific domain

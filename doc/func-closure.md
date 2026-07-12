@@ -327,7 +327,7 @@ run                                        // uses default values
 1. **Parameter Position Requirements**
    - The keyword parameter must be an optional parameter (marked with `?`)
    - The keyword parameter must be the last parameter (if no variadic parameters), or second-to-last when variadic parameters are present
-   
+
 2. **Call Order Requirements**
    - When calling a function, keyword arguments must be placed after all normal parameters (including variadic parameters)
 
