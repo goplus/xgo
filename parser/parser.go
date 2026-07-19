@@ -92,8 +92,6 @@ type parser struct {
 	syncPos token.Pos // last synchronization position
 	syncCnt int       // number of parser.advance calls without progress
 
-	classVarDecl token.Pos // first top-level var declaration in a classfile
-
 	// Non-syntactic parser control
 	exprLev int  // < 0: in control clause, >= 0: in expression
 	inRHS   bool // if set, the parser is parsing a rhs expression
@@ -709,55 +707,47 @@ func (p *parser) parseIdent() *ast.Ident {
 	return &ast.Ident{NamePos: pos, Name: name}
 }
 
-func (p *parser) parseIdentEx() (*ast.Ident, bool) {
-	var posErr token.Pos
-	var ret string
-	if p.inClassFile() && p.tok == token.PERIOD {
-		posDot := p.pos
+func (p *parser) parseValueName(allowDot bool) (*ast.Ident, bool) {
+	if allowDot && p.tok == token.PERIOD {
+		dot := p.pos
 		p.next()
 		name := p.parseIdent()
-		ret = "." + name.Name
-		if posDot+1 == name.NamePos {
-			return &ast.Ident{NamePos: posDot, Name: ret}, true
-		}
-		posErr = name.NamePos
-	} else {
-		id := p.parseIdent()
-		if p.tok != token.PERIOD {
-			return id, false
-		}
-		posDot := p.pos
-		p.next()
-		name := p.parseIdent()
-		ret = id.Name + "." + name.Name
-		if id.End() == posDot {
-			if posDot+1 == name.NamePos {
-				return &ast.Ident{NamePos: id.NamePos, Name: ret}, true
-			}
-			posErr = name.NamePos
-		} else {
-			posErr = posDot
-		}
+		p.checkStaticValueNameSpacing(token.NoPos, dot, name.Pos())
+		name.NamePos = dot
+		name.Name = "." + name.Name
+		return name, true
 	}
-	const msg = "whitespace is not allowed in static member name"
-	p.error(posErr, msg)
-	return &ast.Ident{NamePos: posErr, Name: ret}, true
+	name := p.parseIdent()
+	if p.tok != token.PERIOD {
+		return name, false
+	}
+	dot := p.pos
+	p.next()
+	sel := p.parseIdent()
+	p.checkStaticValueNameSpacing(name.End(), dot, sel.Pos())
+	name.Name += "." + sel.Name
+	return name, true
 }
 
-func (p *parser) parseIdentList() (list []*ast.Ident, hasStatic bool) {
-	if p.trace {
-		defer un(trace(p, "IdentList"))
+func (p *parser) checkStaticValueNameSpacing(leftEnd, dot, right token.Pos) {
+	const msg = "whitespace is not allowed in static value name"
+	if leftEnd.IsValid() && leftEnd != dot {
+		p.error(dot, msg)
 	}
+	if right != dot+1 {
+		p.error(right, msg)
+	}
+}
 
-	idFirst, hasStatic := p.parseIdentEx()
-	list = append(list, idFirst)
+func (p *parser) parseValueNameList(allowDot bool) (list []*ast.Ident, hasStatic bool) {
+	name, static := p.parseValueName(allowDot)
+	list = append(list, name)
+	hasStatic = static
 	for p.tok == token.COMMA {
 		p.next()
-		idNext, isStatic := p.parseIdentEx()
-		if isStatic {
-			hasStatic = true
-		}
-		list = append(list, idNext)
+		name, static = p.parseValueName(allowDot)
+		list = append(list, name)
+		hasStatic = hasStatic || static
 	}
 	return
 }
@@ -3991,15 +3981,75 @@ func (p *parser) inClassFile() bool {
 	return p.mode&ParseXGoClass != 0
 }
 
-func typeFromIdentEx(id *ast.Ident, isStatic bool) ast.Expr {
-	if isStatic {
-		pos := strings.IndexByte(id.Name, '.')
-		return &ast.SelectorExpr{
-			X:   &ast.Ident{NamePos: id.NamePos, Name: id.Name[:pos]},
-			Sel: &ast.Ident{NamePos: id.NamePos + token.Pos(pos+1), Name: id.Name[pos+1:]},
+func (p *parser) parseClassValueSpec() (idents []*ast.Ident, typ ast.Expr, tag *ast.BasicLit, values []ast.Expr, hasStatic bool) {
+	var starPos token.Pos
+	if p.tok == token.MUL {
+		starPos = p.pos
+		p.next()
+	}
+	if p.tok == token.PERIOD && starPos == token.NoPos {
+		idents, hasStatic = p.parseValueNameList(true)
+		typ = p.tryType()
+		if p.tok == token.ASSIGN {
+			p.next()
+			values = p.parseRHSList()
+		}
+	} else {
+		ident := p.parseIdent()
+		if p.tok == token.PERIOD {
+			dot := p.pos
+			p.next()
+			selOK := p.tok == token.IDENT
+			sel := p.parseIdent()
+			if selOK && starPos == token.NoPos &&
+				p.tok != token.SEMICOLON && p.tok != token.STRING && p.tok != token.RPAREN {
+				p.checkStaticValueNameSpacing(ident.End(), dot, sel.Pos())
+				ident.Name += "." + sel.Name
+				idents = append(idents, ident)
+				hasStatic = true
+				for p.tok == token.COMMA {
+					p.next()
+					name, static := p.parseValueName(true)
+					idents = append(idents, name)
+					hasStatic = hasStatic || static
+				}
+				typ = p.tryType()
+				if p.tok == token.ASSIGN {
+					p.next()
+					values = p.parseRHSList()
+				}
+			} else {
+				typ = &ast.SelectorExpr{X: ident, Sel: sel}
+				if starPos != token.NoPos {
+					typ = &ast.StarExpr{Star: starPos, X: typ}
+				}
+			}
+		} else if starPos != token.NoPos {
+			typ = &ast.StarExpr{Star: starPos, X: ident}
+		} else {
+			idents = append(idents, ident)
+			for p.tok == token.COMMA {
+				p.next()
+				name, static := p.parseValueName(true)
+				idents = append(idents, name)
+				hasStatic = hasStatic || static
+			}
+			typ = p.tryType()
+			if p.tok == token.ASSIGN {
+				p.next()
+				values = p.parseRHSList()
+			} else if len(idents) == 1 && typ == nil {
+				typ = ident
+				idents = nil
+			}
 		}
 	}
-	return id
+	if p.tok == token.STRING {
+		tag = &ast.BasicLit{ValuePos: p.pos, Kind: p.tok, Value: p.lit}
+		p.next()
+	}
+	p.expect(token.SEMICOLON)
+	return
 }
 
 func (p *parser) parseValueSpec(doc *ast.CommentGroup, keyword token.Token, iota int) ast.Spec {
@@ -4009,51 +4059,14 @@ func (p *parser) parseValueSpec(doc *ast.CommentGroup, keyword token.Token, iota
 
 	pos := p.pos
 	var idents []*ast.Ident
-	var hasStatic bool
 	var typ ast.Expr
 	var tag *ast.BasicLit
 	var values []ast.Expr
+	var hasStatic bool
 	if p.inClassFile() && p.topScope == p.pkgScope && keyword == token.VAR {
-		var idFirst *ast.Ident
-		var starPos token.Pos
-		if p.tok == token.MUL {
-			starPos = p.pos
-			p.next()
-		}
-		idFirst, hasStatic = p.parseIdentEx()
-		if starPos != token.NoPos {
-			typ = &ast.StarExpr{
-				Star: starPos,
-				X:    typeFromIdentEx(idFirst, hasStatic),
-			}
-			hasStatic = false
-		} else {
-			idents = append(idents, idFirst)
-			for p.tok == token.COMMA {
-				p.next()
-				idNext, isStatic := p.parseIdentEx()
-				if isStatic {
-					hasStatic = true
-				}
-				idents = append(idents, idNext)
-			}
-			typ = p.tryType()
-			if p.tok == token.ASSIGN {
-				p.next()
-				values = p.parseRHSList()
-			} else if len(idents) == 1 && typ == nil {
-				typ = typeFromIdentEx(idFirst, hasStatic)
-				hasStatic = false
-				idents = nil
-			}
-		}
-		if p.tok == token.STRING {
-			tag = &ast.BasicLit{ValuePos: p.pos, Kind: p.tok, Value: p.lit}
-			p.next()
-		}
-		p.expect(token.SEMICOLON)
+		idents, typ, tag, values, hasStatic = p.parseClassValueSpec()
 	} else {
-		idents, hasStatic = p.parseIdentList()
+		idents, hasStatic = p.parseValueNameList(p.inClassFile())
 		typ = p.tryType()
 		// always permit optional initialization for more tolerant parsing
 		if p.tok == token.ASSIGN {
@@ -4160,13 +4173,6 @@ func (p *parser) parseGenDecl(keyword token.Token, f parseSpecFunction) *ast.Gen
 	}
 	doc := p.leadComment
 	pos := p.expect(keyword)
-	if keyword == token.VAR && p.inClassFile() && p.topScope == p.pkgScope {
-		if p.classVarDecl.IsValid() {
-			p.error(pos, "multiple top-level var declarations in classfile")
-		} else {
-			p.classVarDecl = pos
-		}
-	}
 	var lparen, rparen token.Pos
 	var list []ast.Spec
 	if p.tok == token.LPAREN {
