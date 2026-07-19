@@ -1,0 +1,2 @@
+var others = [Bar]
+return "Foo"
