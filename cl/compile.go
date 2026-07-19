@@ -505,6 +505,14 @@ type blockCtx struct {
 	classRecv *ast.FieldList // available when isClass
 	baseClass types.Object   // available when isClass
 
+	// prelimStruct returns the fields (base class + embedded classes + fields
+	// defined so far) of the class type that is currently being initialized.
+	// It is available only while compiling class field initializers, and is
+	// used to complete the incomplete receiver type on demand so that members
+	// promoted through the base/embedded classes (eg. an embedded work class
+	// name that resolves to a project member value) can be resolved.
+	prelimStruct func() *types.Struct
+
 	fileScope *types.Scope // available when isXGoFile
 	rec       *goxRecorder
 
@@ -1034,6 +1042,18 @@ func preloadXGoFile(p *gogen.Package, ctx *blockCtx, file string, f *ast.File, c
 						var spec *ast.ValueSpec
 						recvType := types.NewPointer(decl.Type())
 						recv := types.NewParam(token.NoPos, pkg, "this", recvType)
+						// A class field initializer may reference members promoted
+						// through the base/embedded classes (eg. an embedded work
+						// class name resolves to a project member value like
+						// `this.<GameClass>.Radish`). While the field initializers
+						// are being compiled, this class type is still incomplete,
+						// so a member lookup on the receiver would fail and fall
+						// back to the global type name. Expose the fields known so
+						// far so that compileIdent can complete the receiver type on
+						// demand when (and only when) such a member lookup happens.
+						ctx.prelimStruct = func() *types.Struct {
+							return types.NewStruct(flds, tags)
+						}
 						defs := p.ClassDefsStart(recv, func(idx int, name string, typ types.Type, embed bool) {
 							var id *ast.Ident
 							if embed {
@@ -1070,6 +1090,7 @@ func preloadXGoFile(p *gogen.Package, ctx *blockCtx, file string, f *ast.File, c
 							defs.NewAndInit(initExpr, pos, fldType, names...)
 						}
 						defs.End()
+						ctx.prelimStruct = nil
 					}
 					decl.InitType(p, types.NewStruct(flds, tags))
 				}

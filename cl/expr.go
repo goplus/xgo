@@ -113,9 +113,22 @@ func compileIdent(ctx *blockCtx, lhs int, ident *ast.Ident, flags int) (pkg goge
 	}
 
 	if ctx.isClass { // in an XGo class file
-		if recv = classRecv(cb); recv != nil &&
-			tryMember(cb, lhs, recv, ident, flags) {
-			return
+		if recv = classRecv(cb); recv != nil {
+			if tryMember(cb, lhs, recv, ident, flags) {
+				return
+			}
+			// While compiling class field initializers, the receiver type is
+			// still incomplete, so the member lookup above cannot see members
+			// promoted through the base/embedded classes (eg. an embedded work
+			// class name that should resolve to a project member value like
+			// `this.<GameClass>.Radish`). Complete the receiver type on demand
+			// with the fields known so far and retry the member lookup, so such
+			// names resolve to the promoted member value instead of falling back
+			// to the global type name below.
+			if ctx.prelimStruct != nil && completeRecvType(recv, ctx.prelimStruct) &&
+				tryMember(cb, lhs, recv, ident, flags) {
+				return
+			}
 		}
 	}
 
@@ -258,6 +271,25 @@ func classRecv(cb *gogen.CodeBuilder) *types.Var {
 		return sig.Recv()
 	}
 	return nil
+}
+
+// completeRecvType completes the (still incomplete) receiver named type with a
+// preliminary struct (base class + embedded classes + fields defined so far),
+// so that members promoted through the base/embedded classes can be resolved
+// while class field initializers are being compiled. It returns true if the
+// receiver type was incomplete and got completed. The final underlying is set
+// later by TypeDecl.InitType; SetUnderlying may be called again with the full
+// field set at that point.
+func completeRecvType(recv *types.Var, prelim func() *types.Struct) bool {
+	t := recv.Type()
+	if p, ok := t.(*types.Pointer); ok {
+		t = p.Elem()
+	}
+	if named, ok := t.(*types.Named); ok && named.Underlying() == nil {
+		named.SetUnderlying(prelim())
+		return true
+	}
+	return false
 }
 
 func xgoOp(cb *gogen.CodeBuilder, recv *types.Var, op1, op2 string, src ...ast.Node) error {
