@@ -826,6 +826,19 @@ func (p *fnType) arg(i int, ellipsis bool) types.Type {
 	return nil
 }
 
+// argVar returns the *types.Var of the i-th positional (non-variadic) parameter,
+// or nil when the argument maps to the variadic tail. It is used to inspect the
+// declaration-side parameter name for metadata such as the autoclosure prefix.
+func (p *fnType) argVar(i int) *types.Var {
+	if p.params == nil {
+		return nil
+	}
+	if i+p.base < p.size {
+		return p.params.At(i + p.base)
+	}
+	return nil
+}
+
 func (p *fnType) init(base int, t *types.Signature, typeAsParams bool) {
 	p.base = base
 	p.sig = t
@@ -1256,6 +1269,15 @@ func compileCallArgs(ctx *blockCtx, lhs int, pfn *gogen.Element, fn *fnType, v *
 	var needInferFunc bool
 	for i, arg := range vargs {
 		t := fn.arg(i, ellipsis)
+		// An autoclosure parameter accepts a source-level expression of type T
+		// (its `func() T` result), not a callback. All argument forms, including
+		// explicit lambdas, are type-checked against T and wrapped into `func() T`.
+		if param := fn.argVar(i); isAutoclosureParam(param) {
+			if err = compileAutoclosureArg(ctx, arg, param); err != nil {
+				return
+			}
+			continue
+		}
 		switch expr := arg.(type) {
 		case *ast.LambdaExpr:
 			if fn.typeparam {
@@ -1398,6 +1420,127 @@ retry:
 		goto retry
 	}
 	return true
+}
+
+// xgoAutoclosurePrefix is the Go-facing parameter-name prefix that marks a
+// parameter as an autoclosure. An annotated parameter has an underlying type of
+// `func() T` (no parameters, not variadic, exactly one result). At a call site
+// the source-level argument is type-checked as `T` and the complete argument
+// expression is wrapped into `func() T`, delaying its evaluation.
+//
+// See https://github.com/goplus/xgo/issues/2818.
+const xgoAutoclosurePrefix = "__xgo_autoclosure_"
+
+// isAutoclosureParam reports whether param is annotated as an autoclosure
+// parameter via the xgoAutoclosurePrefix name prefix.
+func isAutoclosureParam(param *types.Var) bool {
+	return param != nil && strings.HasPrefix(param.Name(), xgoAutoclosurePrefix)
+}
+
+// autoclosureResult validates that typ is a valid autoclosure parameter type
+// (an underlying zero-argument, non-variadic function with exactly one result)
+// and returns its single result type T. ok is false when typ is not a valid
+// autoclosure parameter type.
+func autoclosureResult(typ types.Type) (t types.Type, ok bool) {
+retry:
+	switch u := typ.(type) {
+	case *types.Signature:
+		if u.Params().Len() != 0 || u.Variadic() || u.Results().Len() != 1 {
+			return nil, false
+		}
+		return u.Results().At(0).Type(), true
+	case *types.Named:
+		typ = u.Underlying()
+		goto retry
+	}
+	return nil, false
+}
+
+// compileAutoclosureArg compiles an argument for an autoclosure parameter.
+//
+// The parameter must have an underlying type of `func() T`. The complete
+// argument expression is type-checked as `T` and wrapped into a `func() T`
+// closure, so its evaluation is deferred until the receiving API calls the
+// closure. A function value or explicit lambda is accepted only when it is
+// assignable to `T` itself (for example when `T` is a function type); otherwise
+// the argument is rejected, which is the point of the annotation.
+func compileAutoclosureArg(ctx *blockCtx, arg ast.Expr, param *types.Var) error {
+	ret, ok := autoclosureResult(param.Type())
+	if !ok {
+		name := strings.TrimPrefix(param.Name(), xgoAutoclosurePrefix)
+		return ctx.newCodeErrorf(arg.Pos(), arg.End(),
+			"autoclosure parameter %s must have an underlying type of func() T (no parameters, not variadic, exactly one result), got %v",
+			name, param.Type())
+	}
+	cb := ctx.cb
+	// An explicit lambda is a value of the result type T, so it is accepted only
+	// when T is a function type it matches. checkLambdaFuncType reports a clear
+	// "cannot use lambda literal as type T" error otherwise.
+	switch expr := arg.(type) {
+	case *ast.LambdaExpr, *ast.LambdaExpr2:
+		sig, err := checkLambdaFuncType(ctx, arg, ret, clLambaArgument, nil)
+		if err != nil {
+			return err
+		}
+		result := types.NewParam(gotoken.NoPos, ctx.pkg.Types, "", ret)
+		cb.NewClosure(nil, types.NewTuple(result), false).BodyStart(ctx.pkg)
+		compileLambda(ctx, expr, sig)
+		cb.Return(1, arg)
+		cb.End(arg)
+		return nil
+	}
+	if containsTypeParam(ret) {
+		// The result type T depends on type inference (e.g. `func() T` where T is
+		// a type parameter). Wrap using the default expression type so that
+		// gogen.InferFunc can resolve T from the argument, matching the existing
+		// implicit expression-to-closure conversion.
+		compileExpr(ctx, 1, arg)
+		if nonClosure(cb.Get(-1).Type) {
+			cb.ConvertToClosure()
+		}
+		return nil
+	}
+	// The result type T is concrete: build a `func() T` closure and coerce the
+	// argument expression to T via the return statement. This type-checks the
+	// argument as T and rejects function or method values that are not
+	// assignable to T.
+	result := types.NewParam(gotoken.NoPos, ctx.pkg.Types, "", ret)
+	cb.NewClosure(nil, types.NewTuple(result), false).BodyStart(ctx.pkg)
+	compileExpr(ctx, 1, arg)
+	cb.Return(1, arg)
+	cb.End(arg)
+	return nil
+}
+
+// containsTypeParam reports whether typ contains a type parameter, meaning its
+// concrete form depends on type inference at the call site.
+func containsTypeParam(typ types.Type) bool {
+	switch t := typ.(type) {
+	case *types.TypeParam:
+		return true
+	case *types.Pointer:
+		return containsTypeParam(t.Elem())
+	case *types.Slice:
+		return containsTypeParam(t.Elem())
+	case *types.Array:
+		return containsTypeParam(t.Elem())
+	case *types.Chan:
+		return containsTypeParam(t.Elem())
+	case *types.Map:
+		return containsTypeParam(t.Key()) || containsTypeParam(t.Elem())
+	case *types.Signature:
+		return tupleHasTypeParam(t.Params()) || tupleHasTypeParam(t.Results())
+	}
+	return false
+}
+
+func tupleHasTypeParam(t *types.Tuple) bool {
+	for i, n := 0, t.Len(); i < n; i++ {
+		if containsTypeParam(t.At(i).Type()) {
+			return true
+		}
+	}
+	return false
 }
 
 func compileLambda(ctx *blockCtx, lambda ast.Expr, sig *types.Signature) {

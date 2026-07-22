@@ -1231,3 +1231,51 @@ var c Client
 c.Complete "hello", maxTokens = 1024
 `)
 }
+
+// TestErrAutoclosure covers diagnostics for declaration-side autoclosure
+// parameters. See https://github.com/goplus/xgo/issues/2818.
+func TestErrAutoclosure(t *testing.T) {
+	// An autoclosure parameter whose result count is not exactly one is invalid.
+	codeErrorTest(t, `bar.xgo:6:6: autoclosure parameter x must have an underlying type of func() T (no parameters, not variadic, exactly one result), got func() (int, error)`, `
+func bad(__xgo_autoclosure_x func() (int, error)) {
+}
+
+func demo() {
+	bad 1
+}
+`)
+
+	// A zero-result func() parameter is invalid: it represents behavior, not a
+	// deferred value.
+	codeErrorTest(t, `bar.xgo:6:6: autoclosure parameter x must have an underlying type of func() T (no parameters, not variadic, exactly one result), got func()`, `
+func bad(__xgo_autoclosure_x func()) {
+}
+
+func demo() {
+	bad 1
+}
+`)
+
+	// A bare function value is rejected: the source-level type is T (bool), not
+	// func() bool.
+	codeErrorTest(t, `bar.xgo:7:12: cannot use predicate (type func() bool) as type bool in return argument`, `
+func waitUntil(__xgo_autoclosure_condition func() bool) {
+}
+
+func demo() {
+	predicate := func() bool { return true }
+	waitUntil predicate
+}
+`)
+
+	// An explicit lambda is rejected when T is not a function type it matches.
+	codeErrorTest(t, `bar.xgo:7:12: cannot use lambda literal as type bool in argument`, `
+func waitUntil(__xgo_autoclosure_condition func() bool) {
+}
+
+func demo() {
+	predicate := func() bool { return true }
+	waitUntil => predicate()
+}
+`)
+}
