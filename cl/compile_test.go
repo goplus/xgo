@@ -4229,3 +4229,159 @@ func main() {
 }
 `)
 }
+
+// TestAutoclosure covers declaration-side autoclosure semantics for
+// `func() T` parameters annotated with the __xgo_autoclosure_ prefix.
+// See https://github.com/goplus/xgo/issues/2818.
+func TestAutoclosure(t *testing.T) {
+	// A boolean-result autoclosure parameter defers the argument expression.
+	gopClTest(t, `
+func waitUntil(__xgo_autoclosure_condition func() bool) {
+}
+
+func demo() {
+	count := 3
+	waitUntil count == 0
+}
+`, `package main
+
+func waitUntil(__xgo_autoclosure_condition func() bool) {
+}
+func demo() {
+	count := 3
+	waitUntil(func() bool {
+		return count == 0
+	})
+}
+`)
+
+	// A non-boolean result and a named-type result are both wrapped as func() T.
+	gopClTest(t, `
+func debug(__xgo_autoclosure_message func() string) {
+}
+
+type Level int
+
+func withLevel(__xgo_autoclosure_lv func() Level) {
+}
+
+func demo() {
+	n := 1
+	debug "n=" + "1"
+	withLevel Level(n)
+}
+`, `package main
+
+type Level int
+
+func debug(__xgo_autoclosure_message func() string) {
+}
+func withLevel(__xgo_autoclosure_lv func() Level) {
+}
+func demo() {
+	n := 1
+	debug(func() string {
+		return "n=" + "1"
+	})
+	withLevel(func() Level {
+		return Level(n)
+	})
+}
+`)
+
+	// A method value invoked with parentheses is a valid, deferred expression for
+	// an annotated parameter; an unannotated func() bool parameter uses ordinary
+	// function-type checking, accepting a function value or an explicit lambda
+	// (but not a bare expression of type bool; see TestErrAutoclosure).
+	gopClTest(t, `
+func waitUntil(__xgo_autoclosure_condition func() bool) {
+}
+
+func observe(cond func() bool) {
+}
+
+func demo() {
+	predicate := func() bool { return true }
+	waitUntil predicate()
+	observe predicate
+	observe => predicate()
+}
+`, `package main
+
+func waitUntil(__xgo_autoclosure_condition func() bool) {
+}
+func observe(cond func() bool) {
+}
+func demo() {
+	predicate := func() bool {
+		return true
+	}
+	waitUntil(func() bool {
+		return predicate()
+	})
+	observe(predicate)
+	observe(func() bool {
+		return predicate()
+	})
+}
+`)
+}
+
+// TestAutoclosureImported covers autoclosure parameters declared on imported Go
+// functions and methods, including generic result types where T is inferred
+// from the argument, and function-typed results T where an explicit lambda is a
+// valid value of T.
+func TestAutoclosureImported(t *testing.T) {
+	// Generic result type T is inferred from the argument; a method value with
+	// an autoclosure parameter is recognized across the declaration boundary.
+	gopMixedClTest(t, "main", `package main
+
+func Lazy[T any](__xgo_autoclosure_v func() T) {
+}
+
+type Widget struct{}
+
+func (w *Widget) Cond(__xgo_autoclosure_c func() bool) {
+}
+`, `
+func demo() {
+	Lazy 1 + 2
+	var w Widget
+	w.cond 3 == 4
+}
+`, `package main
+
+func demo() {
+	Lazy(func() int {
+		return 1 + 2
+	})
+	var w Widget
+	w.Cond(func() bool {
+		return 3 == 4
+	})
+}
+`)
+
+	// When T is a function type, an explicit lambda is a valid value of T and is
+	// wrapped into func() T.
+	gopMixedClTest(t, "main", `package main
+
+type Handler func(int) bool
+
+func onCheck(__xgo_autoclosure_h func() Handler) {
+}
+`, `
+func demo() {
+	onCheck x => x > 0
+}
+`, `package main
+
+func demo() {
+	onCheck(func() Handler {
+		return func(x int) bool {
+			return x > 0
+		}
+	})
+}
+`)
+}

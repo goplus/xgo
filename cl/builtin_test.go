@@ -54,6 +54,82 @@ func TestNonClosure(t *testing.T) {
 	}
 }
 
+func TestIsAutoclosureParam(t *testing.T) {
+	sig := types.NewSignatureType(nil, nil, nil, nil, types.NewTuple(
+		types.NewParam(0, nil, "", types.Typ[types.Bool])), false)
+	if isAutoclosureParam(nil) {
+		t.Fatal("isAutoclosureParam(nil)")
+	}
+	if isAutoclosureParam(types.NewParam(0, nil, "condition", sig)) {
+		t.Fatal("isAutoclosureParam: unprefixed name should not be an autoclosure")
+	}
+	if !isAutoclosureParam(types.NewParam(0, nil, xgoAutoclosurePrefix+"condition", sig)) {
+		t.Fatal("isAutoclosureParam: prefixed name should be an autoclosure")
+	}
+}
+
+func TestAutoclosureResult(t *testing.T) {
+	newSig := func(params, results *types.Tuple, variadic bool) *types.Signature {
+		return types.NewSignatureType(nil, nil, nil, params, results, variadic)
+	}
+	boolResult := types.NewTuple(types.NewParam(0, nil, "", types.Typ[types.Bool]))
+
+	// valid: func() bool
+	if ret, ok := autoclosureResult(newSig(nil, boolResult, false)); !ok || ret != types.Typ[types.Bool] {
+		t.Fatal("autoclosureResult: func() bool should be valid with result bool")
+	}
+	// valid: named type whose underlying is func() bool
+	tn := types.NewTypeName(0, nil, "Cond", nil)
+	named := types.NewNamed(tn, newSig(nil, boolResult, false), nil)
+	if ret, ok := autoclosureResult(named); !ok || ret != types.Typ[types.Bool] {
+		t.Fatal("autoclosureResult: named func() bool should be valid")
+	}
+	// invalid: func() (no result)
+	if _, ok := autoclosureResult(newSig(nil, nil, false)); ok {
+		t.Fatal("autoclosureResult: func() should be invalid")
+	}
+	// invalid: func(int) bool (has parameters)
+	intParam := types.NewTuple(types.NewParam(0, nil, "", types.Typ[types.Int]))
+	if _, ok := autoclosureResult(newSig(intParam, boolResult, false)); ok {
+		t.Fatal("autoclosureResult: func(int) bool should be invalid")
+	}
+	// invalid: func() (int, error) (multiple results)
+	twoResults := types.NewTuple(
+		types.NewParam(0, nil, "", types.Typ[types.Int]),
+		types.NewParam(0, nil, "", types.Typ[types.Int]))
+	if _, ok := autoclosureResult(newSig(nil, twoResults, false)); ok {
+		t.Fatal("autoclosureResult: func() (int, int) should be invalid")
+	}
+	// invalid: not a function type
+	if _, ok := autoclosureResult(types.Typ[types.Bool]); ok {
+		t.Fatal("autoclosureResult: bool should be invalid")
+	}
+}
+
+func TestContainsTypeParam(t *testing.T) {
+	tp := types.NewTypeParam(types.NewTypeName(0, nil, "T", nil), types.NewInterfaceType(nil, nil))
+	if containsTypeParam(types.Typ[types.Int]) {
+		t.Fatal("containsTypeParam: int should not contain a type param")
+	}
+	if !containsTypeParam(tp) {
+		t.Fatal("containsTypeParam: type param itself")
+	}
+	if !containsTypeParam(types.NewSlice(tp)) {
+		t.Fatal("containsTypeParam: []T")
+	}
+	if !containsTypeParam(types.NewPointer(tp)) {
+		t.Fatal("containsTypeParam: *T")
+	}
+	if !containsTypeParam(types.NewMap(types.Typ[types.String], tp)) {
+		t.Fatal("containsTypeParam: map[string]T")
+	}
+	sig := types.NewSignatureType(nil, nil, nil, nil,
+		types.NewTuple(types.NewParam(0, nil, "", tp)), false)
+	if !containsTypeParam(sig) {
+		t.Fatal("containsTypeParam: func() T")
+	}
+}
+
 func TestConvKwargs1(t *testing.T) {
 	ctx := &blockCtx{
 		pkgCtx: &pkgCtx{},

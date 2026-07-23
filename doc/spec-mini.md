@@ -1328,6 +1328,70 @@ process                                     // all parameters optional
 - The keyword parameter must be the last parameter (without variadic) or second-to-last (with variadic).
 - When calling a function, keyword arguments must be placed after all normal parameters (including variadic parameters). This might seem inconsistent with the order of keyword and variadic parameters in a function declaration, but that's the rule.
 
+#### Autoclosure parameters
+
+A parameter whose underlying type is a zero-argument function with exactly one result, `func() T`, may be declared as an _autoclosure_ parameter. An autoclosure parameter makes the source-level calling contract explicit: the caller provides an expression of type `T`, while the implementation continues to receive a `func() T`. The compiler delays evaluation by wrapping the complete argument expression in a closure.
+
+The Go-facing encoding is a parameter-name prefix, `__xgo_autoclosure_`, following the same convention used for optional parameters. The source-facing parameter name excludes the prefix.
+
+```go
+func waitUntil(__xgo_autoclosure_condition func() bool) {
+	// condition is a func() bool
+}
+```
+
+A call passes an expression of type `T`:
+
+```go
+count := 3
+waitUntil count == 0
+```
+
+is lowered to:
+
+```go
+waitUntil(func() bool {
+	return count == 0
+})
+```
+
+The argument expression is not evaluated before the call. The generated closure uses normal closure capture, does not memoize its result, and may be called zero, once, or many times, depending on the receiving API's contract.
+
+An autoclosure parameter must have an underlying function type that has no parameters, is not variadic, and has exactly one result `T`. The result type `T` may be any type, including a named type, a function type, or, for imported generic functions, a type parameter inferred from the argument. The following parameter types are not valid autoclosure parameters:
+
+```go
+func()               // zero results
+func(int) bool       // has parameters
+func() (T, error)    // multiple results
+```
+
+Because the source-level type is `T` and not `func() T`, a bare function value or an explicit lambda is rejected unless it is assignable to `T` itself (which naturally applies when `T` is a function type):
+
+```go
+predicate := func() bool { return true }
+
+waitUntil predicate()    // valid and deferred
+waitUntil predicate      // error: func() bool is not bool
+waitUntil => predicate() // error: func() bool is not bool
+```
+
+This distinguishes an intentional deferred-value API from an ordinary callback API, and lets the compiler diagnose an accidental omission of `()`.
+
+Implicit expression-to-closure conversion is performed only for annotated autoclosure parameters. An unannotated parameter of type `func() T` uses ordinary function-type checking: the caller must provide a compatible function value or an explicit lambda, not an expression of type `T`.
+
+```go
+func observe(cond func() bool) {
+}
+```
+
+```go
+predicate := func() bool { return true }
+
+observe predicate        // valid
+observe => predicate()   // valid
+observe predicate()      // error: bool is not func() bool
+```
+
 
 ### Built-in functions
 

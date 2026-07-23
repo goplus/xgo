@@ -2,8 +2,8 @@ package main
 
 import "fmt"
 
-func RepeatUntil(cond func() bool, body func()) {
-	for !cond() {
+func RepeatUntil(__xgo_autoclosure_cond func() bool, body func()) {
+	for !__xgo_autoclosure_cond() {
 		body()
 	}
 }
