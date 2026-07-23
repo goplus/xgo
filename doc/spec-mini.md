@@ -1375,7 +1375,22 @@ waitUntil predicate      // error: func() bool is not bool
 waitUntil => predicate() // error: func() bool is not bool
 ```
 
-This distinguishes an intentional deferred-value API from an ordinary callback API, and lets the compiler diagnose an accidental omission of `()`. Unannotated zero-argument function parameters retain their existing behavior of accepting either a function value or an implicitly wrapped expression.
+This distinguishes an intentional deferred-value API from an ordinary callback API, and lets the compiler diagnose an accidental omission of `()`.
+
+Implicit expression-to-closure conversion is performed only for annotated autoclosure parameters. An unannotated parameter of type `func() T` uses ordinary function-type checking: the caller must provide a compatible function value or an explicit lambda, not an expression of type `T`.
+
+```go
+func observe(cond func() bool) {
+}
+```
+
+```go
+predicate := func() bool { return true }
+
+observe predicate        // valid
+observe => predicate()   // valid
+observe predicate()      // error: bool is not func() bool
+```
 
 
 ### Built-in functions

@@ -4289,27 +4289,28 @@ func demo() {
 }
 `)
 
-	// A method value invoked with parentheses is a valid, deferred expression;
-	// an unannotated func() bool parameter retains its current behavior of
-	// accepting a bare function value or an implicitly wrapped expression.
+	// A method value invoked with parentheses is a valid, deferred expression for
+	// an annotated parameter; an unannotated func() bool parameter uses ordinary
+	// function-type checking, accepting a function value or an explicit lambda
+	// (but not a bare expression of type bool; see TestErrAutoclosure).
 	gopClTest(t, `
 func waitUntil(__xgo_autoclosure_condition func() bool) {
 }
 
-func classic(cond func() bool) {
+func observe(cond func() bool) {
 }
 
 func demo() {
 	predicate := func() bool { return true }
 	waitUntil predicate()
-	classic predicate
-	classic true
+	observe predicate
+	observe => predicate()
 }
 `, `package main
 
 func waitUntil(__xgo_autoclosure_condition func() bool) {
 }
-func classic(cond func() bool) {
+func observe(cond func() bool) {
 }
 func demo() {
 	predicate := func() bool {
@@ -4318,9 +4319,9 @@ func demo() {
 	waitUntil(func() bool {
 		return predicate()
 	})
-	classic(predicate)
-	classic(func() bool {
-		return true
+	observe(predicate)
+	observe(func() bool {
+		return predicate()
 	})
 }
 `)

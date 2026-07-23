@@ -1278,4 +1278,17 @@ func demo() {
 	waitUntil => predicate()
 }
 `)
+
+	// An unannotated func() T parameter uses ordinary function-type checking:
+	// a value expression of type T is rejected (implicit expression-to-closure
+	// conversion no longer applies to unannotated parameters).
+	codeErrorTest(t, `bar.xgo:7:10: cannot use predicate() (type bool) as type func() bool in argument to observe predicate()`, `
+func observe(cond func() bool) {
+}
+
+func demo() {
+	predicate := func() bool { return true }
+	observe predicate()
+}
+`)
 }

@@ -1336,12 +1336,11 @@ func compileCallArgs(ctx *blockCtx, lhs int, pfn *gogen.Element, fn *fnType, v *
 		case *ast.NumberUnitLit:
 			compileNumberUnitLit(ctx, expr, t)
 		default:
+			// Implicit expression-to-closure conversion is performed only for
+			// annotated autoclosure parameters (handled above). An unannotated
+			// parameter uses ordinary function-type checking, so the argument is
+			// compiled as-is. See https://github.com/goplus/xgo/issues/2818.
 			compileExpr(ctx, 1, arg)
-			if sigParamLen(t) == 0 {
-				if nonClosure(cb.Get(-1).Type) {
-					cb.ConvertToClosure()
-				}
-			}
 		}
 	}
 	if needInferFunc {
@@ -1392,18 +1391,6 @@ retry:
 		to = " to " + ctx.LoadExpr(toNode)
 	}
 	return nil, ctx.newCodeErrorf(lambda.Pos(), lambda.End(), "cannot use lambda literal as type %v in %v%v", ftyp, flag, to)
-}
-
-func sigParamLen(typ types.Type) int {
-retry:
-	switch t := typ.(type) {
-	case *types.Signature:
-		return t.Params().Len()
-	case *types.Named:
-		typ = t.Underlying()
-		goto retry
-	}
-	return -1
 }
 
 func nonClosure(typ types.Type) bool {
