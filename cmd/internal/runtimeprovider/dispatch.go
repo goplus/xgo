@@ -52,11 +52,7 @@ func TryRun(ctx context.Context, cwd string, target xgoprojs.Proj, flags, appArg
 	}
 	boundary := beginRuntimeSignalBoundary(ctx)
 	status, err := resolver.Run(boundary.Context(), rt, appArgs, streams)
-	status, err = boundary.Finish(status, err)
-	if err != nil {
-		return DispatchResult{}, err
-	}
-	return DispatchResult{Handled: true, Status: status}, nil
+	return finishDispatch(boundary, DispatchResult{}, status, err)
 }
 
 // TryBuild resolves and, when matched, builds one runtime target. It never
@@ -75,11 +71,7 @@ func TryBuild(ctx context.Context, cwd string, target xgoprojs.Proj, flags []str
 	}
 	boundary := beginRuntimeSignalBoundary(ctx)
 	status, final, err := resolver.Build(boundary.Context(), rt, output, streams)
-	status, err = boundary.Finish(status, err)
-	if err != nil {
-		return DispatchResult{}, err
-	}
-	return DispatchResult{Handled: true, Status: status, Output: final}, nil
+	return finishDispatch(boundary, DispatchResult{Output: final}, status, err)
 }
 
 // TryInstall resolves every target before starting a provider. A request with
@@ -117,11 +109,17 @@ func TryInstall(ctx context.Context, cwd string, targets []xgoprojs.Proj, flags 
 	}
 	boundary := beginRuntimeSignalBoundary(ctx)
 	status, final, err := resolver.Install(boundary.Context(), runtimes[0], streams)
+	return finishDispatch(boundary, DispatchResult{Output: final}, status, err)
+}
+
+func finishDispatch(boundary *runtimeSignalBoundary, result DispatchResult, status ProcessStatus, err error) (DispatchResult, error) {
 	status, err = boundary.Finish(status, err)
 	if err != nil {
 		return DispatchResult{}, err
 	}
-	return DispatchResult{Handled: true, Status: status, Output: final}, nil
+	result.Handled = true
+	result.Status = status
+	return result, nil
 }
 
 func newDispatchResolver(ctx context.Context, cwd string, flags []string) (*Resolver, context.Context, error) {

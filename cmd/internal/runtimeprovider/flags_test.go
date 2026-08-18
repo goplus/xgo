@@ -82,6 +82,23 @@ func TestParseRuntimeFlags(t *testing.T) {
 	}
 }
 
+func TestBuildPolicyFlagForms(t *testing.T) {
+	policy := BuildPolicy{
+		Flags:    []string{"-trimpath=true"},
+		Verbose:  true,
+		Trace:    true,
+		KeepWork: true,
+	}
+	wantGo := []string{"-v", "-x", "-work", "-trimpath=true"}
+	wantProtocol := []string{"-v=true", "-x=true", "-work=true", "-trimpath=true"}
+	if got := policy.goBuildFlags(); !reflect.DeepEqual(got, wantGo) {
+		t.Fatalf("go build flags = %#v, want %#v", got, wantGo)
+	}
+	if got := policy.protocolFlags(); !reflect.DeepEqual(got, wantProtocol) {
+		t.Fatalf("protocol flags = %#v, want %#v", got, wantProtocol)
+	}
+}
+
 func TestParseRuntimeFlagsRejected(t *testing.T) {
 	for _, flag := range []string{"-n=true", "-tags=foo", "-buildmode=pie", "-buildvcs=true", "-trimpath=false"} {
 		got, err := parseRuntimeFlags(t.TempDir(), "/usr/bin/go", "off", "", []string{flag})

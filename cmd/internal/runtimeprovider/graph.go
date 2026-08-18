@@ -139,19 +139,16 @@ func hostGoCommand() (string, error) {
 }
 
 func goEnvValue(ctx context.Context, goCommand, dir string, graphFlags []string, key string) (string, error) {
-	args := append([]string{"env"}, key)
-	cmd := exec.CommandContext(ctx, goCommand, args...)
+	cmd := commandContext(ctx, goCommand, "env", key)
 	cmd.Dir = dir
 	if graphFlags == nil {
 		cmd.Env = os.Environ()
 	} else {
 		cmd.Env = graphEnvironment(os.Environ(), "", graphFlags)
 	}
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
 	out, err := cmd.Output()
 	if err != nil {
-		return "", commandError("go env "+key, err, stderr.String())
+		return "", commandError("go env "+key, err, string(cmdStderr(cmd)))
 	}
 	return strings.TrimSpace(string(out)), nil
 }

@@ -44,6 +44,154 @@ type builtProvider struct {
 	keep bool
 }
 
+func (r *Resolver) Run(ctx context.Context, rt *Runtime, appArgs []string, streams Streams) (ProcessStatus, error) {
+	policy, err := r.BuildPolicy()
+	if err != nil {
+		return ProcessStatus{}, err
+	}
+	return execute(ctx, rt, actionRun, policy, "", "", appArgs, streams)
+}
+
+func (r *Resolver) Build(ctx context.Context, rt *Runtime, requestedOutput string, streams Streams) (ProcessStatus, string, error) {
+	policy, err := r.BuildPolicy()
+	if err != nil {
+		return ProcessStatus{}, "", err
+	}
+	streams = fillStreams(streams)
+	final, err := resolveBuildOutput(r.cwd, requestedOutput, rt.DefaultExecName)
+	if err != nil {
+		return ProcessStatus{}, "", err
+	}
+	tx, err := beginOutputTransaction(final, policy.KeepWork)
+	if err != nil {
+		return ProcessStatus{}, final, err
+	}
+	defer tx.abort()
+	status, err := execute(ctx, rt, actionBuild, policy, tx.staged, final, nil, streams)
+	if err != nil || status.Signaled || status.Code != 0 {
+		return status, final, err
+	}
+	if err := tx.commit(); err != nil {
+		return ProcessStatus{}, final, err
+	}
+	if policy.KeepWork {
+		fmt.Fprintf(streams.Stderr, "XGO_RUNTIME_OUTPUT_WORK=%s\n", tx.dir)
+	}
+	return successStatus(), final, nil
+}
+
+// Install builds one runtime target transactionally into the effective GOBIN.
+func (r *Resolver) Install(ctx context.Context, rt *Runtime, streams Streams) (ProcessStatus, string, error) {
+	bin, err := installBin(ctx, rt.Graph)
+	if err != nil {
+		return ProcessStatus{}, "", err
+	}
+	if err := os.MkdirAll(bin, 0755); err != nil {
+		return ProcessStatus{}, "", fmt.Errorf("create install directory: %w", err)
+	}
+	return r.Build(ctx, rt, filepath.Join(bin, rt.DefaultExecName), streams)
+}
+
+func installBin(ctx context.Context, graph GraphPolicy) (string, error) {
+	cmd := commandContext(ctx, graph.GoCommand, "env", "-json", "GOBIN", "GOPATH")
+	cmd.Dir = graph.WorkDir
+	cmd.Env = graphEnvironment(os.Environ(), graph.GoWork, nil)
+	stdout, err := cmd.Output()
+	if err != nil {
+		return "", commandError("resolve install directory", err, string(cmdStderr(cmd)))
+	}
+	values := make(map[string]string)
+	if err := json.Unmarshal(stdout, &values); err != nil {
+		return "", fmt.Errorf("decode Go install directory: %w", err)
+	}
+	bin := values["GOBIN"]
+	if bin == "" {
+		paths := filepath.SplitList(values["GOPATH"])
+		if len(paths) == 0 || paths[0] == "" {
+			return "", fmt.Errorf("go env GOPATH is empty")
+		}
+		bin = filepath.Join(paths[0], "bin")
+	}
+	if !filepath.IsAbs(bin) {
+		return "", fmt.Errorf("Go install directory %q is not absolute", bin)
+	}
+	return filepath.Clean(bin), nil
+}
+
+func execute(ctx context.Context, rt *Runtime, act action, policy BuildPolicy, output, finalOutput string, appArgs []string, streams Streams) (ProcessStatus, error) {
+	streams = fillStreams(streams)
+	provider, err := buildProvider(ctx, rt, policy, streams)
+	if err != nil {
+		return ProcessStatus{}, err
+	}
+	defer provider.cleanup()
+	args, err := providerArgs(rt, act, policy, output, finalOutput, appArgs)
+	if err != nil {
+		return ProcessStatus{}, err
+	}
+	env := providerEnvironment(os.Environ(), rt)
+	if err := validateArgv(provider.path, args, env); err != nil {
+		return ProcessStatus{}, err
+	}
+	if policy.Trace {
+		fmt.Fprintln(streams.Stderr, redactCommand(provider.path, args))
+	}
+	cmd := exec.Command(provider.path, args...)
+	cmd.Dir = rt.ProjectDir
+	cmd.Env = env
+	cmd.Stdin, cmd.Stdout, cmd.Stderr = streams.Stdin, streams.Stdout, streams.Stderr
+	return runProviderProcess(ctx, cmd)
+}
+
+func buildProvider(ctx context.Context, rt *Runtime, policy BuildPolicy, streams Streams) (*builtProvider, error) {
+	if goos := os.Getenv("GOOS"); goos != "" && goos != runtime.GOOS {
+		return nil, fmt.Errorf("runtime providers are host-only: GOOS=%s, host=%s", goos, runtime.GOOS)
+	}
+	if goarch := os.Getenv("GOARCH"); goarch != "" && goarch != runtime.GOARCH {
+		return nil, fmt.Errorf("runtime providers are host-only: GOARCH=%s, host=%s", goarch, runtime.GOARCH)
+	}
+	if err := validateProvider(ctx, rt); err != nil {
+		return nil, err
+	}
+	dir, err := os.MkdirTemp("", "xgo-runtime-provider-")
+	if err != nil {
+		return nil, err
+	}
+	if err := os.Chmod(dir, 0700); err != nil {
+		_ = os.RemoveAll(dir)
+		return nil, err
+	}
+	provider := &builtProvider{dir: dir, path: filepath.Join(dir, executableName("provider")), keep: policy.KeepWork}
+	args := []string{"build"}
+	args = append(args, rt.Graph.Flags...)
+	args = append(args, policy.goBuildFlags()...)
+	args = append(args, "-buildmode=exe", "-o", provider.path, rt.ProviderPackage)
+	cmd := exec.CommandContext(ctx, rt.Graph.GoCommand, args...)
+	cmd.Dir = rt.Graph.WorkDir
+	cmd.Env = hostBuildEnvironment(os.Environ(), rt.Graph.GoWork)
+	cmd.Stdin, cmd.Stdout, cmd.Stderr = streams.Stdin, streams.Stdout, streams.Stderr
+	if policy.Trace {
+		fmt.Fprintln(streams.Stderr, redactCommand(rt.Graph.GoCommand, args))
+	}
+	if err := cmd.Run(); err != nil {
+		provider.cleanup()
+		return nil, fmt.Errorf("build runtime provider %q: %w", rt.ProviderPackage, err)
+	}
+	info, err := os.Lstat(provider.path)
+	if err != nil {
+		provider.cleanup()
+		return nil, fmt.Errorf("runtime provider build output: %w", err)
+	}
+	if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() || info.Size() == 0 {
+		provider.cleanup()
+		return nil, fmt.Errorf("runtime provider build did not produce a regular executable")
+	}
+	if policy.KeepWork {
+		fmt.Fprintf(streams.Stderr, "XGO_RUNTIME_PROVIDER_WORK=%s\n", dir)
+	}
+	return provider, nil
+}
+
 func (p *builtProvider) cleanup() {
 	if p != nil && !p.keep {
 		_ = os.RemoveAll(p.dir)
@@ -108,69 +256,6 @@ func sameResolvedModule(a, b ResolvedModule) bool {
 	return *a.Replace == *b.Replace
 }
 
-func buildProvider(ctx context.Context, rt *Runtime, policy BuildPolicy, streams Streams) (*builtProvider, error) {
-	if goos := os.Getenv("GOOS"); goos != "" && goos != runtime.GOOS {
-		return nil, fmt.Errorf("runtime providers are host-only: GOOS=%s, host=%s", goos, runtime.GOOS)
-	}
-	if goarch := os.Getenv("GOARCH"); goarch != "" && goarch != runtime.GOARCH {
-		return nil, fmt.Errorf("runtime providers are host-only: GOARCH=%s, host=%s", goarch, runtime.GOARCH)
-	}
-	if err := validateProvider(ctx, rt); err != nil {
-		return nil, err
-	}
-	dir, err := os.MkdirTemp("", "xgo-runtime-provider-")
-	if err != nil {
-		return nil, err
-	}
-	if err := os.Chmod(dir, 0700); err != nil {
-		_ = os.RemoveAll(dir)
-		return nil, err
-	}
-	provider := &builtProvider{dir: dir, path: filepath.Join(dir, executableName("provider")), keep: policy.KeepWork}
-	args := []string{"build"}
-	args = append(args, rt.Graph.Flags...)
-	args = append(args, policy.goBuildFlags()...)
-	args = append(args, "-buildmode=exe", "-o", provider.path, rt.ProviderPackage)
-	cmd := exec.CommandContext(ctx, rt.Graph.GoCommand, args...)
-	cmd.Dir = rt.Graph.WorkDir
-	cmd.Env = hostBuildEnvironment(os.Environ(), rt.Graph.GoWork)
-	cmd.Stdin, cmd.Stdout, cmd.Stderr = streams.Stdin, streams.Stdout, streams.Stderr
-	if policy.Trace {
-		fmt.Fprintln(streams.Stderr, redactCommand(rt.Graph.GoCommand, args))
-	}
-	if err := cmd.Run(); err != nil {
-		provider.cleanup()
-		return nil, fmt.Errorf("build runtime provider %q: %w", rt.ProviderPackage, err)
-	}
-	info, err := os.Lstat(provider.path)
-	if err != nil {
-		provider.cleanup()
-		return nil, fmt.Errorf("runtime provider build output: %w", err)
-	}
-	if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() || info.Size() == 0 {
-		provider.cleanup()
-		return nil, fmt.Errorf("runtime provider build did not produce a regular executable")
-	}
-	if policy.KeepWork {
-		fmt.Fprintf(streams.Stderr, "XGO_RUNTIME_PROVIDER_WORK=%s\n", dir)
-	}
-	return provider, nil
-}
-
-func (p BuildPolicy) goBuildFlags() []string {
-	flags := make([]string, 0, len(p.Flags)+3)
-	if p.Verbose {
-		flags = append(flags, "-v")
-	}
-	if p.Trace {
-		flags = append(flags, "-x")
-	}
-	if p.KeepWork {
-		flags = append(flags, "-work")
-	}
-	return append(flags, p.Flags...)
-}
-
 func hostBuildEnvironment(base []string, goWork string) []string {
 	env := graphEnvironment(base, goWork, nil)
 	env = replaceEnv(env, "GOOS", runtime.GOOS)
@@ -181,109 +266,6 @@ func hostBuildEnvironment(base []string, goWork string) []string {
 func providerEnvironment(base []string, rt *Runtime) []string {
 	env := hostBuildEnvironment(base, rt.Graph.GoWork)
 	return replaceEnv(env, runtimeGuardEnv, runtimeGuard(rt.ProjectDir, rt.ProviderPackage))
-}
-
-func (r *Resolver) Run(ctx context.Context, rt *Runtime, appArgs []string, streams Streams) (ProcessStatus, error) {
-	policy, err := r.BuildPolicy()
-	if err != nil {
-		return ProcessStatus{}, err
-	}
-	return execute(ctx, rt, actionRun, policy, "", "", appArgs, streams)
-}
-
-func (r *Resolver) Build(ctx context.Context, rt *Runtime, requestedOutput string, streams Streams) (ProcessStatus, string, error) {
-	policy, err := r.BuildPolicy()
-	if err != nil {
-		return ProcessStatus{}, "", err
-	}
-	// execute fills streams for the provider process, but Build also reports
-	// kept work directories after execute returns. Normalize once here so a
-	// caller may omit Stderr without making the post-build report panic.
-	streams = fillStreams(streams)
-	final, err := resolveBuildOutput(r.cwd, requestedOutput, rt.DefaultExecName)
-	if err != nil {
-		return ProcessStatus{}, "", err
-	}
-	tx, err := beginOutputTransaction(final, policy.KeepWork)
-	if err != nil {
-		return ProcessStatus{}, final, err
-	}
-	defer tx.abort()
-	status, err := execute(ctx, rt, actionBuild, policy, tx.staged, final, nil, streams)
-	if err != nil || status.Signaled || status.Code != 0 {
-		return status, final, err
-	}
-	if err := tx.commit(); err != nil {
-		return ProcessStatus{}, final, err
-	}
-	if policy.KeepWork {
-		fmt.Fprintf(streams.Stderr, "XGO_RUNTIME_OUTPUT_WORK=%s\n", tx.dir)
-	}
-	return successStatus(), final, nil
-}
-
-// Install builds one runtime target transactionally into the effective GOBIN.
-func (r *Resolver) Install(ctx context.Context, rt *Runtime, streams Streams) (ProcessStatus, string, error) {
-	bin, err := installBin(ctx, rt.Graph)
-	if err != nil {
-		return ProcessStatus{}, "", err
-	}
-	if err := os.MkdirAll(bin, 0755); err != nil {
-		return ProcessStatus{}, "", fmt.Errorf("create install directory: %w", err)
-	}
-	return r.Build(ctx, rt, filepath.Join(bin, rt.DefaultExecName), streams)
-}
-
-func installBin(ctx context.Context, graph GraphPolicy) (string, error) {
-	cmd := exec.CommandContext(ctx, graph.GoCommand, "env", "-json", "GOBIN", "GOPATH")
-	cmd.Dir = graph.WorkDir
-	cmd.Env = graphEnvironment(os.Environ(), graph.GoWork, nil)
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout, cmd.Stderr = &stdout, &stderr
-	if err := cmd.Run(); err != nil {
-		return "", commandError("resolve install directory", err, stderr.String())
-	}
-	values := make(map[string]string)
-	if err := json.Unmarshal(stdout.Bytes(), &values); err != nil {
-		return "", fmt.Errorf("decode Go install directory: %w", err)
-	}
-	bin := values["GOBIN"]
-	if bin == "" {
-		paths := filepath.SplitList(values["GOPATH"])
-		if len(paths) == 0 || paths[0] == "" {
-			return "", fmt.Errorf("go env GOPATH is empty")
-		}
-		bin = filepath.Join(paths[0], "bin")
-	}
-	if !filepath.IsAbs(bin) {
-		return "", fmt.Errorf("Go install directory %q is not absolute", bin)
-	}
-	return filepath.Clean(bin), nil
-}
-
-func execute(ctx context.Context, rt *Runtime, act action, policy BuildPolicy, output, finalOutput string, appArgs []string, streams Streams) (ProcessStatus, error) {
-	streams = fillStreams(streams)
-	provider, err := buildProvider(ctx, rt, policy, streams)
-	if err != nil {
-		return ProcessStatus{}, err
-	}
-	defer provider.cleanup()
-	args, err := providerArgs(rt, act, policy, output, finalOutput, appArgs)
-	if err != nil {
-		return ProcessStatus{}, err
-	}
-	env := providerEnvironment(os.Environ(), rt)
-	if err := validateArgv(provider.path, args, env); err != nil {
-		return ProcessStatus{}, err
-	}
-	if policy.Trace {
-		fmt.Fprintln(streams.Stderr, redactCommand(provider.path, args))
-	}
-	cmd := exec.Command(provider.path, args...)
-	cmd.Dir = rt.ProjectDir
-	cmd.Env = env
-	cmd.Stdin, cmd.Stdout, cmd.Stderr = streams.Stdin, streams.Stdout, streams.Stderr
-	return runProviderProcess(ctx, cmd)
 }
 
 func fillStreams(streams Streams) Streams {

@@ -79,20 +79,6 @@ func providerArgs(rt *Runtime, act action, policy BuildPolicy, output, finalOutp
 	return runtimeprotocol.Encode(request)
 }
 
-func (p BuildPolicy) protocolFlags() []string {
-	flags := make([]string, 0, len(p.Flags)+3)
-	if p.Verbose {
-		flags = append(flags, "-v=true")
-	}
-	if p.Trace {
-		flags = append(flags, "-x=true")
-	}
-	if p.KeepWork {
-		flags = append(flags, "-work=true")
-	}
-	return append(flags, p.Flags...)
-}
-
 func validateArgv(executable string, args, env []string) error {
 	if runtime.GOOS == "windows" {
 		// CreateProcessW has a 32,767 UTF-16 code-unit command-line limit. Keep

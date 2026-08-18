@@ -30,6 +30,28 @@ type parsedFlags struct {
 	rejected []string
 }
 
+func (p BuildPolicy) goBuildFlags() []string {
+	return p.formatFlags("")
+}
+
+func (p BuildPolicy) protocolFlags() []string {
+	return p.formatFlags("=true")
+}
+
+func (p BuildPolicy) formatFlags(enabledSuffix string) []string {
+	flags := make([]string, 0, len(p.Flags)+3)
+	if p.Verbose {
+		flags = append(flags, "-v"+enabledSuffix)
+	}
+	if p.Trace {
+		flags = append(flags, "-x"+enabledSuffix)
+	}
+	if p.KeepWork {
+		flags = append(flags, "-work"+enabledSuffix)
+	}
+	return append(flags, p.Flags...)
+}
+
 // parseRuntimeFlags extracts the policy needed for discovery. Rejected build
 // flags are retained and reported only after a runtime project is matched, so
 // ordinary projects keep their existing behavior.
