@@ -18,6 +18,7 @@
 package run
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"reflect"
@@ -25,6 +26,7 @@ import (
 	"github.com/goplus/gogen"
 	"github.com/goplus/xgo/cl"
 	"github.com/goplus/xgo/cmd/internal/base"
+	"github.com/goplus/xgo/cmd/internal/runtimeprovider"
 	"github.com/goplus/xgo/tool"
 	"github.com/goplus/xgo/x/gocmd"
 	"github.com/goplus/xgo/x/xgoprojs"
@@ -75,11 +77,32 @@ func runCmd(cmd *base.Command, args []string) {
 		gogen.SetDebug(gogen.DbgFlagInstruction)
 	}
 
+	noChdir := *flagNoChdir
+	runtimeFlags := append([]string(nil), pass.Args...)
+	if *flagAsm {
+		runtimeFlags = append(runtimeFlags, "-asm=true")
+	}
+	if *flagNoChdir {
+		runtimeFlags = append(runtimeFlags, "-nc=true")
+	}
+	if *flagProf {
+		runtimeFlags = append(runtimeFlags, "-prof=true")
+	}
+	runtimeResult, runtimeErr := tryRuntime(proj, args, runtimeFlags)
+	if runtimeErr != nil {
+		fmt.Fprintln(os.Stderr, runtimeErr)
+		os.Exit(1)
+	}
+	if runtimeResult.Handled {
+		if runtimeResult.Status.Signaled || runtimeResult.Status.Code != 0 {
+			runtimeprovider.Exit(runtimeResult.Status)
+		}
+		return
+	}
 	if *flagProf {
 		panic("TODO: profile not impl")
 	}
 
-	noChdir := *flagNoChdir
 	conf, err := tool.NewDefaultConf(".", tool.ConfFlagNoTestFiles, pass.Tags())
 	if err != nil {
 		log.Panicln("tool.NewDefaultConf:", err)
@@ -92,6 +115,10 @@ func runCmd(cmd *base.Command, args []string) {
 	confCmd := conf.NewGoCmdConf()
 	confCmd.Flags = pass.Args
 	run(proj, args, !noChdir, conf, confCmd)
+}
+
+func tryRuntime(proj xgoprojs.Proj, args, flags []string) (runtimeprovider.DispatchResult, error) {
+	return runtimeprovider.TryRun(context.Background(), "", proj, flags, args, runtimeprovider.Streams{})
 }
 
 func run(proj xgoprojs.Proj, args []string, chDir bool, conf *tool.Config, run *gocmd.RunConfig) {

@@ -18,6 +18,7 @@
 package build
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -27,6 +28,7 @@ import (
 	"github.com/goplus/gogen"
 	"github.com/goplus/xgo/cl"
 	"github.com/goplus/xgo/cmd/internal/base"
+	"github.com/goplus/xgo/cmd/internal/runtimeprovider"
 	"github.com/goplus/xgo/tool"
 	"github.com/goplus/xgo/x/gocmd"
 	"github.com/goplus/xgo/x/xgoprojs"
@@ -73,6 +75,17 @@ func runCmd(cmd *base.Command, args []string) {
 	if len(args) != 0 {
 		log.Panicln("too many arguments:", args)
 	}
+	runtimeResult, runtimeErr := tryRuntime(proj, pass.Args, *flagOutput)
+	if runtimeErr != nil {
+		fmt.Fprintln(os.Stderr, runtimeErr)
+		os.Exit(1)
+	}
+	if runtimeResult.Handled {
+		if runtimeResult.Status.Signaled || runtimeResult.Status.Code != 0 {
+			runtimeprovider.Exit(runtimeResult.Status)
+		}
+		return
+	}
 
 	conf, err := tool.NewDefaultConf(".", tool.ConfFlagNoTestFiles, pass.Tags())
 	if err != nil {
@@ -90,6 +103,10 @@ func runCmd(cmd *base.Command, args []string) {
 	}
 	confCmd.Flags = append(confCmd.Flags, pass.Args...)
 	build(proj, conf, confCmd)
+}
+
+func tryRuntime(proj xgoprojs.Proj, flags []string, output string) (runtimeprovider.DispatchResult, error) {
+	return runtimeprovider.TryBuild(context.Background(), "", proj, flags, output, runtimeprovider.Streams{})
 }
 
 func build(proj xgoprojs.Proj, conf *tool.Config, build *gocmd.BuildConfig) {

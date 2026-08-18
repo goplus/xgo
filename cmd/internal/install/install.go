@@ -18,6 +18,7 @@
 package install
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -27,6 +28,7 @@ import (
 	"github.com/goplus/mod/modfetch"
 	"github.com/goplus/xgo/cl"
 	"github.com/goplus/xgo/cmd/internal/base"
+	"github.com/goplus/xgo/cmd/internal/runtimeprovider"
 	"github.com/goplus/xgo/tool"
 	"github.com/goplus/xgo/x/gocmd"
 	"github.com/goplus/xgo/x/xgoprojs"
@@ -70,6 +72,17 @@ func runCmd(cmd *base.Command, args []string) {
 		cl.SetDebug(cl.DbgFlagAll)
 		cl.SetDisableRecover(true)
 	}
+	runtimeResult, runtimeErr := tryRuntime(projs, pass.Args)
+	if runtimeErr != nil {
+		fmt.Fprintln(os.Stderr, runtimeErr)
+		os.Exit(1)
+	}
+	if runtimeResult.Handled {
+		if runtimeResult.Status.Signaled || runtimeResult.Status.Code != 0 {
+			runtimeprovider.Exit(runtimeResult.Status)
+		}
+		return
+	}
 
 	conf, err := tool.NewDefaultConf(".", tool.ConfFlagNoTestFiles, pass.Tags())
 	if err != nil {
@@ -82,6 +95,10 @@ func runCmd(cmd *base.Command, args []string) {
 	for _, proj := range projs {
 		install(proj, conf, confCmd)
 	}
+}
+
+func tryRuntime(projs []xgoprojs.Proj, flags []string) (runtimeprovider.DispatchResult, error) {
+	return runtimeprovider.TryInstall(context.Background(), "", projs, flags, runtimeprovider.Streams{})
 }
 
 func install(proj xgoprojs.Proj, conf *tool.Config, install *gocmd.InstallConfig) {
