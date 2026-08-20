@@ -38,10 +38,7 @@ func runtimeGuard(projectDir, providerPackage string) string {
 	return sha256Bytes([]byte(projectDir + "\x00" + providerPackage))
 }
 
-// loadRuntimeModule preserves modload's gox.mod-to-gop.mod fallback while
-// distinguishing an absent optional metadata file from an unreadable one.
-// Runtime ownership must not fall back to the legacy path on metadata I/O
-// failures.
+// loadRuntimeModule preserves metadata fallback and reports unreadable optional files.
 func loadRuntimeModule(goMod, goxMod string) (modload.Module, error) {
 	return loadRuntimeModuleView(goMod, goxMod, nil)
 }
@@ -72,6 +69,16 @@ func externalClassModule(module modload.Module) string {
 		}
 	}
 	return ""
+}
+
+func runtimeProjectMatches(projects []*modfile.Project, name string) bool {
+	ext := modfile.ClassExt(name)
+	for _, project := range projects {
+		if project != nil && project.Runtime != nil && project.IsProj(ext, name) {
+			return true
+		}
+	}
+	return false
 }
 
 func loadResolvedClasses(graph *effectiveGraph) (*xgomod.Module, bool, error) {

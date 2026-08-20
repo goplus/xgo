@@ -36,48 +36,24 @@ type DispatchResult struct {
 // TryRun resolves and, when matched, runs one runtime target. It never exits
 // the process; command entry points own status-to-exit translation.
 func TryRun(ctx context.Context, cwd string, target xgoprojs.Proj, flags, appArgs []string, streams Streams) (DispatchResult, error) {
-	if target == nil {
-		return DispatchResult{}, fmt.Errorf("runtime provider run requires a non-nil target")
-	}
-	resolver, ctx, err := newDispatchResolver(ctx, cwd, flags)
-	if err != nil {
-		return DispatchResult{}, err
-	}
-	rt, handled, err := resolveTarget(ctx, resolver, target)
-	if err != nil || !handled {
-		return DispatchResult{Handled: handled}, err
-	}
 	if len(appArgs) != 0 && appArgs[0] == "--" {
 		appArgs = appArgs[1:]
 	}
-	boundary := beginRuntimeSignalBoundary(ctx)
-	status, err := resolver.Run(boundary.Context(), rt, appArgs, streams)
-	return finishDispatch(boundary, DispatchResult{}, status, err)
+	return dispatchOne(ctx, cwd, target, flags, "run", func(ctx context.Context, resolver *Resolver, rt *Runtime) (ProcessStatus, string, error) {
+		status, err := resolver.Run(ctx, rt, appArgs, streams)
+		return status, "", err
+	})
 }
 
 // TryBuild resolves and, when matched, builds one runtime target. It never
 // exits the process; command entry points own status-to-exit translation.
 func TryBuild(ctx context.Context, cwd string, target xgoprojs.Proj, flags []string, output string, streams Streams) (DispatchResult, error) {
-	if target == nil {
-		return DispatchResult{}, fmt.Errorf("runtime provider build requires a non-nil target")
-	}
-	resolver, ctx, err := newDispatchResolver(ctx, cwd, flags)
-	if err != nil {
-		return DispatchResult{}, err
-	}
-	rt, handled, err := resolveTarget(ctx, resolver, target)
-	if err != nil || !handled {
-		return DispatchResult{Handled: handled}, err
-	}
-	boundary := beginRuntimeSignalBoundary(ctx)
-	status, final, err := resolver.Build(boundary.Context(), rt, output, streams)
-	return finishDispatch(boundary, DispatchResult{Output: final}, status, err)
+	return dispatchOne(ctx, cwd, target, flags, "build", func(ctx context.Context, resolver *Resolver, rt *Runtime) (ProcessStatus, string, error) {
+		return resolver.Build(ctx, rt, output, streams)
+	})
 }
 
-// TryInstall resolves every target before starting a provider. A request with
-// multiple targets is rejected only when at least one target is runtime-backed;
-// an all-legacy request remains available to the existing install path. This
-// keeps provider execution and output-directory creation after validation.
+// TryInstall resolves all targets before creating output or starting a provider.
 func TryInstall(ctx context.Context, cwd string, targets []xgoprojs.Proj, flags []string, streams Streams) (DispatchResult, error) {
 	if len(targets) == 0 {
 		return DispatchResult{}, fmt.Errorf("runtime provider install requires at least one target")
@@ -110,6 +86,23 @@ func TryInstall(ctx context.Context, cwd string, targets []xgoprojs.Proj, flags 
 	boundary := beginRuntimeSignalBoundary(ctx)
 	status, final, err := resolver.Install(boundary.Context(), runtimes[0], streams)
 	return finishDispatch(boundary, DispatchResult{Output: final}, status, err)
+}
+
+func dispatchOne(ctx context.Context, cwd string, target xgoprojs.Proj, flags []string, action string, run func(context.Context, *Resolver, *Runtime) (ProcessStatus, string, error)) (DispatchResult, error) {
+	if target == nil {
+		return DispatchResult{}, fmt.Errorf("runtime provider %s requires a non-nil target", action)
+	}
+	resolver, ctx, err := newDispatchResolver(ctx, cwd, flags)
+	if err != nil {
+		return DispatchResult{}, err
+	}
+	rt, handled, err := resolveTarget(ctx, resolver, target)
+	if err != nil || !handled {
+		return DispatchResult{Handled: handled}, err
+	}
+	boundary := beginRuntimeSignalBoundary(ctx)
+	status, output, err := run(boundary.Context(), resolver, rt)
+	return finishDispatch(boundary, DispatchResult{Output: output}, status, err)
 }
 
 func finishDispatch(boundary *runtimeSignalBoundary, result DispatchResult, status ProcessStatus, err error) (DispatchResult, error) {

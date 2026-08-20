@@ -48,9 +48,7 @@ func resolvePackageDirectory(ctx context.Context, graph *effectiveGraph, importP
 		return "", ResolvedModule{}, fmt.Errorf("package target %q resolved as %q", importPath, pkg.ImportPath)
 	}
 	if pkg.Dir == "" || pkg.Module == nil {
-		// The Go command may omit physical fields for an XGo-only package.
-		// Resolve that candidate from the selected graph, then ask Go which
-		// module root owns it so a prefix match cannot cross a nested module.
+		// XGo-only packages may omit physical fields; resolve them from the graph.
 		return resolveXGoOnlyPackageDirectory(ctx, graph, importPath, policy)
 	}
 	listed, err := normalizeListedModule(*pkg.Module)
@@ -66,9 +64,7 @@ func resolvePackageDirectory(ctx context.Context, graph *effectiveGraph, importP
 		return "", ResolvedModule{}, fmt.Errorf("package target %q: %w", importPath, err)
 	}
 	if module.Effective().Dir == "" {
-		// Unmarked dependencies are not materialized during runtime discovery.
-		// Return their authoritative package identity so Resolve can classify
-		// them as legacy before attempting any runtime metadata access.
+		// Keep unmarked dependency identity without materializing its source.
 		return dir, module, nil
 	}
 	if !sameResolvedModule(listed, module) {
@@ -107,6 +103,17 @@ func validatePackageOwnership(ctx context.Context, policy GraphPolicy, module Re
 		return fmt.Errorf("package target %q crosses a nested module boundary", importPath)
 	}
 	return nil
+}
+
+func moduleOwnsPackage(ctx context.Context, policy GraphPolicy, moduleGoMod, dir string) (bool, error) {
+	ownerGoMod, err := goEnvWithPolicy(ctx, policy, dir, "GOMOD")
+	if err != nil {
+		return false, err
+	}
+	if ownerGoMod == "" || ownerGoMod == os.DevNull {
+		return false, nil
+	}
+	return sameFile(moduleGoMod, ownerGoMod)
 }
 
 func listPackageTarget(ctx context.Context, importPath, workDir string, policy GraphPolicy) (goListPackage, error) {
@@ -156,11 +163,7 @@ func resolveXGoOnlyPackageDirectory(ctx context.Context, graph *effectiveGraph, 
 		if err := validatePackagePath(module, importPath, dir); err != nil {
 			return "", ResolvedModule{}, err
 		}
-		// An XGo-only package can be supplied entirely by an overlay, in which
-		// case its logical directory has no physical cwd for `go env` to enter.
-		// The effective graph already established the owning module; retain the
-		// nested-module check for physical directories and use that graph identity
-		// for synthetic ones.
+		// Overlay-only packages have no physical cwd; the graph owns their identity.
 		if graph.files != nil && graph.files.hasReplacementChild(dir) {
 			return dir, module, nil
 		}
@@ -172,10 +175,7 @@ func resolveXGoOnlyPackageDirectory(ctx context.Context, graph *effectiveGraph, 
 	return "", ResolvedModule{}, fmt.Errorf("package target %q is outside the effective module graph", importPath)
 }
 
-// retargetEffectiveGraph keeps the caller's selected build list and only
-// changes which already-resolved module owns the class project. This is
-// essential for package targets: running go list from a dependency directory
-// would silently switch to that dependency's standalone graph.
+// retargetEffectiveGraph keeps the caller graph and changes only its target module.
 func retargetEffectiveGraph(graph *effectiveGraph, target ResolvedModule) (*effectiveGraph, error) {
 	modfilePath := target.Effective().GoMod
 	if target.Selected.Path == graph.Target.Selected.Path {

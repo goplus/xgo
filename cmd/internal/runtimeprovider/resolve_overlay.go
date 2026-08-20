@@ -27,10 +27,8 @@ import (
 	"github.com/goplus/mod/modfile"
 )
 
-// resolveOverlayLocalTarget disambiguates a local argument that does not exist
-// on disk. xgoprojs parses both an overlay-only directory and an overlay-only
-// file as DirProj, so classification must consult the same virtual filesystem
-// as the Go command before deciding that the target belongs to the legacy path.
+// resolveOverlayLocalTarget classifies overlay-only local targets.
+// xgoprojs may parse both files and directories as DirProj.
 func (r *Resolver) resolveOverlayLocalTarget(ctx context.Context, candidate string, recursive bool) (TargetKind, string, string, *effectiveGraph, error) {
 	graph, err := loadEffectiveGraph(ctx, r.cwd, r.policy.graph)
 	if err != nil {
@@ -103,10 +101,8 @@ func classModuleMarked(classModules []ResolvedModule, modulePath string) bool {
 	return false
 }
 
-// overlayRuntimeProjectMatch classifies a target using the effective graph's
-// overlay-aware metadata. It is intentionally a classification-only path:
-// v1 has no snapshot contract for overlays, so a positive match is converted
-// to an explicit unsupported error before any provider Runtime is built.
+// overlayRuntimeProjectMatch classifies against overlay metadata only.
+// Runtime provider v1 rejects a positive overlay match before execution.
 func overlayRuntimeProjectMatch(projectDir string, graph *effectiveGraph, recursive bool) (bool, error) {
 	if graph == nil || graph.files == nil || !graph.files.hasOverlay() {
 		return false, fmt.Errorf("overlay classification requires an effective graph file view")
@@ -126,11 +122,8 @@ func overlayRuntimeProjectMatch(projectDir string, graph *effectiveGraph, recurs
 		return false, err
 	}
 	for _, name := range names {
-		ext := modfile.ClassExt(name)
-		for _, project := range projects {
-			if project.Runtime != nil && project.IsProj(ext, name) {
-				return true, nil
-			}
+		if runtimeProjectMatches(projects, name) {
+			return true, nil
 		}
 	}
 	return false, nil
@@ -168,11 +161,8 @@ func overlayWalkRuntimeProjects(root string, projects []*modfile.Project, view *
 			return err
 		}
 		for _, name := range names {
-			ext := modfile.ClassExt(name)
-			for _, project := range projects {
-				if project.Runtime != nil && project.IsProj(ext, name) {
-					return errRuntimeProjectInPattern
-				}
+			if runtimeProjectMatches(projects, name) {
+				return errRuntimeProjectInPattern
 			}
 		}
 		dirs, err := view.directoryNames(current)

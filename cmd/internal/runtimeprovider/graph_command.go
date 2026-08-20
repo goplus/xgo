@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 )
 
@@ -81,10 +80,7 @@ func preparePolicies(ctx context.Context, cwd string, cli []string) (parsedFlags
 	return policy, nil
 }
 
-// sanitizeGraphFlags removes graph files that do not exist from discovery.
-// They remain rejected runtime flags, so a matched runtime still reports the
-// policy error through BuildPolicy while a legacy target can continue with its
-// normal command path.
+// sanitizeGraphFlags defers missing graph files as runtime-only policy errors.
 func sanitizeGraphFlags(policy parsedFlags) (parsedFlags, error) {
 	if path := policy.graph.ModFile; path != "" {
 		if _, err := os.Stat(path); os.IsNotExist(err) {
@@ -110,21 +106,11 @@ func hostGoCommand() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("host Go command: %w", err)
 	}
-	path, err = filepath.Abs(path)
+	canonical, err := canonicalExistingFile(path)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("host Go command %q: %w", path, err)
 	}
-	if real, err := filepath.EvalSymlinks(path); err == nil {
-		path = real
-	}
-	info, err := os.Stat(path)
-	if err != nil {
-		return "", err
-	}
-	if !info.Mode().IsRegular() {
-		return "", fmt.Errorf("host Go command %q is not a regular file", path)
-	}
-	return path, nil
+	return canonical, nil
 }
 
 func goEnvValue(ctx context.Context, goCommand, dir, key string, clearGOFLAGS bool) (string, error) {
@@ -136,17 +122,16 @@ func goEnvValue(ctx context.Context, goCommand, dir, key string, clearGOFLAGS bo
 	if clearGOFLAGS {
 		cmd.Env = replaceEnv(cmd.Env, "GOFLAGS", "")
 	}
-	out, err := cmd.Output()
-	if err != nil {
-		return "", commandError("go env "+key, err, string(cmdStderr(cmd)))
-	}
-	return strings.TrimSpace(string(out)), nil
+	return runGoEnv(cmd, key)
 }
 
 func goEnvWithPolicy(ctx context.Context, policy GraphPolicy, dir, key string) (string, error) {
 	cmd := graphCommand(ctx, policy, dir, "env", key)
-	// Graph flags do not affect go env values and are deliberately never
-	// reconstructed into GOFLAGS; all graph operations pass them via argv.
+	// Graph flags stay in argv; GOFLAGS remains cleared by graphCommand.
+	return runGoEnv(cmd, key)
+}
+
+func runGoEnv(cmd *exec.Cmd, key string) (string, error) {
 	out, err := cmd.Output()
 	if err != nil {
 		return "", commandError("go env "+key, err, string(cmdStderr(cmd)))

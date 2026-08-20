@@ -185,10 +185,8 @@ func (tx *outputTransaction) abort() {
 	_ = tx.parent.Close()
 }
 
-// commitContext validates and publishes the staged output. Cancellation is
-// checked immediately before the rename, which is the transaction's commit
-// point; cancellation after that point cannot retract an already-published
-// executable.
+// commitContext validates and publishes staged output.
+// Cancellation is checked immediately before the commit rename.
 func (tx *outputTransaction) commitContext(ctx context.Context) error {
 	if tx == nil || tx.closed {
 		return fmt.Errorf("runtime output transaction is closed")
@@ -265,9 +263,7 @@ func (tx *outputTransaction) commitContext(ctx context.Context) error {
 	} else if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return fmt.Errorf("reinspect runtime output %q: %w", tx.final, err)
 	}
-	// The provider may run arbitrary build logic for a long time. Refuse to
-	// publish through the pinned handle if the user-visible parent pathname was
-	// renamed or replaced while that logic ran.
+	// Recheck the user-visible parent after provider execution.
 	if err := tx.checkParentPath(); err != nil {
 		return err
 	}
@@ -283,13 +279,9 @@ func (tx *outputTransaction) commitContext(ctx context.Context) error {
 		}
 		return fmt.Errorf("commit runtime output (final state %s): %w", state, err)
 	}
-	// Rename is the commit point. A pathname check after it is diagnostic only:
-	// the output is already visible and must not be reported as an uncommitted
-	// transaction.
+	// Rename is the commit point; later checks are diagnostic only.
 	_ = tx.checkParentPath()
-	// The rename above is the commit point. Cleanup and directory syncing are
-	// best effort from here so a successfully published output is never reported
-	// as a failed transaction.
+	// Cleanup and directory syncing are best effort after publication.
 	if !tx.keepDir {
 		_ = tx.parent.Remove(tx.workName)
 	}

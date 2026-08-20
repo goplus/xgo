@@ -14,9 +14,7 @@
  * limitations under the License.
  */
 
-// Package runtimeprovider implements XGo's private runtime-provider
-// dispatcher. The shared argv contract lives in mod/runtimeprotocol so XGo
-// and provider implementations cannot maintain divergent codecs.
+// Package runtimeprovider implements XGo's private runtime-provider dispatcher.
 package runtimeprovider
 
 import (

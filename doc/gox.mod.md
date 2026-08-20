@@ -221,7 +221,26 @@ mygame/
 ```
  
 ---
- 
+
+## Runtime providers
+
+A framework may delegate execution to a verified provider executable:
+
+```text
+runtime v1 example.com/framework/cmd/provider
+```
+
+The provider must be a `main` package inside the declaring module. XGo resolves
+it from the effective `go.mod`/`go.work` graph, checks the class metadata
+snapshot, then builds and runs it on the host platform. `xgo run`, `xgo build`,
+and `xgo install` use the same provider protocol.
+
+Runtime providers are intentionally fail-closed: vendor and overlay-backed
+runtime projects are rejected, and `XGO_RUNTIME=off` disables dispatch. Keep
+the provider package and its `gox.mod`/`gop.mod` in the framework module.
+
+---
+
 ## Summary
  
 `gox.mod` is the heart of XGo's classfile system, but it lives in **framework packages**, not in user projects. Ordinary XGo projects use a plain `go.mod` with `//xgo:class` annotations on their framework dependencies — that's the signal `xgo run` and other toolchain commands use to discover the relevant `gox.mod` files and learn the class structure (file patterns, class types, auto-imports) before parsing and compiling the project's source files.

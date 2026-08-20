@@ -281,10 +281,7 @@ func processStatus(err error) (ProcessStatus, error) {
 	return status, nil
 }
 
-// statusUnlessCanceled closes the race where a provider exits successfully at
-// the same time its parent context is canceled. A successful build/run must not
-// be reported after cancellation, because build callers may publish output
-// immediately after receiving that status.
+// statusUnlessCanceled rejects a successful provider result after cancellation.
 func statusUnlessCanceled(ctx context.Context, status ProcessStatus) (ProcessStatus, error) {
 	if !status.Signaled && status.Code == 0 {
 		if cause := context.Cause(ctx); cause != nil {

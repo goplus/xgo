@@ -25,9 +25,8 @@ import (
 	"strings"
 )
 
-// graphFileView keeps the logical paths changed by -overlay. Runtime-provider
-// v1 never executes against this view: it uses the map to classify project
-// files, while the Go command remains authoritative for graph resolution.
+// graphFileView models -overlay paths for classification only.
+// The Go command remains authoritative for graph resolution.
 type graphFileView struct {
 	workDir      string
 	replacements map[string]string
@@ -125,18 +124,14 @@ func (v *graphFileView) readFile(path string) ([]byte, error) {
 	return os.ReadFile(logical)
 }
 
-// hasReplacementAncestor reports whether a path is below an exact overlay
-// entry. Both a deleted parent and a parent replaced by a regular file hide
-// children. Callers must check an exact entry first, because an exact child
-// replacement takes precedence over a deleted parent.
+// hasReplacementAncestor reports whether an overlay entry hides path.
+// Callers check exact replacements first.
 func (v *graphFileView) hasReplacementAncestor(path string) bool {
 	_, ok := v.replacementAncestor(path)
 	return ok
 }
 
-// replacementAncestor returns the nearest exact overlay entry above path.
-// Nearest-entry selection matches cmd/go's path-prefix lookup and matters for
-// nested deletion/addition overlays.
+// replacementAncestor returns the nearest overlay entry above path.
 func (v *graphFileView) replacementAncestor(path string) (string, bool) {
 	if v == nil || !v.hasOverlay() {
 		return "", false
@@ -152,9 +147,8 @@ func (v *graphFileView) replacementAncestor(path string) (string, bool) {
 	return "", false
 }
 
-// hasReplacementChild reports whether a non-deleted overlay key is below path.
-// It both preserves physical files below deletions and synthesizes virtual
-// directories; replacement destinations stay opaque until Go reads them.
+// hasReplacementChild reports whether path has a visible overlay child.
+// Replacement destinations remain opaque until Go reads them.
 func (v *graphFileView) hasReplacementChild(path string) bool {
 	if !v.hasOverlay() {
 		return false
@@ -203,8 +197,7 @@ func (v *graphFileView) physicalEntries(dir string) ([]os.DirEntry, error) {
 	return entries, err
 }
 
-// regularFileNames merges physical entries with overlay keys, but never stats
-// a replacement destination. This keeps ordinary legacy overlays unchanged.
+// regularFileNames merges physical and overlay files without inspecting destinations.
 func (v *graphFileView) regularFileNames(dir string) ([]string, error) {
 	logicalDir := v.logicalPath(dir)
 	entries, err := v.physicalEntries(logicalDir)
@@ -252,8 +245,7 @@ func (v *graphFileView) regularFileNames(dir string) ([]string, error) {
 	return names, nil
 }
 
-// directoryNames returns physical child directories plus the first component
-// of each non-deleted overlay key. It is used only by pattern classification.
+// directoryNames returns physical children plus overlay-only directories.
 func (v *graphFileView) directoryNames(dir string) ([]string, error) {
 	logicalDir := overlayPath(v.workDir, dir)
 	visible, err := v.directoryVisible(logicalDir)
@@ -338,9 +330,7 @@ func (v *graphFileView) regularFileVisible(path string) (bool, error) {
 	return statVisible(logical, os.FileMode.IsRegular)
 }
 
-// canonicalFile pins a physical file in the usual case, but keeps the logical
-// path for an overlay-only file. The latter is necessary because cmd/go can
-// create go.mod (or an alternate modfile) solely through -overlay.
+// canonicalFile returns a physical path or an overlay-only logical path.
 func (v *graphFileView) canonicalFile(path string) (string, error) {
 	if !v.hasOverlay() {
 		return canonicalExistingFile(path)
@@ -358,10 +348,8 @@ func (v *graphFileView) canonicalFile(path string) (string, error) {
 	return canonicalExistingFile(logical)
 }
 
-// canonicalDir is the directory counterpart to canonicalFile. A synthetic
-// directory has no filesystem inode, so its clean logical path is returned;
-// this is safe for classification because provider execution is rejected for
-// overlay-backed runtime targets before any path is sent over the protocol.
+// canonicalDir is the directory counterpart to canonicalFile.
+// Synthetic directories are safe because overlay runtime targets never execute.
 func (v *graphFileView) canonicalDir(path string) (string, error) {
 	if !v.hasOverlay() {
 		return canonicalExistingDir(path)

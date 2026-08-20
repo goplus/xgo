@@ -78,9 +78,7 @@ func (p GraphPolicy) goArgs(command string, args ...string) []string {
 	return append(ret, args...)
 }
 
-// parseRuntimeFlags extracts the policy needed for discovery. Rejected build
-// flags are retained and reported only after a runtime project is matched, so
-// ordinary projects keep their existing behavior.
+// parseRuntimeFlags extracts discovery policy and defers rejected flags.
 func parseRuntimeFlags(projectDir, goCommand, goWork, ambient string, cli []string) (parsedFlags, error) {
 	ambientArgs, err := splitQuotedFields(ambient)
 	if err != nil {
@@ -123,8 +121,7 @@ func parseRuntimeFlags(projectDir, goCommand, goWork, ambient string, cli []stri
 				ret.graph.ModFile = path
 			} else {
 				ret.graph.Overlay = path
-				// Retain the overlay for authoritative target discovery, then
-				// reject it only if that target selects a runtime provider.
+				// Discover through the overlay; reject it for matched runtimes.
 				ret.rejected = append(ret.rejected, arg)
 			}
 		case "v":
@@ -207,9 +204,7 @@ func isQuotedFieldSpace(c byte) bool {
 	return c == ' ' || c == '\t' || c == '\n' || c == '\r'
 }
 
-// splitQuotedFields mirrors cmd/internal/quoted.Split, which is what the Go
-// command uses for GOFLAGS. Quotes only delimit a field when they are its first
-// byte, and quoted contents are not unescaped.
+// splitQuotedFields mirrors the Go command's GOFLAGS parser.
 func splitQuotedFields(s string) ([]string, error) {
 	var fields []string
 	for len(s) > 0 {

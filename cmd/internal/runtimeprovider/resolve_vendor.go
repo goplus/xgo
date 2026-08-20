@@ -30,10 +30,8 @@ import (
 	gomodfile "golang.org/x/mod/modfile"
 )
 
-// preflightClassMetadataDetails reads only the target module metadata. It is
-// intentionally separate from loadEffectiveGraph: go list -m all cannot run
-// in vendor mode, and probing a legacy target must not turn that limitation
-// into a runtime-provider error before a runtime project has been identified.
+// preflightClassMetadataDetails reads target metadata without loading the graph.
+// This keeps legacy vendor targets on the existing path.
 func (r *Resolver) preflightClassMetadataDetails(ctx context.Context, dir string) (loaded modload.Module, moduleGoMod string, hasClass, vendor bool, err error) {
 	goMod, err := goEnvWithPolicy(ctx, r.policy.graph, dir, "GOMOD")
 	if err != nil {
@@ -63,18 +61,14 @@ func (r *Resolver) preflightClassMetadataDetails(ctx context.Context, dir string
 	return loaded, moduleGoMod, hasClass, vendor, err
 }
 
-// probeVendorProject identifies a runtime project without invoking
-// "go list -m all". Standard Go vendor snapshots do not preserve gox.mod or
-// gop.mod reliably, so an external class marker is indeterminate and must fail
-// closed instead of consulting a live replacement or returning ErrNotHandled.
+// probeVendorProject classifies a target without go list -m all.
+// External class metadata is unavailable in standard vendor snapshots.
 func (r *Resolver) probeVendorProject(projectDir string, target modload.Module, recursive bool) (bool, error) {
 	return r.matchVendorModule(projectDir, target, recursive)
 }
 
-// probeVendorPackage uses package-specific `go list`, which remains available
-// in vendor mode, to distinguish another workspace main module from an
-// unmarked dependency. Only main/workspace module metadata is authoritative;
-// external class metadata is absent from standard vendor data and fails closed.
+// probeVendorPackage uses package-specific go list, which works in vendor mode.
+// Only main/workspace metadata is authoritative.
 func (r *Resolver) probeVendorPackage(ctx context.Context, moduleGoMod string, target modload.Module, importPath string, recursive bool) (bool, error) {
 	if classPath := externalClassModule(target); classPath != "" {
 		return false, r.vendorClassMetadataError(classPath)
@@ -126,14 +120,7 @@ func (r *Resolver) probeVendorPackageInModule(ctx context.Context, moduleGoMod s
 	if err != nil || !pathWithin(root, projectDir) {
 		return false, nil
 	}
-	ownerGoMod, err := goEnvWithPolicy(ctx, r.policy.graph, projectDir, "GOMOD")
-	if err != nil {
-		return false, err
-	}
-	if ownerGoMod == "" || ownerGoMod == os.DevNull {
-		return false, nil
-	}
-	same, err := sameFile(moduleGoMod, ownerGoMod)
+	same, err := moduleOwnsPackage(ctx, r.policy.graph, moduleGoMod, projectDir)
 	if err != nil {
 		return false, err
 	}
@@ -149,10 +136,8 @@ type workspaceVendorMember struct {
 	goMod      string
 }
 
-// probeVendorWorkspacePackage handles XGo-only packages for which go list
-// cannot report physical package fields. Only go.work use members are eligible:
-// workspace replacements and other live dependency sources are deliberately
-// excluded from this conservative vendor-mode classification.
+// probeVendorWorkspacePackage handles XGo-only packages in vendor mode.
+// Only go.work use members are eligible.
 func (r *Resolver) probeVendorWorkspacePackage(ctx context.Context, importPath string, recursive bool) (bool, error) {
 	members, err := loadWorkspaceVendorMembers(r.policy.graph.GoWork)
 	if err != nil {
@@ -312,11 +297,8 @@ func hasRuntimeProject(dir string, projects []*modfile.Project) (bool, error) {
 		if !info.Mode().IsRegular() {
 			continue
 		}
-		ext := modfile.ClassExt(entry.Name())
-		for _, project := range projects {
-			if project.Runtime != nil && project.IsProj(ext, entry.Name()) {
-				return true, nil
-			}
+		if runtimeProjectMatches(projects, entry.Name()) {
+			return true, nil
 		}
 	}
 	return false, nil
@@ -370,9 +352,8 @@ func effectiveVendorMode(policy GraphPolicy, moduleGoMod string, parsed *gomodfi
 	return vendoredWorkspace == workspace, nil
 }
 
-// vendorManifestIsForWorkspace mirrors cmd/go's modulesTextIsForWorkspace.
-// A missing modules.txt retains the historical module-vendor behavior, but it
-// cannot identify a workspace vendor directory.
+// vendorManifestIsForWorkspace mirrors cmd/go's workspace marker.
+// A missing modules.txt is treated as module vendor mode.
 func vendorManifestIsForWorkspace(vendorDir string) (bool, error) {
 	file, err := os.Open(filepath.Join(vendorDir, "modules.txt"))
 	if os.IsNotExist(err) {

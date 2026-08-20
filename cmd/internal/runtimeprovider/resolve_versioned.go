@@ -29,10 +29,8 @@ import (
 	"golang.org/x/mod/module"
 )
 
-// versionedPackageHasRuntime classifies the requested module version in an
-// isolated graph. It must not borrow metadata from the caller's selected build
-// list: the same package path may describe a legacy project in one version and
-// a runtime project in another.
+// versionedPackageHasRuntime classifies the requested version in an isolated graph.
+// Caller graph metadata is deliberately not reused.
 func (r *Resolver) versionedPackageHasRuntime(ctx context.Context, target string) (bool, error) {
 	importPath, query, ok := splitVersionedPackageTarget(target)
 	if !ok {
@@ -56,9 +54,7 @@ func (r *Resolver) versionedPackageHasRuntime(ctx context.Context, target string
 	get.Stdout = io.Discard
 	getErr := get.Run()
 	if getErr != nil {
-		// A failed go get remains the legacy path's diagnostic responsibility.
-		// XGo-only packages may not be Go packages at all, so continue with the
-		// structured module probe below without inferring anything from stderr.
+		// Continue with the structured probe; XGo-only packages may not be Go packages.
 		if cause := context.Cause(ctx); cause != nil {
 			return false, cause
 		}
@@ -127,9 +123,7 @@ func (r *Resolver) versionedPackageHasRuntime(ctx context.Context, target string
 		return false, fmt.Errorf("versioned package %q graph selected unexpected module %#v", target, requested)
 	}
 	if requested.Effective().Dir == "" || requested.Effective().GoMod == "" {
-		// `go list -m all` may omit source fields for an otherwise selected
-		// dependency. `go list -find` is authoritative for this package and has
-		// already supplied a fully materialized module record.
+		// `go list -find` already supplied the authoritative source fields.
 		requested = listed
 		graph.Modules[listed.Selected.Path] = requested
 	}
