@@ -222,27 +222,27 @@ mygame/
  
 ---
 
-## Runtime providers
+## Project drivers
 
-A framework may delegate execution to a verified provider executable:
+A framework may delegate project execution to a verified driver executable:
 
 ```text
-runtime v1 example.com/framework/cmd/provider
+driver v1 example.com/framework/cmd/driver
 ```
 
-The provider must be a `main` package inside the declaring module. XGo resolves
+The driver must be a `main` package inside the declaring module. XGo resolves
 it from the effective `go.mod`/`go.work` graph, checks the class metadata
 snapshot, then builds and runs it on the host platform. `xgo run`, `xgo build`,
-and `xgo install` use the same provider protocol.
+and `xgo install` use the same driver protocol.
 
 The protocol version and the declaring module's `xgo` requirement are independent.
-`runtime v1` identifies the provider contract, first supported by XGo 1.8.0;
+`driver v1` identifies the driver contract, first supported by XGo 1.8.0;
 `xgo 1.9.0` would mean only that the declaring module needs XGo 1.9.0 or
 later. The effective minimum is the higher of those two requirements.
 
-Runtime providers are intentionally fail-closed: vendor and overlay-backed
-runtime projects are rejected, and `XGO_RUNTIME=off` disables dispatch. Keep
-the provider package and its `gox.mod`/`gop.mod` in the framework module.
+Project drivers are intentionally fail-closed: vendor and overlay-backed
+driver-backed projects are rejected, and `XGO_DRIVER=off` disables dispatch. Keep
+the driver package and its `gox.mod`/`gop.mod` in the framework module.
 
 ---
 

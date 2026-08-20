@@ -26,7 +26,7 @@ import (
 	"github.com/goplus/gogen"
 	"github.com/goplus/xgo/cl"
 	"github.com/goplus/xgo/cmd/internal/base"
-	"github.com/goplus/xgo/cmd/internal/runtimeprovider"
+	"github.com/goplus/xgo/cmd/internal/projectdriver"
 	"github.com/goplus/xgo/tool"
 	"github.com/goplus/xgo/x/gocmd"
 	"github.com/goplus/xgo/x/xgoprojs"
@@ -78,24 +78,24 @@ func runCmd(cmd *base.Command, args []string) {
 	}
 
 	noChdir := *flagNoChdir
-	runtimeFlags := append([]string(nil), pass.Args...)
+	driverFlags := append([]string(nil), pass.Args...)
 	if *flagAsm {
-		runtimeFlags = append(runtimeFlags, "-asm=true")
+		driverFlags = append(driverFlags, "-asm=true")
 	}
 	if *flagNoChdir {
-		runtimeFlags = append(runtimeFlags, "-nc=true")
+		driverFlags = append(driverFlags, "-nc=true")
 	}
 	if *flagProf {
-		runtimeFlags = append(runtimeFlags, "-prof=true")
+		driverFlags = append(driverFlags, "-prof=true")
 	}
-	runtimeResult, runtimeErr := tryRuntime(proj, args, runtimeFlags)
-	if runtimeErr != nil {
-		fmt.Fprintln(os.Stderr, runtimeErr)
+	driverResult, driverErr := tryDriver(proj, args, driverFlags)
+	if driverErr != nil {
+		fmt.Fprintln(os.Stderr, driverErr)
 		os.Exit(1)
 	}
-	if runtimeResult.Handled {
-		if runtimeResult.Status.Signaled || runtimeResult.Status.Code != 0 {
-			runtimeprovider.Exit(runtimeResult.Status)
+	if driverResult.Handled {
+		if driverResult.Status.Signaled || driverResult.Status.Code != 0 {
+			projectdriver.Exit(driverResult.Status)
 		}
 		return
 	}
@@ -117,8 +117,8 @@ func runCmd(cmd *base.Command, args []string) {
 	run(proj, args, !noChdir, conf, confCmd)
 }
 
-func tryRuntime(proj xgoprojs.Proj, args, flags []string) (runtimeprovider.DispatchResult, error) {
-	return runtimeprovider.TryRun(context.Background(), "", proj, flags, args, runtimeprovider.Streams{})
+func tryDriver(proj xgoprojs.Proj, args, flags []string) (projectdriver.DispatchResult, error) {
+	return projectdriver.TryRun(context.Background(), "", proj, flags, args, projectdriver.Streams{})
 }
 
 func run(proj xgoprojs.Proj, args []string, chDir bool, conf *tool.Config, run *gocmd.RunConfig) {

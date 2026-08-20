@@ -28,7 +28,7 @@ import (
 	"github.com/goplus/mod/modfetch"
 	"github.com/goplus/xgo/cl"
 	"github.com/goplus/xgo/cmd/internal/base"
-	"github.com/goplus/xgo/cmd/internal/runtimeprovider"
+	"github.com/goplus/xgo/cmd/internal/projectdriver"
 	"github.com/goplus/xgo/tool"
 	"github.com/goplus/xgo/x/gocmd"
 	"github.com/goplus/xgo/x/xgoprojs"
@@ -72,14 +72,14 @@ func runCmd(cmd *base.Command, args []string) {
 		cl.SetDebug(cl.DbgFlagAll)
 		cl.SetDisableRecover(true)
 	}
-	runtimeResult, runtimeErr := tryRuntime(projs, pass.Args)
-	if runtimeErr != nil {
-		fmt.Fprintln(os.Stderr, runtimeErr)
+	driverResult, driverErr := tryDriver(projs, pass.Args)
+	if driverErr != nil {
+		fmt.Fprintln(os.Stderr, driverErr)
 		os.Exit(1)
 	}
-	if runtimeResult.Handled {
-		if runtimeResult.Status.Signaled || runtimeResult.Status.Code != 0 {
-			runtimeprovider.Exit(runtimeResult.Status)
+	if driverResult.Handled {
+		if driverResult.Status.Signaled || driverResult.Status.Code != 0 {
+			projectdriver.Exit(driverResult.Status)
 		}
 		return
 	}
@@ -97,8 +97,8 @@ func runCmd(cmd *base.Command, args []string) {
 	}
 }
 
-func tryRuntime(projs []xgoprojs.Proj, flags []string) (runtimeprovider.DispatchResult, error) {
-	return runtimeprovider.TryInstall(context.Background(), "", projs, flags, runtimeprovider.Streams{})
+func tryDriver(projs []xgoprojs.Proj, flags []string) (projectdriver.DispatchResult, error) {
+	return projectdriver.TryInstall(context.Background(), "", projs, flags, projectdriver.Streams{})
 }
 
 func install(proj xgoprojs.Proj, conf *tool.Config, install *gocmd.InstallConfig) {
