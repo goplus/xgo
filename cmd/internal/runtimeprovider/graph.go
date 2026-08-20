@@ -42,6 +42,348 @@ type effectiveGraph struct {
 	Modules       map[string]ResolvedModule
 	ClassModules  []ResolvedModule
 	TargetModFile fileIdentity
+	files         *graphFileView
+}
+
+// graphFileView keeps the logical paths changed by -overlay. Runtime-provider
+// v1 never executes against this view: it uses the map to classify project
+// files, while the Go command remains authoritative for graph resolution.
+type graphFileView struct {
+	workDir      string
+	replacements map[string]string
+}
+
+type overlayJSON struct {
+	Replace map[string]string
+}
+
+func newGraphFileView(policy GraphPolicy, workDir string) (*graphFileView, error) {
+	view := &graphFileView{workDir: workDir}
+	overlay := policy.Overlay
+	if overlay == "" {
+		return view, nil
+	}
+	data, err := os.ReadFile(overlay)
+	if err != nil {
+		return nil, fmt.Errorf("read overlay %q: %w", overlay, err)
+	}
+	var parsed overlayJSON
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		return nil, fmt.Errorf("parse overlay %q: %w", overlay, err)
+	}
+	view.replacements = make(map[string]string, len(parsed.Replace))
+	for from, to := range parsed.Replace {
+		if from == "" {
+			return nil, fmt.Errorf("overlay %q contains an empty replacement path", overlay)
+		}
+		from = overlayPath(workDir, from)
+		if _, duplicate := view.replacements[from]; duplicate {
+			return nil, fmt.Errorf("overlay %q contains duplicate normalized path %q", overlay, from)
+		}
+		view.replacements[from] = overlayPath(workDir, to)
+	}
+	for parent, target := range view.replacements {
+		if target == "" {
+			continue
+		}
+		for child, childTarget := range view.replacements {
+			if childTarget != "" && child != parent && pathWithin(parent, child) {
+				return nil, fmt.Errorf("overlay %q maps both file %q and child %q", overlay, parent, child)
+			}
+		}
+	}
+	return view, nil
+}
+
+func overlayPath(workDir, path string) string {
+	if path == "" {
+		return ""
+	}
+	if !filepath.IsAbs(path) {
+		path = filepath.Join(workDir, path)
+	}
+	return filepath.Clean(path)
+}
+
+func (v *graphFileView) hasOverlay() bool {
+	return v != nil && v.replacements != nil
+}
+
+func (v *graphFileView) readFile(path string) ([]byte, error) {
+	if v == nil || !v.hasOverlay() {
+		return os.ReadFile(path)
+	}
+	logical := overlayPath(v.workDir, path)
+	if actual, ok := v.replacements[logical]; ok {
+		if actual == "" {
+			return nil, &os.PathError{Op: "read", Path: logical, Err: os.ErrNotExist}
+		}
+		return os.ReadFile(actual)
+	}
+	// An exact child replacement wins over an ancestor deletion, as in cmd/go.
+	if v.hasReplacementAncestor(logical) {
+		return nil, &os.PathError{Op: "read", Path: logical, Err: os.ErrNotExist}
+	}
+	return os.ReadFile(logical)
+}
+
+// hasReplacementAncestor reports whether a path is below an exact overlay
+// entry. Both a deleted parent and a parent replaced by a regular file hide
+// children. Callers must check an exact entry first, because an exact child
+// replacement takes precedence over a deleted parent.
+func (v *graphFileView) hasReplacementAncestor(path string) bool {
+	_, ok := v.replacementAncestor(path)
+	return ok
+}
+
+// replacementAncestor returns the nearest exact overlay entry above path.
+// Nearest-entry selection matches cmd/go's path-prefix lookup and matters for
+// nested deletion/addition overlays.
+func (v *graphFileView) replacementAncestor(path string) (string, bool) {
+	if v == nil || !v.hasOverlay() {
+		return "", false
+	}
+	for parent := filepath.Dir(path); parent != path; parent = filepath.Dir(parent) {
+		if actual, ok := v.replacements[parent]; ok {
+			return actual, true
+		}
+		if parent == filepath.Dir(parent) {
+			break
+		}
+	}
+	return "", false
+}
+
+// hasReplacementBelow reports whether a non-deleted overlay key is below path.
+// A deletion does not synthesize a directory and must not hide a physical file.
+func (v *graphFileView) hasReplacementBelow(path string) bool {
+	if v == nil || !v.hasOverlay() {
+		return false
+	}
+	for candidate, actual := range v.replacements {
+		if actual != "" && candidate != path && pathWithin(path, candidate) {
+			return true
+		}
+	}
+	return false
+}
+
+// hasVirtualDirectory reports whether an overlay child implies path as a
+// directory. The replacement destination is intentionally opaque: Go follows
+// it when it reads a file, and classification must not reject symlinks,
+// missing files, or directories before a runtime match is known.
+func (v *graphFileView) hasVirtualDirectory(path string) bool {
+	if v == nil || !v.hasOverlay() {
+		return false
+	}
+	for logical, actual := range v.replacements {
+		if actual != "" && logical != path && pathWithin(path, logical) {
+			return true
+		}
+	}
+	return false
+}
+
+func (v *graphFileView) directoryVisible(dir string) (bool, error) {
+	if v == nil || !v.hasOverlay() {
+		info, err := os.Stat(dir)
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		if err != nil {
+			return false, err
+		}
+		return info.IsDir(), nil
+	}
+	logical := overlayPath(v.workDir, dir)
+	if _, exact := v.replacements[logical]; exact {
+		return false, nil
+	}
+	ancestor, hasAncestor := v.replacementAncestor(logical)
+	if hasAncestor && ancestor != "" {
+		return false, nil
+	}
+	if v.hasVirtualDirectory(logical) {
+		return true, nil
+	}
+	info, err := os.Stat(logical)
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return info.IsDir(), nil
+}
+
+func (v *graphFileView) physicalEntries(dir string) ([]os.DirEntry, error) {
+	if v == nil || !v.hasOverlay() {
+		return os.ReadDir(dir)
+	}
+	logical := overlayPath(v.workDir, dir)
+	if _, exact := v.replacements[logical]; exact {
+		return nil, nil
+	}
+	if _, hasAncestor := v.replacementAncestor(logical); hasAncestor {
+		return nil, nil
+	}
+	entries, err := os.ReadDir(logical)
+	if os.IsNotExist(err) && v.hasVirtualDirectory(logical) {
+		return nil, nil
+	}
+	return entries, err
+}
+
+// regularFileNames merges physical entries with overlay keys, but never stats
+// a replacement destination. This keeps ordinary legacy overlays unchanged.
+func (v *graphFileView) regularFileNames(dir string) ([]string, error) {
+	logicalDir := dir
+	if v != nil && v.hasOverlay() {
+		logicalDir = overlayPath(v.workDir, dir)
+	}
+	entries, err := v.physicalEntries(logicalDir)
+	if err != nil {
+		return nil, err
+	}
+	files := make(map[string]bool, len(entries))
+	for _, entry := range entries {
+		logical := filepath.Join(logicalDir, entry.Name())
+		if v != nil && v.hasOverlay() {
+			if actual, replaced := v.replacements[logical]; replaced {
+				files[entry.Name()] = actual != ""
+				continue
+			}
+			if v.hasReplacementBelow(logical) {
+				continue
+			}
+		}
+		if entry.Type()&os.ModeSymlink != 0 {
+			continue
+		}
+		info, infoErr := entry.Info()
+		if infoErr != nil {
+			return nil, infoErr
+		}
+		if info.Mode().IsRegular() {
+			files[entry.Name()] = true
+		}
+	}
+	if v != nil && v.hasOverlay() {
+		for logical, actual := range v.replacements {
+			if filepath.Dir(logical) != logicalDir {
+				continue
+			}
+			files[filepath.Base(logical)] = actual != ""
+		}
+	}
+	names := make([]string, 0, len(files))
+	for name, visible := range files {
+		if visible {
+			names = append(names, name)
+		}
+	}
+	sort.Strings(names)
+	return names, nil
+}
+
+// directoryNames returns physical child directories plus the first component
+// of each non-deleted overlay key. It is used only by pattern classification.
+func (v *graphFileView) directoryNames(dir string) ([]string, error) {
+	logicalDir := overlayPath(v.workDir, dir)
+	visible, err := v.directoryVisible(logicalDir)
+	if err != nil {
+		return nil, err
+	}
+	if !visible {
+		return nil, nil
+	}
+	entries, err := v.physicalEntries(logicalDir)
+	if err != nil {
+		return nil, err
+	}
+	direct := make(map[string]bool, len(entries))
+	for _, entry := range entries {
+		logical := filepath.Join(logicalDir, entry.Name())
+		if actual, replaced := v.replacements[logical]; replaced {
+			direct[entry.Name()] = false
+			if actual == "" {
+				continue
+			}
+			continue
+		}
+		if v.hasReplacementBelow(logical) {
+			direct[entry.Name()] = true
+			continue
+		}
+		if entry.Type()&os.ModeSymlink != 0 {
+			continue
+		}
+		info, infoErr := entry.Info()
+		if infoErr != nil {
+			return nil, infoErr
+		}
+		if info.IsDir() {
+			direct[entry.Name()] = true
+		}
+	}
+	for logical, actual := range v.replacements {
+		if actual == "" || !pathWithin(logicalDir, logical) {
+			continue
+		}
+		rel, relErr := filepath.Rel(logicalDir, logical)
+		if relErr != nil || rel == "." || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+			continue
+		}
+		name := rel
+		if at := strings.IndexByte(rel, filepath.Separator); at >= 0 {
+			name = rel[:at]
+		}
+		child := filepath.Join(logicalDir, name)
+		if childActual, exact := v.replacements[child]; exact {
+			direct[name] = childActual == ""
+			continue
+		}
+		direct[name] = true
+	}
+	names := make([]string, 0, len(direct))
+	for name, visible := range direct {
+		if visible {
+			names = append(names, name)
+		}
+	}
+	sort.Strings(names)
+	return names, nil
+}
+
+func (v *graphFileView) regularFileVisible(path string) (bool, error) {
+	if v == nil || !v.hasOverlay() {
+		info, err := os.Stat(path)
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		if err != nil {
+			return false, err
+		}
+		return info.Mode().IsRegular(), nil
+	}
+	logical := overlayPath(v.workDir, path)
+	if actual, exact := v.replacements[logical]; exact {
+		if actual == "" {
+			return false, nil
+		}
+		return true, nil
+	}
+	if v.hasReplacementAncestor(logical) {
+		return false, nil
+	}
+	info, err := os.Stat(logical)
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return info.Mode().IsRegular(), nil
 }
 
 type goListModule struct {
@@ -56,12 +398,22 @@ type goListModule struct {
 	}
 }
 
+type goListPackage struct {
+	Dir        string
+	ImportPath string
+	Name       string
+	Module     *goListModule
+	Error      *struct {
+		Err string
+	}
+}
+
 func preparePolicies(ctx context.Context, cwd string, cli []string) (parsedFlags, error) {
 	goCommand, err := hostGoCommand()
 	if err != nil {
 		return parsedFlags{}, err
 	}
-	ambient, err := goEnvValue(ctx, goCommand, cwd, nil, "GOFLAGS")
+	ambient, err := goEnvValue(ctx, goCommand, cwd, "GOFLAGS", false)
 	if err != nil {
 		return parsedFlags{}, err
 	}
@@ -69,12 +421,15 @@ func preparePolicies(ctx context.Context, cwd string, cli []string) (parsedFlags
 	if err != nil {
 		return parsedFlags{}, err
 	}
-	policy = sanitizeGraphFlags(policy)
+	policy, err = sanitizeGraphFlags(policy)
+	if err != nil {
+		return parsedFlags{}, err
+	}
 	// GOWORK does not depend on -mod/-modfile/-overlay. Keep graph flags out of
 	// GOFLAGS entirely: their canonical paths are passed as distinct argv
 	// elements to every graph command, which also preserves spaces and Windows
 	// path separators without a second quoting grammar.
-	goWork, err := goEnvValue(ctx, goCommand, cwd, []string{}, "GOWORK")
+	goWork, err := goEnvValue(ctx, goCommand, cwd, "GOWORK", true)
 	if err != nil {
 		return parsedFlags{}, err
 	}
@@ -91,29 +446,27 @@ func preparePolicies(ctx context.Context, cwd string, cli []string) (parsedFlags
 }
 
 // sanitizeGraphFlags removes graph files that do not exist from discovery.
-// Their original spelling is retained as a rejected runtime flag, so a
-// matched runtime still reports the policy error through BuildPolicy while a
-// legacy target can continue with its normal command path.
-func sanitizeGraphFlags(policy parsedFlags) parsedFlags {
-	flags := make([]string, 0, len(policy.graph.Flags))
-	for _, flag := range policy.graph.Flags {
-		name := ""
-		if strings.HasPrefix(flag, "-modfile=") {
-			name = "modfile"
-		} else if strings.HasPrefix(flag, "-overlay=") {
-			name = "overlay"
+// They remain rejected runtime flags, so a matched runtime still reports the
+// policy error through BuildPolicy while a legacy target can continue with its
+// normal command path.
+func sanitizeGraphFlags(policy parsedFlags) (parsedFlags, error) {
+	if path := policy.graph.ModFile; path != "" {
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			policy.rejected = append(policy.rejected, "-modfile="+path)
+			policy.graph.ModFile = ""
+		} else if err != nil {
+			return parsedFlags{}, fmt.Errorf("inspect -modfile input %q: %w", path, err)
 		}
-		if name != "" {
-			path := strings.TrimPrefix(flag, "-"+name+"=")
-			if _, err := os.Stat(path); err != nil {
-				policy.rejected = append(policy.rejected, flag)
-				continue
-			}
-		}
-		flags = append(flags, flag)
 	}
-	policy.graph.Flags = flags
-	return policy
+	if path := policy.graph.Overlay; path != "" {
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			policy.rejected = append(policy.rejected, "-overlay="+path)
+			policy.graph.Overlay = ""
+		} else if err != nil {
+			return parsedFlags{}, fmt.Errorf("inspect -overlay input %q: %w", path, err)
+		}
+	}
+	return policy, nil
 }
 
 func hostGoCommand() (string, error) {
@@ -138,13 +491,14 @@ func hostGoCommand() (string, error) {
 	return path, nil
 }
 
-func goEnvValue(ctx context.Context, goCommand, dir string, graphFlags []string, key string) (string, error) {
+func goEnvValue(ctx context.Context, goCommand, dir, key string, clearGOFLAGS bool) (string, error) {
 	cmd := commandContext(ctx, goCommand, "env", key)
 	cmd.Dir = dir
-	if graphFlags == nil {
-		cmd.Env = os.Environ()
-	} else {
-		cmd.Env = graphEnvironment(os.Environ(), "", graphFlags)
+	cmd.Env = os.Environ()
+	// GOFLAGS itself must be read from the ambient environment; GOWORK is
+	// queried with GOFLAGS cleared so an ambient graph flag cannot affect it.
+	if clearGOFLAGS {
+		cmd.Env = replaceEnv(cmd.Env, "GOFLAGS", "")
 	}
 	out, err := cmd.Output()
 	if err != nil {
@@ -154,12 +508,14 @@ func goEnvValue(ctx context.Context, goCommand, dir string, graphFlags []string,
 }
 
 func loadEffectiveGraph(ctx context.Context, projectDir string, policy GraphPolicy) (*effectiveGraph, error) {
-	args := []string{"list", "-m", "-json"}
-	args = append(args, policy.Flags...)
-	args = append(args, "all")
+	view, err := newGraphFileView(policy, projectDir)
+	if err != nil {
+		return nil, err
+	}
+	args := policy.goArgs("list", "-m", "-json", "all")
 	cmd := exec.CommandContext(ctx, policy.GoCommand, args...)
 	cmd.Dir = projectDir
-	cmd.Env = graphEnvironment(os.Environ(), policy.GoWork, nil)
+	cmd.Env = graphEnvironment(os.Environ(), policy.GoWork)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -184,7 +540,7 @@ func loadEffectiveGraph(ctx context.Context, projectDir string, policy GraphPoli
 	if len(raw) == 0 {
 		return nil, fmt.Errorf("effective module graph is empty")
 	}
-	projectDir, err := canonicalExistingDir(projectDir)
+	projectDir, err = canonicalExistingDir(projectDir)
 	if err != nil {
 		return nil, err
 	}
@@ -209,10 +565,10 @@ func loadEffectiveGraph(ctx context.Context, projectDir string, policy GraphPoli
 		return nil, fmt.Errorf("project directory %q is outside the effective module graph", projectDir)
 	}
 	modfilePath := ret.Target.Effective().GoMod
-	if alternate := graphFlagValue(policy.Flags, "modfile"); alternate != "" {
-		modfilePath = alternate
+	if policy.ModFile != "" {
+		modfilePath = policy.ModFile
 	}
-	identity, classPaths, err := readTargetModFile(modfilePath)
+	identity, classPaths, err := readTargetModFileView(modfilePath, view)
 	if err != nil {
 		return nil, err
 	}
@@ -233,6 +589,7 @@ func loadEffectiveGraph(ctx context.Context, projectDir string, policy GraphPoli
 	}
 	ret.ClassModules = classModules
 	ret.TargetModFile = identity
+	ret.files = view
 	return ret, nil
 }
 
@@ -252,7 +609,7 @@ func downloadGraphModule(ctx context.Context, dir string, policy GraphPolicy, re
 	query := effective.Path + "@" + effective.Version
 	cmd := exec.CommandContext(ctx, policy.GoCommand, "mod", "download", "-json", query)
 	cmd.Dir = dir
-	cmd.Env = graphEnvironment(os.Environ(), policy.GoWork, nil)
+	cmd.Env = graphEnvironment(os.Environ(), policy.GoWork)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
 	if err := cmd.Run(); err != nil {
@@ -360,13 +717,17 @@ func canonicalModuleSource(path, dir, goMod string) (string, string, error) {
 }
 
 func readTargetModFile(path string) (fileIdentity, []string, error) {
-	canonical, err := canonicalExistingFile(path)
+	return readTargetModFileView(path, nil)
+}
+
+func readTargetModFileView(path string, view *graphFileView) (fileIdentity, []string, error) {
+	canonical, err := view.canonicalFile(path)
 	if err != nil {
 		return fileIdentity{}, nil, fmt.Errorf("effective target modfile: %w", err)
 	}
-	data, err := os.ReadFile(canonical)
+	data, err := view.readFile(canonical)
 	if err != nil {
-		return fileIdentity{}, nil, err
+		return fileIdentity{}, nil, fmt.Errorf("read effective target modfile: %w", err)
 	}
 	parsed, err := gomodfile.Parse(canonical, data, nil)
 	if err != nil {
@@ -382,10 +743,118 @@ func readTargetModFile(path string) (fileIdentity, []string, error) {
 	return fileIdentity{Path: canonical, SHA256: sha256Bytes(data)}, classMods, nil
 }
 
-func resolvePackageDirectory(graph *effectiveGraph, importPath string) (string, ResolvedModule, error) {
-	if importPath == "" || strings.Contains(importPath, "@") || strings.Contains(importPath, "...") {
-		return "", ResolvedModule{}, fmt.Errorf("runtime provider does not support package target %q", importPath)
+// canonicalFile pins a physical file in the usual case, but keeps the logical
+// path for an overlay-only file. The latter is necessary because cmd/go can
+// create go.mod (or an alternate modfile) solely through -overlay.
+func (v *graphFileView) canonicalFile(path string) (string, error) {
+	if v == nil || !v.hasOverlay() {
+		return canonicalExistingFile(path)
 	}
+	logical := overlayPath(v.workDir, path)
+	if actual, exact := v.replacements[logical]; exact {
+		if actual == "" {
+			return "", &os.PathError{Op: "stat", Path: logical, Err: os.ErrNotExist}
+		}
+		return logical, nil
+	}
+	if v.hasReplacementAncestor(logical) {
+		return "", &os.PathError{Op: "stat", Path: logical, Err: os.ErrNotExist}
+	}
+	return canonicalExistingFile(logical)
+}
+
+// canonicalDir is the directory counterpart to canonicalFile. A synthetic
+// directory has no filesystem inode, so its clean logical path is returned;
+// this is safe for classification because provider execution is rejected for
+// overlay-backed runtime targets before any path is sent over the protocol.
+func (v *graphFileView) canonicalDir(path string) (string, error) {
+	if v == nil || !v.hasOverlay() {
+		return canonicalExistingDir(path)
+	}
+	logical := overlayPath(v.workDir, path)
+	visible, err := v.directoryVisible(logical)
+	if err != nil {
+		return "", err
+	}
+	if !visible {
+		return "", &os.PathError{Op: "stat", Path: logical, Err: os.ErrNotExist}
+	}
+	if v.hasVirtualDirectory(logical) {
+		return logical, nil
+	}
+	return canonicalExistingDir(logical)
+}
+
+func resolvePackageDirectory(ctx context.Context, graph *effectiveGraph, importPath, workDir string, policy GraphPolicy) (string, ResolvedModule, error) {
+	pkg, err := listPackageTarget(ctx, importPath, workDir, policy)
+	if err != nil {
+		return "", ResolvedModule{}, err
+	}
+	if pkg.ImportPath != importPath {
+		return "", ResolvedModule{}, fmt.Errorf("package target %q resolved as %q", importPath, pkg.ImportPath)
+	}
+	if pkg.Dir == "" || pkg.Module == nil {
+		// The Go command may omit physical fields for an XGo-only package.
+		// Resolve that candidate from the selected graph, then ask Go which
+		// module root owns it so a prefix match cannot cross a nested module.
+		return resolveXGoOnlyPackageDirectory(ctx, graph, importPath, policy)
+	}
+	listed, err := normalizeListedModule(*pkg.Module)
+	if err != nil {
+		return "", ResolvedModule{}, fmt.Errorf("package target %q: %w", importPath, err)
+	}
+	module, ok := graph.Modules[listed.Selected.Path]
+	if !ok {
+		return "", ResolvedModule{}, fmt.Errorf("package target %q does not match the effective module graph", importPath)
+	}
+	dir, err := graph.files.canonicalDir(pkg.Dir)
+	if err != nil {
+		return "", ResolvedModule{}, fmt.Errorf("package target %q: %w", importPath, err)
+	}
+	if module.Effective().Dir == "" {
+		// Unmarked dependencies are not materialized during runtime discovery.
+		// Return their authoritative package identity so Resolve can classify
+		// them as legacy before attempting any runtime metadata access.
+		return dir, module, nil
+	}
+	if !sameResolvedModule(listed, module) {
+		return "", ResolvedModule{}, fmt.Errorf("package target %q does not match the effective module graph", importPath)
+	}
+	if !pathWithin(module.Effective().Dir, dir) {
+		return "", ResolvedModule{}, fmt.Errorf("package target %q escapes module %q", importPath, module.Selected.Path)
+	}
+	return dir, module, nil
+}
+
+func listPackageTarget(ctx context.Context, importPath, workDir string, policy GraphPolicy) (goListPackage, error) {
+	if importPath == "" || strings.Contains(importPath, "@") || strings.Contains(importPath, "...") {
+		return goListPackage{}, fmt.Errorf("runtime provider does not support package target %q", importPath)
+	}
+	args := policy.goArgs("list", "-e", "-find", "-json", importPath)
+	cmd := exec.CommandContext(ctx, policy.GoCommand, args...)
+	cmd.Dir = workDir
+	cmd.Env = graphEnvironment(os.Environ(), policy.GoWork)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout, cmd.Stderr = &stdout, &stderr
+	if err := cmd.Run(); err != nil {
+		return goListPackage{}, commandError("resolve package target "+importPath, err, stderr.String())
+	}
+	dec := json.NewDecoder(&stdout)
+	var pkg goListPackage
+	if err := dec.Decode(&pkg); err != nil {
+		return goListPackage{}, fmt.Errorf("decode package target %q: %w", importPath, err)
+	}
+	var extra json.RawMessage
+	if err := dec.Decode(&extra); !errors.Is(err, io.EOF) {
+		if err == nil {
+			return goListPackage{}, fmt.Errorf("package target %q resolved to multiple packages", importPath)
+		}
+		return goListPackage{}, fmt.Errorf("decode package target %q: %w", importPath, err)
+	}
+	return pkg, nil
+}
+
+func resolveXGoOnlyPackageDirectory(ctx context.Context, graph *effectiveGraph, importPath string, policy GraphPolicy) (string, ResolvedModule, error) {
 	paths := make([]string, 0, len(graph.Modules))
 	for path := range graph.Modules {
 		paths = append(paths, path)
@@ -397,16 +866,45 @@ func resolvePackageDirectory(graph *effectiveGraph, importPath string) (string, 
 		}
 		module := graph.Modules[modulePath]
 		root := module.Effective().Dir
+		if root == "" {
+			return "", ResolvedModule{}, fmt.Errorf("package target %q has no materialized module source", importPath)
+		}
 		suffix := strings.TrimPrefix(importPath, modulePath)
-		dir := filepath.Join(root, filepath.FromSlash(strings.TrimPrefix(suffix, "/")))
-		canonical, err := canonicalExistingDir(dir)
+		candidate := filepath.Join(root, filepath.FromSlash(strings.TrimPrefix(suffix, "/")))
+		dir, err := graph.files.canonicalDir(candidate)
 		if err != nil {
 			return "", ResolvedModule{}, fmt.Errorf("package target %q: %w", importPath, err)
 		}
-		if !pathWithin(root, canonical) {
+		if !pathWithin(root, dir) {
 			return "", ResolvedModule{}, fmt.Errorf("package target %q escapes module %q", importPath, modulePath)
 		}
-		return canonical, module, nil
+		// An XGo-only package can be supplied entirely by an overlay, in which
+		// case its logical directory has no physical cwd for `go env` to enter.
+		// The effective graph already established the owning module; retain the
+		// nested-module check for physical directories and use that graph identity
+		// for synthetic ones.
+		if graph.files != nil && graph.files.hasVirtualDirectory(dir) {
+			return dir, module, nil
+		}
+		ownerGoMod, err := goEnvWithPolicy(ctx, policy, dir, "GOMOD")
+		if err != nil {
+			return "", ResolvedModule{}, fmt.Errorf("resolve package target %q module ownership: %w", importPath, err)
+		}
+		if ownerGoMod == "" || ownerGoMod == os.DevNull {
+			return "", ResolvedModule{}, fmt.Errorf("package target %q has no module ownership", importPath)
+		}
+		ownerRoot, err := canonicalExistingDir(filepath.Dir(ownerGoMod))
+		if err != nil {
+			return "", ResolvedModule{}, fmt.Errorf("resolve package target %q module ownership: %w", importPath, err)
+		}
+		same, err := sameFile(ownerRoot, root)
+		if err != nil {
+			return "", ResolvedModule{}, fmt.Errorf("resolve package target %q module ownership: %w", importPath, err)
+		}
+		if !same {
+			return "", ResolvedModule{}, fmt.Errorf("package target %q crosses a nested module boundary", importPath)
+		}
+		return dir, module, nil
 	}
 	return "", ResolvedModule{}, fmt.Errorf("package target %q is outside the effective module graph", importPath)
 }
@@ -420,7 +918,7 @@ func retargetEffectiveGraph(graph *effectiveGraph, target ResolvedModule) (*effe
 	if target.Selected.Path == graph.Target.Selected.Path {
 		modfilePath = graph.TargetModFile.Path
 	}
-	identity, classPaths, err := readTargetModFile(modfilePath)
+	identity, classPaths, err := readTargetModFileView(modfilePath, graph.files)
 	if err != nil {
 		return nil, err
 	}
@@ -440,6 +938,7 @@ func retargetEffectiveGraph(graph *effectiveGraph, target ResolvedModule) (*effe
 		Modules:       graph.Modules,
 		ClassModules:  classModules,
 		TargetModFile: identity,
+		files:         graph.files,
 	}, nil
 }
 
@@ -447,40 +946,14 @@ func moduleContainsPackage(modulePath, packagePath string) bool {
 	return packagePath == modulePath || strings.HasPrefix(packagePath, modulePath+"/")
 }
 
-func graphFlagValue(flags []string, name string) string {
-	prefix := "-" + name + "="
-	for i := len(flags) - 1; i >= 0; i-- {
-		if strings.HasPrefix(flags[i], prefix) {
-			return strings.TrimPrefix(flags[i], prefix)
-		}
-	}
-	return ""
-}
-
-func graphEnvironment(base []string, goWork string, graphFlags []string) []string {
-	env := replaceEnv(base, "GOFLAGS", joinQuotedFields(graphFlags))
+func graphEnvironment(base []string, goWork string) []string {
+	// Graph policy is passed as argv. Clearing inherited GOFLAGS prevents an
+	// ambient unsupported flag from changing the authoritative graph command.
+	env := replaceEnv(base, "GOFLAGS", "")
 	if goWork != "" {
 		env = replaceEnv(env, "GOWORK", goWork)
 	}
 	return env
-}
-
-func joinQuotedFields(fields []string) string {
-	var joined strings.Builder
-	for i, field := range fields {
-		if i != 0 {
-			joined.WriteByte(' ')
-		}
-		joined.WriteByte('"')
-		for j := 0; j < len(field); j++ {
-			if field[j] == '\\' || field[j] == '"' {
-				joined.WriteByte('\\')
-			}
-			joined.WriteByte(field[j])
-		}
-		joined.WriteByte('"')
-	}
-	return joined.String()
 }
 
 func replaceEnv(env []string, key, value string) []string {

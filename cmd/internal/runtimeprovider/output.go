@@ -17,6 +17,7 @@
 package runtimeprovider
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
@@ -53,6 +54,9 @@ func resolveBuildOutput(cwd, requested, defaultName string) (string, error) {
 	} else {
 		trailingSeparator := strings.HasSuffix(path, string(filepath.Separator)) ||
 			(runtime.GOOS == "windows" && strings.HasSuffix(path, "/"))
+		if !filepath.IsAbs(path) {
+			path = filepath.Join(cwd, path)
+		}
 		if info, err := os.Stat(path); err == nil && info.IsDir() || trailingSeparator {
 			path = filepath.Join(path, defaultName)
 		}
@@ -182,8 +186,22 @@ func (tx *outputTransaction) abort() {
 }
 
 func (tx *outputTransaction) commit() error {
+	return tx.commitContext(context.Background())
+}
+
+// commitContext validates and publishes the staged output. Cancellation is
+// checked immediately before the rename, which is the transaction's commit
+// point; cancellation after that point cannot retract an already-published
+// executable.
+func (tx *outputTransaction) commitContext(ctx context.Context) error {
 	if tx == nil || tx.closed {
 		return fmt.Errorf("runtime output transaction is closed")
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if cause := context.Cause(ctx); cause != nil {
+		return cause
 	}
 	if err := tx.checkParentPath(); err != nil {
 		return err
@@ -257,6 +275,9 @@ func (tx *outputTransaction) commit() error {
 	if err := tx.checkParentPath(); err != nil {
 		return err
 	}
+	if cause := context.Cause(ctx); cause != nil {
+		return cause
+	}
 	if err := tx.parent.Rename(tx.stagedName, tx.finalName); err != nil {
 		state := "absent"
 		if info, statErr := tx.parent.Lstat(tx.finalName); statErr == nil {
@@ -266,9 +287,10 @@ func (tx *outputTransaction) commit() error {
 		}
 		return fmt.Errorf("commit runtime output (final state %s): %w", state, err)
 	}
-	if err := tx.checkParentPath(); err != nil {
-		return err
-	}
+	// Rename is the commit point. A pathname check after it is diagnostic only:
+	// the output is already visible and must not be reported as an uncommitted
+	// transaction.
+	_ = tx.checkParentPath()
 	// The rename above is the commit point. Cleanup and directory syncing are
 	// best effort from here so a successfully published output is never reported
 	// as a failed transaction.

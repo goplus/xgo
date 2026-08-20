@@ -24,67 +24,125 @@ import (
 )
 
 func TestSplitQuotedFields(t *testing.T) {
-	got, err := splitQuotedFields(`-buildvcs=false '-overlay=a b.json' "-modfile=x.mod" -trimpath`)
-	if err != nil {
-		t.Fatal(err)
+	tests := []struct {
+		name string
+		in   string
+		want []string
+	}{
+		{
+			name: "whole fields may be quoted",
+			in:   `-buildvcs=false '-overlay=a b.json' "-modfile=x.mod" -trimpath`,
+			want: []string{"-buildvcs=false", "-overlay=a b.json", "-modfile=x.mod", "-trimpath"},
+		},
+		{
+			name: "backslashes are literal",
+			in:   `"-modfile=C:\work\alt.mod" -overlay=C:\work\overlay.json -x=foo\`,
+			want: []string{`-modfile=C:\work\alt.mod`, `-overlay=C:\work\overlay.json`, `-x=foo\`},
+		},
+		{
+			name: "quotes inside fields are literal",
+			in:   `-overlay="a b.json" "-modfile=x.mod"`,
+			want: []string{`-overlay="a`, `b.json"`, "-modfile=x.mod"},
+		},
+		{
+			name: "unterminated interior quote is literal",
+			in:   `-x="unterminated`,
+			want: []string{`-x="unterminated`},
+		},
+		{
+			name: "empty quoted field",
+			in:   `'' ""`,
+			want: []string{"", ""},
+		},
 	}
-	want := []string{"-buildvcs=false", "-overlay=a b.json", "-modfile=x.mod", "-trimpath"}
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("splitQuotedFields() = %#v, want %#v", got, want)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := splitQuotedFields(tt.in)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Fatalf("splitQuotedFields(%q) = %#v, want %#v", tt.in, got, tt.want)
+			}
+		})
 	}
-	for _, in := range []string{`"unterminated`, `-x=foo\`} {
+	for _, in := range []string{`"unterminated`, `'unterminated`} {
 		if _, err := splitQuotedFields(in); err == nil {
 			t.Fatalf("splitQuotedFields(%q) succeeded", in)
 		}
 	}
 }
 
-func TestJoinQuotedFieldsRoundTrip(t *testing.T) {
-	want := []string{
-		"-modfile=/workspace/with space/runtime.mod",
-		`-overlay=C:\\work tree\\overlay.json`,
-		`-overlay=/tmp/a\"quoted\".json`,
-	}
-	encoded := joinQuotedFields(want)
-	got, err := splitQuotedFields(encoded)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("splitQuotedFields(joinQuotedFields()) = %#v, want %#v (encoded %q)", got, want, encoded)
-	}
-}
-
 func TestParseRuntimeFlags(t *testing.T) {
 	dir := t.TempDir()
 	got, err := parseRuntimeFlags(dir, "/usr/bin/go", "off",
-		`-buildvcs=false -mod=readonly -overlay='old overlay.json'`,
+		`-buildvcs=false -mod=readonly`,
 		[]string{"-v=true", "-x=false", "-work=true", "-trimpath=true", "-mod=mod", "-modfile=alt.mod"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	wantGraph := []string{
-		"-overlay=" + filepath.Join(dir, "old overlay.json"),
 		"-mod=mod",
 		"-modfile=" + filepath.Join(dir, "alt.mod"),
 	}
-	if !reflect.DeepEqual(got.graph.Flags, wantGraph) {
-		t.Fatalf("graph flags = %#v, want %#v", got.graph.Flags, wantGraph)
+	if !reflect.DeepEqual(got.graph.goFlags(), wantGraph) {
+		t.Fatalf("graph flags = %#v, want %#v", got.graph.goFlags(), wantGraph)
 	}
-	if got.graph.ModMode != "mod" || !got.build.Verbose || got.build.Trace || !got.build.KeepWork {
+	if got.graph.ModMode != modModeMod || got.graph.ModFile != filepath.Join(dir, "alt.mod") || !got.build.Verbose || got.build.Trace || !got.build.KeepWork {
 		t.Fatalf("unexpected policies: %#v", got)
 	}
-	if want := []string{"-buildvcs=false", "-trimpath=true"}; !reflect.DeepEqual(got.build.Flags, want) {
-		t.Fatalf("build flags = %#v, want %#v", got.build.Flags, want)
+	if !got.build.DisableBuildVCS || !got.build.TrimPath {
+		t.Fatalf("build flags = %#v", got.build)
 	}
 	if err := got.validateRuntime(); err != nil {
 		t.Fatal(err)
 	}
 }
 
+func TestParseRuntimeFlagsDefersOverlayRejection(t *testing.T) {
+	dir := t.TempDir()
+	got, err := parseRuntimeFlags(dir, "/usr/bin/go", "off", `'-overlay=old overlay.json'`, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantGraph := []string{"-overlay=" + filepath.Join(dir, "old overlay.json")}
+	if !reflect.DeepEqual(got.graph.goFlags(), wantGraph) {
+		t.Fatalf("graph flags = %#v, want %#v", got.graph.goFlags(), wantGraph)
+	}
+	if err := got.validateRuntime(); err == nil || !strings.Contains(err.Error(), "overlay") {
+		t.Fatalf("validateRuntime() = %v, want deferred overlay rejection", err)
+	}
+}
+
+func TestParseRuntimeFlagsAcceptsDoubleDashForms(t *testing.T) {
+	dir := t.TempDir()
+	got, err := parseRuntimeFlags(dir, "/usr/bin/go", "off", `--mod=readonly --trimpath`, []string{"--mod=mod", "--buildvcs=false"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := []string{"-mod=mod"}; !reflect.DeepEqual(got.graph.goFlags(), want) {
+		t.Fatalf("graph flags = %#v, want %#v", got.graph.goFlags(), want)
+	}
+	if !got.build.TrimPath || !got.build.DisableBuildVCS {
+		t.Fatalf("build flags = %#v", got.build)
+	}
+	if err := got.validateRuntime(); err != nil {
+		t.Fatal(err)
+	}
+	for _, flag := range []string{"--", "---trimpath"} {
+		got, err := parseRuntimeFlags(dir, "/usr/bin/go", "off", "", []string{flag})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := got.validateRuntime(); err == nil {
+			t.Fatalf("invalid flag %q was accepted", flag)
+		}
+	}
+}
+
 func TestBuildPolicyFlagForms(t *testing.T) {
 	policy := BuildPolicy{
-		Flags:    []string{"-trimpath=true"},
+		TrimPath: true,
 		Verbose:  true,
 		Trace:    true,
 		KeepWork: true,

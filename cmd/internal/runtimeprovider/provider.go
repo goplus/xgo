@@ -28,16 +28,6 @@ import (
 	"runtime"
 )
 
-type goListPackage struct {
-	Dir        string
-	ImportPath string
-	Name       string
-	Module     *goListModule
-	Error      *struct {
-		Err string
-	}
-}
-
 type builtProvider struct {
 	path string
 	dir  string
@@ -57,6 +47,10 @@ func (r *Resolver) Build(ctx context.Context, rt *Runtime, requestedOutput strin
 	if err != nil {
 		return ProcessStatus{}, "", err
 	}
+	return r.buildWithPolicy(ctx, rt, requestedOutput, policy, streams)
+}
+
+func (r *Resolver) buildWithPolicy(ctx context.Context, rt *Runtime, requestedOutput string, policy BuildPolicy, streams Streams) (ProcessStatus, string, error) {
 	streams = fillStreams(streams)
 	final, err := resolveBuildOutput(r.cwd, requestedOutput, rt.DefaultExecName)
 	if err != nil {
@@ -71,7 +65,7 @@ func (r *Resolver) Build(ctx context.Context, rt *Runtime, requestedOutput strin
 	if err != nil || status.Signaled || status.Code != 0 {
 		return status, final, err
 	}
-	if err := tx.commit(); err != nil {
+	if err := commitOutputUnlessCanceled(ctx, tx); err != nil {
 		return ProcessStatus{}, final, err
 	}
 	if policy.KeepWork {
@@ -82,6 +76,10 @@ func (r *Resolver) Build(ctx context.Context, rt *Runtime, requestedOutput strin
 
 // Install builds one runtime target transactionally into the effective GOBIN.
 func (r *Resolver) Install(ctx context.Context, rt *Runtime, streams Streams) (ProcessStatus, string, error) {
+	policy, err := r.BuildPolicy()
+	if err != nil {
+		return ProcessStatus{}, "", err
+	}
 	bin, err := installBin(ctx, rt.Graph)
 	if err != nil {
 		return ProcessStatus{}, "", err
@@ -89,13 +87,13 @@ func (r *Resolver) Install(ctx context.Context, rt *Runtime, streams Streams) (P
 	if err := os.MkdirAll(bin, 0755); err != nil {
 		return ProcessStatus{}, "", fmt.Errorf("create install directory: %w", err)
 	}
-	return r.Build(ctx, rt, filepath.Join(bin, rt.DefaultExecName), streams)
+	return r.buildWithPolicy(ctx, rt, filepath.Join(bin, rt.DefaultExecName), policy, streams)
 }
 
 func installBin(ctx context.Context, graph GraphPolicy) (string, error) {
 	cmd := commandContext(ctx, graph.GoCommand, "env", "-json", "GOBIN", "GOPATH")
 	cmd.Dir = graph.WorkDir
-	cmd.Env = graphEnvironment(os.Environ(), graph.GoWork, nil)
+	cmd.Env = graphEnvironment(os.Environ(), graph.GoWork)
 	stdout, err := cmd.Output()
 	if err != nil {
 		return "", commandError("resolve install directory", err, string(cmdStderr(cmd)))
@@ -162,8 +160,7 @@ func buildProvider(ctx context.Context, rt *Runtime, policy BuildPolicy, streams
 		return nil, err
 	}
 	provider := &builtProvider{dir: dir, path: filepath.Join(dir, executableName("provider")), keep: policy.KeepWork}
-	args := []string{"build"}
-	args = append(args, rt.Graph.Flags...)
+	args := rt.Graph.goArgs("build")
 	args = append(args, policy.goBuildFlags()...)
 	args = append(args, "-buildmode=exe", "-o", provider.path, rt.ProviderPackage)
 	cmd := exec.CommandContext(ctx, rt.Graph.GoCommand, args...)
@@ -202,12 +199,10 @@ func validateProvider(ctx context.Context, rt *Runtime) error {
 	if !moduleContainsPackage(rt.Origin.Selected.Path, rt.ProviderPackage) {
 		return fmt.Errorf("runtime provider package %q is outside declaring module %q", rt.ProviderPackage, rt.Origin.Selected.Path)
 	}
-	args := []string{"list", "-json"}
-	args = append(args, rt.Graph.Flags...)
-	args = append(args, rt.ProviderPackage)
+	args := rt.Graph.goArgs("list", "-json", rt.ProviderPackage)
 	cmd := exec.CommandContext(ctx, rt.Graph.GoCommand, args...)
 	cmd.Dir = rt.Graph.WorkDir
-	cmd.Env = graphEnvironment(os.Environ(), rt.Graph.GoWork, nil)
+	cmd.Env = graphEnvironment(os.Environ(), rt.Graph.GoWork)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
 	if err := cmd.Run(); err != nil {
@@ -257,7 +252,7 @@ func sameResolvedModule(a, b ResolvedModule) bool {
 }
 
 func hostBuildEnvironment(base []string, goWork string) []string {
-	env := graphEnvironment(base, goWork, nil)
+	env := graphEnvironment(base, goWork)
 	env = replaceEnv(env, "GOOS", runtime.GOOS)
 	env = replaceEnv(env, "GOARCH", runtime.GOARCH)
 	return env
@@ -295,4 +290,24 @@ func processStatus(err error) (ProcessStatus, error) {
 		status.Signal, status.Signaled = signal, true
 	}
 	return status, nil
+}
+
+// statusUnlessCanceled closes the race where a provider exits successfully at
+// the same time its parent context is canceled. A successful build/run must not
+// be reported after cancellation, because build callers may publish output
+// immediately after receiving that status.
+func statusUnlessCanceled(ctx context.Context, status ProcessStatus) (ProcessStatus, error) {
+	if !status.Signaled && status.Code == 0 {
+		if cause := context.Cause(ctx); cause != nil {
+			return ProcessStatus{}, cause
+		}
+	}
+	return status, nil
+}
+
+func commitOutputUnlessCanceled(ctx context.Context, tx *outputTransaction) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	return tx.commitContext(ctx)
 }

@@ -21,6 +21,7 @@ package runtimeprovider
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -88,6 +89,15 @@ func TestRunProviderProcessWindows(t *testing.T) {
 	}
 	if stderr.String() != "provider-stderr" {
 		t.Fatalf("stderr = %q", stderr.String())
+	}
+}
+
+func TestStatusUnlessCanceledRejectsSuccessfulExitAfterCancellation(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	status, err := statusUnlessCanceled(ctx, successStatus())
+	if !errors.Is(err, context.Canceled) || status != (ProcessStatus{}) {
+		t.Fatalf("statusUnlessCanceled() = (%+v, %v), want cancellation", status, err)
 	}
 }
 

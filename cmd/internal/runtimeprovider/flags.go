@@ -19,7 +19,6 @@ package runtimeprovider
 import (
 	"fmt"
 	"path/filepath"
-	"sort"
 	"strconv"
 	"strings"
 )
@@ -39,7 +38,7 @@ func (p BuildPolicy) protocolFlags() []string {
 }
 
 func (p BuildPolicy) formatFlags(enabledSuffix string) []string {
-	flags := make([]string, 0, len(p.Flags)+3)
+	flags := make([]string, 0, 5)
 	if p.Verbose {
 		flags = append(flags, "-v"+enabledSuffix)
 	}
@@ -49,7 +48,34 @@ func (p BuildPolicy) formatFlags(enabledSuffix string) []string {
 	if p.KeepWork {
 		flags = append(flags, "-work"+enabledSuffix)
 	}
-	return append(flags, p.Flags...)
+	if p.TrimPath {
+		flags = append(flags, "-trimpath=true")
+	}
+	if p.DisableBuildVCS {
+		flags = append(flags, "-buildvcs=false")
+	}
+	return flags
+}
+
+func (p GraphPolicy) goFlags() []string {
+	flags := make([]string, 0, 3)
+	if p.ModMode != "" {
+		flags = append(flags, "-mod="+string(p.ModMode))
+	}
+	if p.ModFile != "" {
+		flags = append(flags, "-modfile="+p.ModFile)
+	}
+	if p.Overlay != "" {
+		flags = append(flags, "-overlay="+p.Overlay)
+	}
+	return flags
+}
+
+func (p GraphPolicy) goArgs(command string, args ...string) []string {
+	ret := make([]string, 1, 1+len(args)+3)
+	ret[0] = command
+	ret = append(ret, p.goFlags()...)
+	return append(ret, args...)
 }
 
 // parseRuntimeFlags extracts the policy needed for discovery. Rejected build
@@ -61,12 +87,10 @@ func parseRuntimeFlags(projectDir, goCommand, goWork, ambient string, cli []stri
 		return parsedFlags{}, fmt.Errorf("invalid GOFLAGS: %w", err)
 	}
 	all := append(ambientArgs, cli...)
-	graphValues := make(map[string]string, 3)
-	graphSeen := make(map[string]int, 3)
 	var ret parsedFlags
 	ret.graph.GoCommand = goCommand
 	ret.graph.GoWork = goWork
-	for i, arg := range all {
+	for _, arg := range all {
 		name, value, ok := splitCanonicalFlag(arg)
 		if !ok {
 			ret.rejected = append(ret.rejected, arg)
@@ -74,8 +98,9 @@ func parseRuntimeFlags(projectDir, goCommand, goWork, ambient string, cli []stri
 		}
 		switch name {
 		case "mod":
-			switch value {
-			case "mod", "readonly", "vendor":
+			mode := modMode(value)
+			switch mode {
+			case modModeMod, modModeReadonly, modModeVendor:
 			default:
 				// Keep malformed runtime-only policy deferred until a
 				// runtime project is selected. Legacy Go/XGo commands are
@@ -83,9 +108,7 @@ func parseRuntimeFlags(projectDir, goCommand, goWork, ambient string, cli []stri
 				ret.rejected = append(ret.rejected, arg)
 				continue
 			}
-			graphValues[name] = value
-			graphSeen[name] = i
-			ret.graph.ModMode = value
+			ret.graph.ModMode = mode
 		case "modfile", "overlay":
 			if value == "" {
 				ret.rejected = append(ret.rejected, arg)
@@ -96,8 +119,14 @@ func parseRuntimeFlags(projectDir, goCommand, goWork, ambient string, cli []stri
 				ret.rejected = append(ret.rejected, arg)
 				continue
 			}
-			graphValues[name] = path
-			graphSeen[name] = i
+			if name == "modfile" {
+				ret.graph.ModFile = path
+			} else {
+				ret.graph.Overlay = path
+				// Retain the overlay for authoritative target discovery, then
+				// reject it only if that target selects a runtime provider.
+				ret.rejected = append(ret.rejected, arg)
+			}
 		case "v":
 			v, err := strconv.ParseBool(value)
 			if err != nil {
@@ -122,42 +151,18 @@ func parseRuntimeFlags(projectDir, goCommand, goWork, ambient string, cli []stri
 				ret.rejected = append(ret.rejected, "-"+name)
 				continue
 			}
-			ret.build.Flags = replaceBuildFlag(ret.build.Flags, name, "-trimpath=true")
+			ret.build.TrimPath = true
 		case "buildvcs":
 			if value != "false" {
 				ret.rejected = append(ret.rejected, "-"+name)
 				continue
 			}
-			ret.build.Flags = replaceBuildFlag(ret.build.Flags, name, "-buildvcs=false")
+			ret.build.DisableBuildVCS = true
 		default:
 			ret.rejected = append(ret.rejected, "-"+name)
 		}
 	}
-	type graphFlag struct {
-		name  string
-		value string
-		pos   int
-	}
-	ordered := make([]graphFlag, 0, len(graphValues))
-	for name, value := range graphValues {
-		ordered = append(ordered, graphFlag{name: name, value: value, pos: graphSeen[name]})
-	}
-	sort.Slice(ordered, func(i, j int) bool { return ordered[i].pos < ordered[j].pos })
-	for _, flag := range ordered {
-		ret.graph.Flags = append(ret.graph.Flags, "-"+flag.name+"="+flag.value)
-	}
 	return ret, nil
-}
-
-func replaceBuildFlag(flags []string, name, value string) []string {
-	prefix := "-" + name
-	for i, flag := range flags {
-		if flag == prefix || strings.HasPrefix(flag, prefix+"=") {
-			flags[i] = value
-			return flags
-		}
-	}
-	return append(flags, value)
 }
 
 func (p parsedFlags) validateRuntime() error {
@@ -168,10 +173,13 @@ func (p parsedFlags) validateRuntime() error {
 }
 
 func splitCanonicalFlag(arg string) (name, value string, ok bool) {
-	if !strings.HasPrefix(arg, "-") || arg == "-" || strings.HasPrefix(arg, "--") {
+	if !strings.HasPrefix(arg, "-") || arg == "-" || arg == "--" {
 		return "", "", false
 	}
 	arg = strings.TrimPrefix(arg, "-")
+	if strings.HasPrefix(arg, "-") {
+		arg = strings.TrimPrefix(arg, "-")
+	}
 	if at := strings.IndexByte(arg, '='); at >= 0 {
 		name, value = arg[:at], arg[at+1:]
 	} else {
@@ -195,48 +203,42 @@ func canonicalFlagPath(base, path string) (string, error) {
 	return abs, nil
 }
 
-// splitQuotedFields implements the quoting accepted by GOFLAGS without
-// invoking a shell. Quotes are removed and backslash quotes the next byte.
+func isQuotedFieldSpace(c byte) bool {
+	return c == ' ' || c == '\t' || c == '\n' || c == '\r'
+}
+
+// splitQuotedFields mirrors cmd/internal/quoted.Split, which is what the Go
+// command uses for GOFLAGS. Quotes only delimit a field when they are its first
+// byte, and quoted contents are not unescaped.
 func splitQuotedFields(s string) ([]string, error) {
 	var fields []string
-	for i := 0; i < len(s); {
-		for i < len(s) && (s[i] == ' ' || s[i] == '\t' || s[i] == '\r' || s[i] == '\n') {
-			i++
+	for len(s) > 0 {
+		for len(s) > 0 && isQuotedFieldSpace(s[0]) {
+			s = s[1:]
 		}
-		if i == len(s) {
+		if len(s) == 0 {
 			break
 		}
-		var b strings.Builder
-		quote := byte(0)
-		for i < len(s) {
-			c := s[i]
-			if quote == 0 && (c == ' ' || c == '\t' || c == '\r' || c == '\n') {
-				break
-			}
-			switch c {
-			case '\'', '"':
-				if quote == 0 {
-					quote = c
-				} else if quote == c {
-					quote = 0
-				} else {
-					b.WriteByte(c)
-				}
-			case '\\':
+		if s[0] == '\'' || s[0] == '"' {
+			quote := s[0]
+			s = s[1:]
+			i := 0
+			for i < len(s) && s[i] != quote {
 				i++
-				if i == len(s) {
-					return nil, fmt.Errorf("trailing backslash")
-				}
-				b.WriteByte(s[i])
-			default:
-				b.WriteByte(c)
 			}
+			if i >= len(s) {
+				return nil, fmt.Errorf("unterminated %c string", quote)
+			}
+			fields = append(fields, s[:i])
+			s = s[i+1:]
+			continue
+		}
+		i := 0
+		for i < len(s) && !isQuotedFieldSpace(s[i]) {
 			i++
 		}
-		if quote != 0 {
-			return nil, fmt.Errorf("unterminated quote")
-		}
-		fields = append(fields, b.String())
+		fields = append(fields, s[:i])
+		s = s[i:]
 	}
 	return fields, nil
 }

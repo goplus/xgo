@@ -61,13 +61,22 @@ const (
 type ModuleRef = xgomod.ModuleRef
 type ResolvedModule = xgomod.ResolvedModule
 
+type modMode string
+
+const (
+	modModeMod      modMode = "mod"
+	modModeReadonly modMode = "readonly"
+	modModeVendor   modMode = "vendor"
+)
+
 // GraphPolicy is the exact module/workspace policy shared by discovery,
 // validation, and provider construction.
 type GraphPolicy struct {
 	GoCommand string
 	GoWork    string
-	Flags     []string
-	ModMode   string
+	ModMode   modMode
+	ModFile   string
+	Overlay   string
 	// WorkDir anchors all Go graph operations on both sides of the wire;
 	// provider execution itself still runs in ProjectDir.
 	WorkDir string
@@ -75,10 +84,11 @@ type GraphPolicy struct {
 
 // BuildPolicy is the runtime-safe subset of XGo/Go build flags.
 type BuildPolicy struct {
-	Flags    []string
-	Verbose  bool
-	Trace    bool
-	KeepWork bool
+	Verbose         bool
+	Trace           bool
+	KeepWork        bool
+	TrimPath        bool
+	DisableBuildVCS bool
 }
 
 // Runtime is the immutable discovery result passed to execution.

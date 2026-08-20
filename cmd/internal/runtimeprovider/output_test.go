@@ -17,6 +17,8 @@
 package runtimeprovider
 
 import (
+	"context"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -98,6 +100,29 @@ func TestOutputTransactionFailurePreservesFinal(t *testing.T) {
 	}
 	if _, err := os.Stat(tx.dir); !os.IsNotExist(err) {
 		t.Fatalf("failed transaction left staging directory: %v", err)
+	}
+}
+
+func TestCanceledBuildDoesNotCommitOutput(t *testing.T) {
+	dir := t.TempDir()
+	final := filepath.Join(dir, executableName("game"))
+	if err := os.WriteFile(final, []byte("old"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	tx, err := beginOutputTransaction(final, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.abort()
+	writeTestExecutable(t, tx.staged)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if err := commitOutputUnlessCanceled(ctx, tx); !errors.Is(err, context.Canceled) {
+		t.Fatalf("commitOutputUnlessCanceled() = %v, want context cancellation", err)
+	}
+	got, err := os.ReadFile(final)
+	if err != nil || string(got) != "old" {
+		t.Fatalf("canceled commit changed final output: %q, %v", got, err)
 	}
 }
 
@@ -305,5 +330,21 @@ func TestResolveBuildOutput(t *testing.T) {
 	got, err = resolveBuildOutput(dir, dir+string(filepath.Separator), "game")
 	if err != nil || got != want {
 		t.Fatalf("directory output = %q, %v", got, err)
+	}
+
+	got, err = resolveBuildOutput(dir, "relative/bin/game", "default")
+	want = filepath.Join(dir, "relative", "bin", "game")
+	if err != nil || got != want {
+		t.Fatalf("relative output = %q, %v; want %q", got, err, want)
+	}
+
+	relativeDir := filepath.Join(dir, "relative-dir")
+	if err := os.Mkdir(relativeDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	got, err = resolveBuildOutput(dir, filepath.Join("relative-dir", ""), "default")
+	want = filepath.Join(relativeDir, executableName("default"))
+	if err != nil || got != want {
+		t.Fatalf("relative directory output = %q, %v; want %q", got, err, want)
 	}
 }

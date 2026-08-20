@@ -18,13 +18,188 @@ package runtimeprovider
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"reflect"
 	"runtime"
+	"sort"
 	"strings"
 	"testing"
 )
+
+func TestGraphFileViewReadsOverlayReplacement(t *testing.T) {
+	root := t.TempDir()
+	logical := filepath.Join(root, "go.mod")
+	replacement := filepath.Join(root, "draft.mod")
+	overlay := filepath.Join(root, "overlay.json")
+	mustWriteFile(t, logical, "module example.test/plain\n\ngo 1.25\n")
+	mustWriteFile(t, replacement, "module example.test/overlay\n\ngo 1.25\n")
+	data, err := json.Marshal(struct {
+		Replace map[string]string `json:"Replace"`
+	}{Replace: map[string]string{logical: replacement}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	mustWriteFile(t, overlay, string(data))
+	view, err := newGraphFileView(GraphPolicy{Overlay: overlay}, root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := view.readFile(logical)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(got), "module example.test/overlay") {
+		t.Fatalf("overlay read = %q", got)
+	}
+}
+
+func TestGraphFileViewSynthesizesOverlayParentDirectories(t *testing.T) {
+	root := t.TempDir()
+	actual := filepath.Join(root, "actual.foo")
+	logical := filepath.Join(root, "virtual", "nested", "main.foo")
+	overlay := filepath.Join(root, "overlay.json")
+	mustWriteFile(t, actual, "overlay project\n")
+	data, err := json.Marshal(struct {
+		Replace map[string]string `json:"Replace"`
+	}{Replace: map[string]string{logical: actual}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	mustWriteFile(t, overlay, string(data))
+	view, err := newGraphFileView(GraphPolicy{Overlay: overlay}, root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	names, err := view.regularFileNames(filepath.Join(root, "virtual", "nested"))
+	if err != nil {
+		t.Fatalf("regularFileNames() = %v", err)
+	}
+	if !reflect.DeepEqual(names, []string{"main.foo"}) {
+		t.Fatalf("regularFileNames() = %#v, want [main.foo]", names)
+	}
+	dir, err := view.canonicalDir(filepath.Join(root, "virtual", "nested"))
+	if err != nil || dir != filepath.Join(root, "virtual", "nested") {
+		t.Fatalf("canonicalDir() = %q, %v", dir, err)
+	}
+}
+
+func TestGraphFileViewDeletedParentAllowsAddedChild(t *testing.T) {
+	root := t.TempDir()
+	parent := filepath.Join(root, "parent")
+	actual := filepath.Join(root, "replacement.foo")
+	logical := filepath.Join(parent, "child", "main.foo")
+	overlay := filepath.Join(root, "overlay.json")
+	mustMkdirAll(t, parent)
+	mustWriteFile(t, filepath.Join(parent, "old.foo"), "old\n")
+	mustWriteFile(t, actual, "new\n")
+	data, err := json.Marshal(struct {
+		Replace map[string]string `json:"Replace"`
+	}{Replace: map[string]string{parent: "", logical: actual}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	mustWriteFile(t, overlay, string(data))
+	view, err := newGraphFileView(GraphPolicy{Overlay: overlay}, root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := view.readFile(logical)
+	if err != nil || string(got) != "new\n" {
+		t.Fatalf("readFile() = %q, %v", got, err)
+	}
+	names, err := view.regularFileNames(filepath.Join(parent, "child"))
+	if err != nil {
+		t.Fatalf("regularFileNames() = %v", err)
+	}
+	if !reflect.DeepEqual(names, []string{"main.foo"}) {
+		t.Fatalf("regularFileNames() = %#v, want [main.foo]", names)
+	}
+}
+
+func TestGraphFileViewDoesNotInspectReplacementDestinations(t *testing.T) {
+	root := t.TempDir()
+	project := filepath.Join(root, "project")
+	mustMkdirAll(t, project)
+	missing := filepath.Join(root, "missing.foo")
+	directory := filepath.Join(root, "replacement-dir")
+	mustMkdirAll(t, directory)
+	replacements := map[string]string{
+		filepath.Join(project, "missing.foo"):   missing,
+		filepath.Join(project, "directory.foo"): directory,
+	}
+	if runtime.GOOS != "windows" {
+		target := filepath.Join(root, "target.foo")
+		mustWriteFile(t, target, "target\n")
+		symlink := filepath.Join(root, "symlink.foo")
+		if err := os.Symlink(target, symlink); err != nil {
+			t.Fatal(err)
+		}
+		replacements[filepath.Join(project, "symlink.foo")] = symlink
+	}
+	overlay := filepath.Join(root, "overlay.json")
+	data, err := json.Marshal(struct {
+		Replace map[string]string `json:"Replace"`
+	}{Replace: replacements})
+	if err != nil {
+		t.Fatal(err)
+	}
+	mustWriteFile(t, overlay, string(data))
+	view, err := newGraphFileView(GraphPolicy{Overlay: overlay}, root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	names, err := view.regularFileNames(project)
+	if err != nil {
+		t.Fatalf("regularFileNames() = %v", err)
+	}
+	want := []string{"directory.foo", "missing.foo"}
+	if runtime.GOOS != "windows" {
+		want = append(want, "symlink.foo")
+	}
+	sort.Strings(want)
+	if !reflect.DeepEqual(names, want) {
+		t.Fatalf("regularFileNames() = %#v, want %#v", names, want)
+	}
+}
+
+func TestGraphEnvironmentClearsAmbientGOFLAGS(t *testing.T) {
+	base := []string{"GOFLAGS=-tags=ambient", "GOWORK=/old/work", "PATH=/bin"}
+	env := graphEnvironment(base, "off")
+	if got, ok := environmentValue(env, "GOFLAGS"); !ok || got != "" {
+		t.Fatalf("GOFLAGS = %q, %t; want cleared", got, ok)
+	}
+	if got, ok := environmentValue(env, "GOWORK"); !ok || got != "off" {
+		t.Fatalf("GOWORK = %q, %t; want off", got, ok)
+	}
+}
+
+func TestReadTargetModFileViewAllowsOverlayOnlyModfile(t *testing.T) {
+	root := t.TempDir()
+	logical := filepath.Join(root, "go.mod")
+	actual := filepath.Join(root, "overlay.mod")
+	overlay := filepath.Join(root, "overlay.json")
+	mustWriteFile(t, actual, "module example.test/overlay\n\ngo 1.25\n")
+	data, err := json.Marshal(struct {
+		Replace map[string]string `json:"Replace"`
+	}{Replace: map[string]string{logical: actual}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	mustWriteFile(t, overlay, string(data))
+	view, err := newGraphFileView(GraphPolicy{Overlay: overlay}, root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	identity, classes, err := readTargetModFileView(logical, view)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if identity.Path != logical || len(identity.SHA256) != 64 || len(classes) != 0 {
+		t.Fatalf("overlay-only modfile = %#v, classes %#v", identity, classes)
+	}
+}
 
 func TestLoadEffectiveGraphLocalReplace(t *testing.T) {
 	if testing.Short() {
@@ -72,12 +247,51 @@ replace example.test/framework => ../framework
 	if origin.Replace.Dir != framework || origin.Replace.GoMod != filepath.Join(framework, "go.mod") {
 		t.Fatalf("replacement source = %#v", origin.Replace)
 	}
-	dir, module, err := resolvePackageDirectory(graph, "example.test/framework/cmd/provider")
+	dir, module, err := resolvePackageDirectory(context.Background(), graph, "example.test/framework/cmd/provider", app, policy.graph)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if dir != filepath.Join(framework, "cmd", "provider") || module.Selected.Path != "example.test/framework" {
 		t.Fatalf("resolved package = %q, %#v", dir, module)
+	}
+}
+
+func TestResolvePackageDirectoryHonorsNestedModuleBoundary(t *testing.T) {
+	if testing.Short() {
+		t.Skip("invokes the host Go command")
+	}
+	t.Setenv("GOWORK", "off")
+	app := t.TempDir()
+	nested := filepath.Join(app, "nested")
+	mustMkdirAll(t, nested)
+	mustWriteFile(t, filepath.Join(app, "go.mod"), "module example.test/app\n\ngo 1.25\n")
+	mustWriteFile(t, filepath.Join(nested, "go.mod"), "module example.test/nested\n\ngo 1.25\n")
+	mustWriteFile(t, filepath.Join(nested, "main.go"), "package main\n")
+	policy, err := preparePolicies(context.Background(), app, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	graph, err := loadEffectiveGraph(context.Background(), app, policy.graph)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := resolvePackageDirectory(context.Background(), graph, "example.test/app/nested", app, policy.graph); err == nil {
+		t.Fatal("package path crossing a nested module boundary resolved successfully")
+	}
+}
+
+func TestSanitizeGraphFlagsPropagatesFilesystemErrors(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("self-referential symlink setup is not portable to Windows")
+	}
+	dir := t.TempDir()
+	path := filepath.Join(dir, "loop.mod")
+	if err := os.Symlink("loop.mod", path); err != nil {
+		t.Fatal(err)
+	}
+	policy := parsedFlags{graph: GraphPolicy{ModFile: path}}
+	if _, err := sanitizeGraphFlags(policy); err == nil {
+		t.Fatal("graph input I/O failure was treated as a missing file")
 	}
 }
 

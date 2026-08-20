@@ -46,14 +46,15 @@ func testRuntime() *Runtime {
 			GoCommand: "/usr/bin/go",
 			WorkDir:   "/project",
 			GoWork:    "off",
-			Flags:     []string{"-mod=mod", "-modfile=/project/alt.mod"},
+			ModMode:   modModeMod,
+			ModFile:   "/project/alt.mod",
 		},
 	}
 }
 
 func TestProviderArgsRun(t *testing.T) {
 	rt := testRuntime()
-	got, err := providerArgs(rt, actionRun, BuildPolicy{Flags: []string{"-trimpath=true"}, Verbose: true, Trace: true, KeepWork: true}, "", "", []string{"", "a b", "--"})
+	got, err := providerArgs(rt, actionRun, BuildPolicy{TrimPath: true, Verbose: true, Trace: true, KeepWork: true}, "", "", []string{"", "a b", "--"})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -55,7 +55,7 @@ func providerArgs(rt *Runtime, act action, policy BuildPolicy, output, finalOutp
 			GoCommand: rt.Graph.GoCommand,
 			WorkDir:   rt.Graph.WorkDir,
 			GoWork:    rt.Graph.GoWork,
-			Flags:     append([]string(nil), rt.Graph.Flags...),
+			Flags:     rt.Graph.goFlags(),
 		},
 		BuildFlags:      policy.protocolFlags(),
 		ApplicationArgs: append([]string(nil), appArgs...),

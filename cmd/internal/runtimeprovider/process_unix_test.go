@@ -44,8 +44,36 @@ func TestRunProviderProcessForwardsRuntimeSignal(t *testing.T) {
 	ready := filepath.Join(dir, "ready")
 	received := filepath.Join(dir, "received")
 	cmd := runtimeProviderHelperCommand("handle", ready, received, strconv.Itoa(int(syscall.SIGHUP)))
-	ctx, cancel := context.WithCancelCause(context.Background())
-	t.Cleanup(func() { cancel(nil) })
+	boundary := beginRuntimeSignalBoundary(context.Background())
+	result := make(chan providerProcessResult, 1)
+	go func() {
+		status, err := runProviderProcess(boundary.Context(), cmd)
+		result <- providerProcessResult{status: status, err: err}
+	}()
+	pid := waitForHelperPID(t, ready)
+	t.Cleanup(func() { _ = syscall.Kill(pid, syscall.SIGKILL) })
+
+	boundary.signals <- syscall.SIGHUP
+	got := waitForProviderProcessResult(t, result)
+	var cause runtimeSignalCause
+	if !errors.As(got.err, &cause) || cause.signal != syscall.SIGHUP {
+		t.Fatalf("runProviderProcess() = (%+v, %v), want SIGHUP cancellation cause", got.status, got.err)
+	}
+	status, err := boundary.Finish(got.status, got.err)
+	if err != nil || !status.Signaled || status.Signal != syscall.SIGHUP {
+		t.Fatalf("Finish(runProviderProcess()) = (%+v, %v), want SIGHUP status", status, err)
+	}
+	if signal := waitForHelperSignal(t, received); signal != syscall.SIGHUP {
+		t.Fatalf("provider received %v, want SIGHUP", signal)
+	}
+}
+
+func TestRunProviderProcessReturnsCancellationAfterGracefulExit(t *testing.T) {
+	dir := t.TempDir()
+	ready := filepath.Join(dir, "ready")
+	received := filepath.Join(dir, "received")
+	cmd := runtimeProviderHelperCommand("handle", ready, received, strconv.Itoa(int(syscall.SIGTERM)))
+	ctx, cancel := context.WithCancel(context.Background())
 	result := make(chan providerProcessResult, 1)
 	go func() {
 		status, err := runProviderProcess(ctx, cmd)
@@ -54,13 +82,22 @@ func TestRunProviderProcessForwardsRuntimeSignal(t *testing.T) {
 	pid := waitForHelperPID(t, ready)
 	t.Cleanup(func() { _ = syscall.Kill(pid, syscall.SIGKILL) })
 
-	cancel(runtimeSignalCause{signal: syscall.SIGHUP})
+	cancel()
 	got := waitForProviderProcessResult(t, result)
-	if got.err != nil || got.status.Signaled || got.status.Code != 0 {
-		t.Fatalf("runProviderProcess() = (%+v, %v), want graceful exit", got.status, got.err)
+	if !errors.Is(got.err, context.Canceled) {
+		t.Fatalf("runProviderProcess() = (%+v, %v), want context cancellation", got.status, got.err)
 	}
-	if signal := waitForHelperSignal(t, received); signal != syscall.SIGHUP {
-		t.Fatalf("provider received %v, want SIGHUP", signal)
+	if signal := waitForHelperSignal(t, received); signal != syscall.SIGTERM {
+		t.Fatalf("provider received %v, want SIGTERM", signal)
+	}
+}
+
+func TestStatusUnlessCanceledRejectsSuccessfulExitAfterCancellation(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	status, err := statusUnlessCanceled(ctx, successStatus())
+	if !errors.Is(err, context.Canceled) || status != (ProcessStatus{}) {
+		t.Fatalf("statusUnlessCanceled() = (%+v, %v), want cancellation", status, err)
 	}
 }
 

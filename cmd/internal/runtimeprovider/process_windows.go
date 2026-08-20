@@ -72,6 +72,11 @@ func runProviderProcess(ctx context.Context, cmd *exec.Cmd) (ProcessStatus, erro
 		abortSuspendedProvider(cmd, process)
 		return ProcessStatus{}, err
 	}
+	if err := ctx.Err(); err != nil {
+		terminateProviderJob(job, process)
+		_ = cmd.Wait()
+		return ProcessStatus{}, err
+	}
 	if err := resumeProviderProcess(process); err != nil {
 		terminateProviderJob(job, process)
 		_ = cmd.Wait()
@@ -90,7 +95,13 @@ func runProviderProcess(ctx context.Context, cmd *exec.Cmd) (ProcessStatus, erro
 	err = cmd.Wait()
 	close(done)
 	<-watchDone
-	return processStatus(err)
+	status, err := processStatus(err)
+	if err != nil {
+		return ProcessStatus{}, err
+	}
+	// The process and cancellation watcher can become ready at the same time.
+	// Check the context even when the watcher selected the normal-exit branch.
+	return statusUnlessCanceled(ctx, status)
 }
 
 func configureSuspendedProvider(cmd *exec.Cmd) {
