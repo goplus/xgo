@@ -235,6 +235,11 @@ it from the effective `go.mod`/`go.work` graph, checks the class metadata
 snapshot, then builds and runs it on the host platform. `xgo run`, `xgo build`,
 and `xgo install` use the same provider protocol.
 
+The protocol version and the declaring module's `xgo` requirement are independent.
+`runtime v1` identifies the provider contract, first supported by XGo 1.8.0;
+`xgo 1.9.0` would mean only that the declaring module needs XGo 1.9.0 or
+later. The effective minimum is the higher of those two requirements.
+
 Runtime providers are intentionally fail-closed: vendor and overlay-backed
 runtime projects are rejected, and `XGO_RUNTIME=off` disables dispatch. Keep
 the provider package and its `gox.mod`/`gop.mod` in the framework module.

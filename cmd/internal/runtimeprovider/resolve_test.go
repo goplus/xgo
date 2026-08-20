@@ -607,11 +607,33 @@ func TestCheckRequiredXGoReportsDevelopmentCapability(t *testing.T) {
 	if err == nil {
 		t.Fatal("development build unexpectedly satisfied a newer capability")
 	}
-	for _, want := range []string{"1.8.1", "(devel)", "runtime-provider capability 1.8.0"} {
+	for _, want := range []string{"declaring module requires XGo 1.8.1", "(devel)", "runtime-provider capability 1.8.0"} {
 		if !strings.Contains(err.Error(), want) {
 			t.Fatalf("checkRequiredXGo() error = %q, want %q", err, want)
 		}
 	}
+}
+
+func TestResolveUsesDeclaringModuleXGoRequirement(t *testing.T) {
+	if testing.Short() {
+		t.Skip("invokes the host Go command")
+	}
+	fixture := newRuntimeFixture(t)
+	resolver := fixture.resolver(t)
+	resolver.xgoVersion = "v1.8.0"
+	resolveRuntime(t, resolver, &xgoprojs.DirProj{Dir: fixture.project})
+
+	setFixtureRequiredXGo(t, fixture, "1.9.0")
+	resolver = fixture.resolver(t)
+	resolver.xgoVersion = "v1.8.9"
+	_, err := resolver.Resolve(context.Background(), &xgoprojs.DirProj{Dir: fixture.project})
+	if err == nil || !strings.Contains(err.Error(), "declaring module requires XGo 1.9.0") {
+		t.Fatalf("Resolve() = %v, want declaring-module version error", err)
+	}
+
+	resolver = fixture.resolver(t)
+	resolver.xgoVersion = "v1.9.0"
+	resolveRuntime(t, resolver, &xgoprojs.DirProj{Dir: fixture.project})
 }
 
 func mustRunGo(t *testing.T, dir, goWork string, args ...string) {

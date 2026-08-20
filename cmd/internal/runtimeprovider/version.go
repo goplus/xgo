@@ -40,7 +40,7 @@ func checkRequiredXGo(required, current string) error {
 	}
 	currentSemver, ok := comparableRuntimeProviderVersion(current)
 	if !ok || semver.Compare(currentSemver, requiredSemver) < 0 {
-		return fmt.Errorf("runtime project requires XGo %s, but xgo build is %s", required, describeRuntimeProviderVersion(current))
+		return fmt.Errorf("runtime project's declaring module requires XGo %s, but xgo build is %s", required, describeRuntimeProviderVersion(current))
 	}
 	return nil
 }
