@@ -65,7 +65,7 @@ func (r *Resolver) buildWithPolicy(ctx context.Context, rt *Runtime, requestedOu
 	if err != nil || status.Signaled || status.Code != 0 {
 		return status, final, err
 	}
-	if err := commitOutputUnlessCanceled(ctx, tx); err != nil {
+	if err := tx.commitContext(ctx); err != nil {
 		return ProcessStatus{}, final, err
 	}
 	if policy.KeepWork {
@@ -241,16 +241,6 @@ func validateProvider(ctx context.Context, rt *Runtime) error {
 	return nil
 }
 
-func sameResolvedModule(a, b ResolvedModule) bool {
-	if a.Main != b.Main || a.Selected != b.Selected {
-		return false
-	}
-	if a.Replace == nil || b.Replace == nil {
-		return a.Replace == nil && b.Replace == nil
-	}
-	return *a.Replace == *b.Replace
-}
-
 func hostBuildEnvironment(base []string, goWork string) []string {
 	env := graphEnvironment(base, goWork)
 	env = replaceEnv(env, "GOOS", runtime.GOOS)
@@ -264,15 +254,14 @@ func providerEnvironment(base []string, rt *Runtime) []string {
 }
 
 func fillStreams(streams Streams) Streams {
-	defaults := defaultStreams()
 	if streams.Stdin == nil {
-		streams.Stdin = defaults.Stdin
+		streams.Stdin = os.Stdin
 	}
 	if streams.Stdout == nil {
-		streams.Stdout = defaults.Stdout
+		streams.Stdout = os.Stdout
 	}
 	if streams.Stderr == nil {
-		streams.Stderr = defaults.Stderr
+		streams.Stderr = os.Stderr
 	}
 	return streams
 }
@@ -305,9 +294,10 @@ func statusUnlessCanceled(ctx context.Context, status ProcessStatus) (ProcessSta
 	return status, nil
 }
 
-func commitOutputUnlessCanceled(ctx context.Context, tx *outputTransaction) error {
-	if ctx == nil {
-		ctx = context.Background()
+func providerExitStatus(ctx context.Context, waitErr error) (ProcessStatus, error) {
+	status, err := processStatus(waitErr)
+	if err != nil {
+		return ProcessStatus{}, err
 	}
-	return tx.commitContext(ctx)
+	return statusUnlessCanceled(ctx, status)
 }

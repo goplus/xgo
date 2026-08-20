@@ -52,11 +52,7 @@ func runProviderProcess(ctx context.Context, cmd *exec.Cmd) (ProcessStatus, erro
 		if _, cleanupErr := stopProviderProcessGroup(pgid, syscall.SIGTERM, nil); cleanupErr != nil {
 			return ProcessStatus{}, cleanupErr
 		}
-		status, statusErr := processStatus(err)
-		if statusErr != nil {
-			return ProcessStatus{}, statusErr
-		}
-		return statusUnlessCanceled(ctx, status)
+		return providerExitStatus(ctx, err)
 	case <-ctx.Done():
 	}
 
@@ -65,11 +61,7 @@ func runProviderProcess(ctx context.Context, cmd *exec.Cmd) (ProcessStatus, erro
 	if cleanupErr != nil {
 		return ProcessStatus{}, cleanupErr
 	}
-	status, err := processStatus(err)
-	if err != nil {
-		return ProcessStatus{}, err
-	}
-	return statusUnlessCanceled(ctx, status)
+	return providerExitStatus(ctx, err)
 }
 
 func configureProviderProcessGroup(cmd *exec.Cmd) {

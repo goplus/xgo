@@ -41,7 +41,7 @@ func TestOutputTransactionCommit(t *testing.T) {
 	}
 	defer tx.abort()
 	writeTestExecutable(t, tx.staged)
-	if err := tx.commit(); err != nil {
+	if err := tx.commitContext(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 	got, err := os.ReadFile(final)
@@ -90,7 +90,7 @@ func TestOutputTransactionFailurePreservesFinal(t *testing.T) {
 	if err := os.WriteFile(tx.staged, nil, 0755); err != nil {
 		t.Fatal(err)
 	}
-	if err := tx.commit(); err == nil {
+	if err := tx.commitContext(context.Background()); err == nil {
 		t.Fatal("empty staged output committed")
 	}
 	tx.abort()
@@ -117,8 +117,8 @@ func TestCanceledBuildDoesNotCommitOutput(t *testing.T) {
 	writeTestExecutable(t, tx.staged)
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	if err := commitOutputUnlessCanceled(ctx, tx); !errors.Is(err, context.Canceled) {
-		t.Fatalf("commitOutputUnlessCanceled() = %v, want context cancellation", err)
+	if err := tx.commitContext(ctx); !errors.Is(err, context.Canceled) {
+		t.Fatalf("commitContext() = %v, want context cancellation", err)
 	}
 	got, err := os.ReadFile(final)
 	if err != nil || string(got) != "old" {
@@ -155,7 +155,7 @@ func TestOutputTransactionRejectsSymlinksAndExtras(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(tx.dir, "extra"), []byte("extra"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	if err := tx.commit(); err == nil {
+	if err := tx.commitContext(context.Background()); err == nil {
 		t.Fatal("extra staged output accepted")
 	}
 	if _, err := os.Stat(final); !os.IsNotExist(err) {
@@ -182,7 +182,7 @@ func TestOutputTransactionRejectsFinalSymlinkCreatedAfterBegin(t *testing.T) {
 	if err := os.Symlink(target, final); err != nil {
 		t.Fatal(err)
 	}
-	if err := tx.commit(); err == nil {
+	if err := tx.commitContext(context.Background()); err == nil {
 		t.Fatal("final symlink created after begin was accepted")
 	}
 	if got, err := os.ReadFile(target); err != nil || string(got) != "target" {
@@ -222,7 +222,7 @@ func TestOutputTransactionPinsParentAcrossPathSwap(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	commitErr := tx.commit()
+	commitErr := tx.commitContext(context.Background())
 	if commitErr == nil {
 		t.Fatal("commit accepted a replaced output parent pathname")
 	}
@@ -258,7 +258,7 @@ func TestOutputTransactionRejectsWorkDirectorySwap(t *testing.T) {
 		t.Fatal(err)
 	}
 	writeTestExecutable(t, tx.staged)
-	if err := tx.commit(); err == nil {
+	if err := tx.commitContext(context.Background()); err == nil {
 		t.Fatal("replaced work directory was accepted")
 	}
 	if _, err := os.Stat(final); !os.IsNotExist(err) {
@@ -285,7 +285,7 @@ func TestOutputTransactionSupportsStableParentAlias(t *testing.T) {
 	}
 	defer tx.abort()
 	writeTestExecutable(t, tx.staged)
-	if err := tx.commit(); err != nil {
+	if err := tx.commitContext(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 	if info, err := os.Stat(filepath.Join(parent, "game")); err != nil || info.Size() == 0 {
@@ -308,7 +308,7 @@ func TestOutputTransactionWindowsCaseAlias(t *testing.T) {
 	}
 	defer tx.abort()
 	writeTestExecutable(t, tx.staged)
-	if err := tx.commit(); err != nil {
+	if err := tx.commitContext(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 	info, err := os.Stat(existing)

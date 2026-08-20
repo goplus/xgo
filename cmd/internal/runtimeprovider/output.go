@@ -185,10 +185,6 @@ func (tx *outputTransaction) abort() {
 	_ = tx.parent.Close()
 }
 
-func (tx *outputTransaction) commit() error {
-	return tx.commitContext(context.Background())
-}
-
 // commitContext validates and publishes the staged output. Cancellation is
 // checked immediately before the rename, which is the transaction's commit
 // point; cancellation after that point cannot retract an already-published

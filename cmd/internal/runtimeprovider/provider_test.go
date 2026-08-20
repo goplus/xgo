@@ -17,10 +17,179 @@
 package runtimeprovider
 
 import (
+	"bytes"
+	"context"
+	"errors"
+	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/goplus/xgo/x/xgoprojs"
 )
+
+func TestRuntimeRunAndBuild(t *testing.T) {
+	if testing.Short() {
+		t.Skip("invokes the host Go command")
+	}
+	fixture := newRuntimeFixture(t)
+	resolver := fixture.resolver(t, "-trimpath=true", "-buildvcs=false")
+	rt := resolveRuntime(t, resolver, &xgoprojs.DirProj{Dir: fixture.project})
+	var stdout, stderr bytes.Buffer
+	status, err := resolver.Run(context.Background(), rt, []string{"", "a b", "--"}, Streams{Stdout: &stdout, Stderr: &stderr})
+	if err != nil || status.Code != 0 || status.Signaled {
+		t.Fatalf("run = %#v, %v, stderr=%s", status, err, &stderr)
+	}
+	if got := strings.TrimSpace(stdout.String()); got != "run-args=|a b|--" {
+		t.Fatalf("stdout = %q", got)
+	}
+
+	final := filepath.Join(fixture.root, "bin", "game")
+	if runtime.GOOS == "windows" {
+		final += ".exe"
+	}
+	if err := os.MkdirAll(filepath.Dir(final), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(final, []byte("old"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	status, gotFinal, err := resolver.Build(context.Background(), rt, final, Streams{Stdout: &stdout, Stderr: &stderr})
+	if err != nil || status.Code != 0 || gotFinal != final {
+		t.Fatalf("build = %#v, %q, %v, stderr=%s", status, gotFinal, err, &stderr)
+	}
+	info, err := os.Stat(final)
+	if err != nil || info.Size() <= int64(len("old")) {
+		t.Fatalf("artifact = %#v, %v", info, err)
+	}
+}
+
+func TestRuntimeBuildFailurePreservesOutput(t *testing.T) {
+	if testing.Short() {
+		t.Skip("invokes the host Go command")
+	}
+	fixture := newRuntimeFixture(t)
+	resolver := fixture.resolver(t)
+	rt := resolveRuntime(t, resolver, &xgoprojs.DirProj{Dir: fixture.project})
+	final := filepath.Join(fixture.root, "game")
+	if runtime.GOOS == "windows" {
+		final += ".exe"
+	}
+	if err := os.WriteFile(final, []byte("old"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("FAKE_PROVIDER_EXIT", "42")
+	status, _, err := resolver.Build(context.Background(), rt, final, Streams{Stdout: new(bytes.Buffer), Stderr: new(bytes.Buffer)})
+	if err != nil || status.Code != 42 {
+		t.Fatalf("build failure = %#v, %v", status, err)
+	}
+	data, readErr := os.ReadFile(final)
+	if readErr != nil || string(data) != "old" {
+		t.Fatalf("old output changed: %q, %v", data, readErr)
+	}
+	assertNoOutputWorkDirs(t, filepath.Dir(final))
+}
+
+func TestRuntimeBuildCancellationPreservesOutput(t *testing.T) {
+	if testing.Short() {
+		t.Skip("invokes the host Go command")
+	}
+	fixture := newRuntimeFixture(t)
+	resolver := fixture.resolver(t)
+	rt := resolveRuntime(t, resolver, &xgoprojs.DirProj{Dir: fixture.project})
+	final := filepath.Join(fixture.root, "game")
+	if runtime.GOOS == "windows" {
+		final += ".exe"
+	}
+	if err := os.WriteFile(final, []byte("old"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	marker := filepath.Join(fixture.root, "provider-started")
+	t.Setenv("FAKE_PROVIDER_MARKER", marker)
+	t.Setenv("FAKE_PROVIDER_BLOCK", "1")
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		_, _, _ = resolver.Build(ctx, rt, final, Streams{Stdout: new(bytes.Buffer), Stderr: new(bytes.Buffer)})
+	}()
+	deadline := time.Now().Add(15 * time.Second)
+	for {
+		if _, err := os.Stat(marker); err == nil {
+			break
+		}
+		if time.Now().After(deadline) {
+			cancel()
+			<-done
+			t.Fatal("runtime provider did not start")
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	cancel()
+	select {
+	case <-done:
+	case <-time.After(15 * time.Second):
+		t.Fatal("canceled runtime provider did not exit")
+	}
+	data, readErr := os.ReadFile(final)
+	if readErr != nil || string(data) != "old" {
+		t.Fatalf("canceled build changed old output: %q, %v", data, readErr)
+	}
+	assertNoOutputWorkDirs(t, filepath.Dir(final))
+}
+
+func assertNoOutputWorkDirs(t *testing.T, parent string) {
+	t.Helper()
+	matches, err := filepath.Glob(filepath.Join(parent, ".xgo-runtime-output-*"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(matches) != 0 {
+		t.Fatalf("runtime output work directories remain: %v", matches)
+	}
+}
+
+func TestRuntimeInstallUsesEffectiveGOBIN(t *testing.T) {
+	if testing.Short() {
+		t.Skip("invokes the host Go command")
+	}
+	fixture := newRuntimeFixture(t)
+	resolver := fixture.resolver(t)
+	rt := resolveRuntime(t, resolver, &xgoprojs.DirProj{Dir: fixture.project})
+	bin := filepath.Join(fixture.root, "custom-bin")
+	t.Setenv("GOBIN", bin)
+	status, final, err := resolver.Install(context.Background(), rt, Streams{Stdout: new(bytes.Buffer), Stderr: new(bytes.Buffer)})
+	if err != nil || status.Code != 0 {
+		t.Fatalf("install = %#v, %q, %v", status, final, err)
+	}
+	want := filepath.Join(bin, executableName("game"))
+	if final != want {
+		t.Fatalf("install output = %q, want %q", final, want)
+	}
+	if info, err := os.Stat(final); err != nil || info.Size() == 0 {
+		t.Fatalf("installed artifact = %#v, %v", info, err)
+	}
+}
+
+func TestRuntimeInstallValidatesPolicyBeforeCreatingGOBIN(t *testing.T) {
+	if testing.Short() {
+		t.Skip("invokes the host Go command")
+	}
+	fixture := newRuntimeFixture(t)
+	resolver := fixture.resolver(t, "-tags=unsupported")
+	rt := resolveRuntime(t, resolver, &xgoprojs.DirProj{Dir: fixture.project})
+	bin := filepath.Join(fixture.root, "must-not-exist", "bin")
+	t.Setenv("GOBIN", bin)
+	status, final, err := resolver.Install(context.Background(), rt, Streams{Stdout: new(bytes.Buffer), Stderr: new(bytes.Buffer)})
+	if err == nil || !strings.Contains(err.Error(), "does not support flag -tags") {
+		t.Fatalf("Install() = %#v, %q, %v; want unsupported -tags error", status, final, err)
+	}
+	if _, statErr := os.Stat(bin); !errors.Is(statErr, os.ErrNotExist) {
+		t.Fatalf("GOBIN was created before policy validation: %v", statErr)
+	}
+}
 
 func TestHostBuildEnvironmentPreservesCGO(t *testing.T) {
 	env := hostBuildEnvironment([]string{

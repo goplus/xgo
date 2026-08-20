@@ -95,13 +95,9 @@ func runProviderProcess(ctx context.Context, cmd *exec.Cmd) (ProcessStatus, erro
 	err = cmd.Wait()
 	close(done)
 	<-watchDone
-	status, err := processStatus(err)
-	if err != nil {
-		return ProcessStatus{}, err
-	}
 	// The process and cancellation watcher can become ready at the same time.
 	// Check the context even when the watcher selected the normal-exit branch.
-	return statusUnlessCanceled(ctx, status)
+	return providerExitStatus(ctx, err)
 }
 
 func configureSuspendedProvider(cmd *exec.Cmd) {

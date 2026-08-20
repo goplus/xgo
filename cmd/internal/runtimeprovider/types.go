@@ -120,10 +120,6 @@ type Streams struct {
 	Stderr io.Writer
 }
 
-func defaultStreams() Streams {
-	return Streams{Stdin: os.Stdin, Stdout: os.Stdout, Stderr: os.Stderr}
-}
-
 // ProcessStatus preserves a normal exit code or an operating-system signal.
 type ProcessStatus struct {
 	Code     int
