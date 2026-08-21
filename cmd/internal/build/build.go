@@ -18,6 +18,7 @@
 package build
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -27,6 +28,7 @@ import (
 	"github.com/goplus/gogen"
 	"github.com/goplus/xgo/cl"
 	"github.com/goplus/xgo/cmd/internal/base"
+	"github.com/goplus/xgo/cmd/internal/projectdriver"
 	"github.com/goplus/xgo/tool"
 	"github.com/goplus/xgo/x/gocmd"
 	"github.com/goplus/xgo/x/xgoprojs"
@@ -73,6 +75,17 @@ func runCmd(cmd *base.Command, args []string) {
 	if len(args) != 0 {
 		log.Panicln("too many arguments:", args)
 	}
+	driverResult, driverErr := tryDriver(proj, pass.Args, *flagOutput)
+	if driverErr != nil {
+		fmt.Fprintln(os.Stderr, driverErr)
+		os.Exit(1)
+	}
+	if driverResult.Handled {
+		if driverResult.Status.Signaled || driverResult.Status.Code != 0 {
+			projectdriver.Exit(driverResult.Status)
+		}
+		return
+	}
 
 	conf, err := tool.NewDefaultConf(".", tool.ConfFlagNoTestFiles, pass.Tags())
 	if err != nil {
@@ -90,6 +103,10 @@ func runCmd(cmd *base.Command, args []string) {
 	}
 	confCmd.Flags = append(confCmd.Flags, pass.Args...)
 	build(proj, conf, confCmd)
+}
+
+func tryDriver(proj xgoprojs.Proj, flags []string, output string) (projectdriver.DispatchResult, error) {
+	return projectdriver.TryBuild(context.Background(), "", proj, flags, output, projectdriver.Streams{})
 }
 
 func build(proj xgoprojs.Proj, conf *tool.Config, build *gocmd.BuildConfig) {
