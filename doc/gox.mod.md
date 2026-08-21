@@ -221,7 +221,31 @@ mygame/
 ```
  
 ---
- 
+
+## Project drivers
+
+A framework may delegate project execution to a verified driver executable:
+
+```text
+driver v1 example.com/framework/cmd/driver
+```
+
+The driver must be a `main` package inside the declaring module. XGo resolves
+it from the effective `go.mod`/`go.work` graph, checks the class metadata
+snapshot, then builds and runs it on the host platform. `xgo run`, `xgo build`,
+and `xgo install` use the same driver protocol.
+
+The protocol version and the declaring module's `xgo` requirement are independent.
+`driver v1` identifies the driver contract, first supported by XGo 1.8.0;
+`xgo 1.9.0` would mean only that the declaring module needs XGo 1.9.0 or
+later. The effective minimum is the higher of those two requirements.
+
+Project drivers are intentionally fail-closed: vendor and overlay-backed
+driver-backed projects are rejected, and `XGO_DRIVER=off` disables dispatch. Keep
+the driver package and its `gox.mod`/`gop.mod` in the framework module.
+
+---
+
 ## Summary
  
 `gox.mod` is the heart of XGo's classfile system, but it lives in **framework packages**, not in user projects. Ordinary XGo projects use a plain `go.mod` with `//xgo:class` annotations on their framework dependencies — that's the signal `xgo run` and other toolchain commands use to discover the relevant `gox.mod` files and learn the class structure (file patterns, class types, auto-imports) before parsing and compiling the project's source files.
