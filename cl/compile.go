@@ -22,6 +22,7 @@ import (
 	"go/constant"
 	"go/types"
 	"log"
+	"os"
 	"reflect"
 	"sort"
 	"strconv"
@@ -213,6 +214,7 @@ type Config struct {
 type nodeInterp struct {
 	fset       *token.FileSet
 	files      map[string]*ast.File
+	codes      map[string][]byte
 	relBaseDir string
 }
 
@@ -234,10 +236,22 @@ func (p *nodeInterp) LoadExpr(node ast.Node) string {
 	if start == token.NoPos {
 		return ""
 	}
-	pos := p.fset.Position(start)
-	f := p.files[pos.Filename]
+	pos := p.fset.PositionFor(start, false)
 	n := int(node.End() - start)
-	return string(f.Code[pos.Offset : pos.Offset+n])
+	code := p.codes[pos.Filename]
+	if code == nil {
+		src, err := os.ReadFile(pos.Filename)
+		if err != nil {
+			return ""
+		}
+		code = src
+		p.codes[pos.Filename] = code
+	}
+	end := pos.Offset + n
+	if end > len(code) {
+		return ""
+	}
+	return string(code[pos.Offset:end])
 }
 
 func (p *nodeInterp) ProjFile() *ast.File {
@@ -474,9 +488,12 @@ type pkgCtx struct {
 
 	flatFrags []string // available when flat project
 
-	generics map[string]bool // generic type record
-	idents   []*ast.Ident    // toType ident recored
-	inInst   int             // toType in generic instance
+	outline      bool
+	generics     map[string]bool // generic type record
+	idents       []*ast.Ident    // toType ident recored
+	inInst       int             // toType in generic instance
+	pendingInsts []pendingTypeInstantiation
+	instContext  *types.Context
 
 	goxMainClass string
 	goxMain      int // normal gox files with main func
@@ -707,7 +724,13 @@ func NewPackage(pkgPath string, pkg *ast.Package, conf *Config) (p *gogen.Packag
 	fset := conf.Fset
 	files := pkg.Files
 	interp := &nodeInterp{
-		fset: fset, files: files, relBaseDir: relBaseDir,
+		fset:       fset,
+		files:      files,
+		codes:      make(map[string][]byte, len(pkg.Files)),
+		relBaseDir: relBaseDir,
+	}
+	for filename, f := range files {
+		interp.codes[filename] = f.Code
 	}
 	ctx := &pkgCtx{
 		fset:       fset,
@@ -717,6 +740,10 @@ func NewPackage(pkgPath string, pkg *ast.Package, conf *Config) (p *gogen.Packag
 		overpos:    make(map[string]token.Pos),
 		syms:       make(map[string]loader),
 		generics:   make(map[string]bool),
+		outline:    conf.Outline,
+	}
+	if conf.Outline {
+		ctx.instContext = types.NewContext()
 	}
 	confGox := &gogen.Config{
 		Types:           conf.Types,
@@ -850,6 +877,9 @@ func NewPackage(pkgPath string, pkg *ast.Package, conf *Config) (p *gogen.Packag
 	}
 	for _, load := range ctx.inits {
 		load()
+	}
+	if conf.Outline {
+		ctx.validateTypeInstantiations()
 	}
 	err = ctx.complete()
 
