@@ -37,7 +37,19 @@ This syntax is inspired by **Markdown's code blocks**. Just as Markdown uses tri
 
 ## Built-in Formats
 
-XGo currently supports several domain text literals natively:
+XGo provides built-in support for domain text literals. All built-in DTLs, except for TPL, are located in the `encoding` directory where the directory name corresponds to the DTL name. Currently supported DTLs include:
+
+- **tpl** - Text Processing Language (located in `tpl/` directory)
+- **csv** - CSV data
+- **json** - JSON data
+- **yaml** - YAML data
+- **html** - HTML documents
+- **xml** - XML documents
+- **regexp** - Regular expressions (RE2 syntax)
+- **regexposix** - POSIX regular expressions
+- **golang** - Go source code
+- **xgo** - XGo source code
+- **fs** - File system
 
 ### Text Processing Language (tpl)
 
@@ -57,21 +69,54 @@ Learn more in the [TPL documentation](../tpl/README.md).
 
 ### JSON
 
-Parse and validate JSON structures inline:
+Parse and validate JSON structures inline. The result is a DOM that supports DQL (DOM Query Language) operations.
 
 ```go
 config := json`{
 	"server": "localhost",
 	"port": 8080,
-	"features": ["auth", "logging"]
+	"features": ["auth", "logging"],
+	"database": {
+		"host": "db.example.com",
+		"port": 5432
+	}
 }`!
 
-echo config.port
+// Access properties using DQL syntax
+echo config.server         // "localhost"
+echo config.port           // 8080
+echo config.database.host  // "db.example.com"
+
+// Query all nested nodes with .**
+for item <- config.**.* {
+	echo item
+}
+```
+
+### YAML
+
+Parse YAML content inline. Similar to JSON, the result supports DQL operations.
+
+```go
+config := yaml`
+server: localhost
+port: 8080
+database:
+  host: db.example.com
+  port: 5432
+  credentials:
+    username: admin
+`!
+
+// Access properties using DQL syntax
+echo config.server              // "localhost"
+echo config.database.host       // "db.example.com"
+echo config.database.credentials.username  // "admin"
 ```
 
 ### XML
 
-Work with XML documents directly:
+Work with XML documents directly. The result is a DOM that supports DQL operations.
 
 ```go
 doc := xml`
@@ -80,8 +125,20 @@ doc := xml`
 		<host>localhost</host>
 		<port>5432</port>
 	</database>
+	<servers>
+		<server name="primary">192.168.1.1</server>
+		<server name="secondary">192.168.1.2</server>
+	</servers>
 </configuration>
 `!
+
+// Navigate using DQL syntax
+echo doc.configuration.database.host  // Access nested elements
+
+// Query all server elements
+for server <- doc.**.server {
+	echo server.$name  // Access attributes with $
+}
 ```
 
 ### CSV
@@ -98,24 +155,46 @@ Bob,25,SF
 
 ### HTML
 
-Embed HTML with proper parsing (requires `golang.org/x/net/html`):
+Embed HTML with proper parsing. The result is a DOM that supports DQL operations for querying elements.
 
 ```go
-import "golang.org/x/net/html"
-
 page := html`
 <html>
 	<body>
 		<h1>Welcome</h1>
-		<p>Domain-specific literals in action</p>
+		<div class="content">
+			<p>First paragraph</p>
+			<p>Second paragraph</p>
+		</div>
+		<a href="https://xgo.dev">XGo Website</a>
 	</body>
 </html>
 `!
+
+// Navigate to specific elements
+echo page.html.body.h1  // Access the h1 element
+
+// Query all paragraph elements using .**
+for p <- page.**.p {
+	echo p
+}
+
+// Query all links and get href attribute
+for link <- page.**.a {
+	echo link.$href  // Access attributes with $
+}
+
+// Access elements by class
+for div <- page.**.div {
+	if div.$class == "content" {
+		echo div
+	}
+}
 ```
 
 ### Regular Expressions
 
-Define regex patterns with improved readability. XGo supports both standard and POSIX regex:
+Define regex patterns with improved readability. XGo supports both standard (RE2) and POSIX regex:
 
 ```go
 pattern := regexp`^[a-z]+\[[0-9]+\]$`!
@@ -126,6 +205,142 @@ if pattern.matchString("item[42]") {
 
 // POSIX variant
 posixPattern := regexposix`[[:alpha:]]+`!
+```
+
+### Go Source Code (golang)
+
+Parse Go source code and query its AST (Abstract Syntax Tree). The result is a DOM representing the Go file's structure that supports DQL operations.
+
+```go
+code := golang`
+package main
+
+import "fmt"
+
+func hello(name string) {
+	fmt.Println("Hello,", name)
+}
+
+func main() {
+	hello("World")
+}
+`!
+
+// Query all function declarations
+for fn <- code.**.FuncDecl {
+	echo fn  // Access function AST nodes
+}
+
+// Access package name
+echo code.Name  // "main"
+```
+
+### XGo Source Code (xgo)
+
+Parse XGo source code and query its AST. Similar to `golang`, but for XGo syntax.
+
+```go
+code := xgo`
+echo "Hello, XGo!"
+
+for i <- 1:10 {
+	echo i
+}
+`!
+
+// Query all statements in the file
+for stmt <- code.** {
+	echo stmt
+}
+```
+
+### File System (fs)
+
+The `fs` DTL provides file system access and returns a NodeSet directly (unlike other DTLs which return a single root node). This allows querying directories and files using DQL syntax.
+
+```go
+// Get a NodeSet of the current directory
+files := fs`.`!
+
+// List all files in current directory
+for f <- files.* {
+	name, _ := f.Name()
+	echo name
+}
+
+// List all files recursively (all descendants)
+for f <- files.**.file {
+	path, _ := f.Path()
+	echo path
+}
+
+// List only directories
+for d <- files.*.Dir() {
+	name, _ := d.Name()
+	echo name
+}
+
+// Query a specific directory
+srcFiles := fs`./src`!
+for f <- srcFiles.**.file {
+	echo f
+}
+
+// Filter by pattern
+for f <- files.*.Match("*.go") {
+	name, _ := f.Name()
+	echo name
+}
+```
+
+## Relationship with DQL (DOM Query Language)
+
+Many DTLs parse content into a DOM (Document Object Model) structure, including:
+- **json** - JSON documents
+- **yaml** - YAML documents
+- **xml** - XML documents
+- **html** - HTML documents
+- **golang** - Go source code AST
+- **xgo** - XGo source code AST
+
+While these aren't typically the NodeSets required by DQL, they can be understood as NodeSets containing only a single root node. Therefore, these DOMs also support NodeSet query operations, including:
+
+- **`.name`** - Access a child element by name
+- **`.*`** - Access all direct children
+- **`.**`** - Access all descendants recursively
+- **`.$attr`** - Access an attribute value
+
+This means you can directly query a DTL result without first converting it to a DQL NodeSet:
+
+```go
+// JSON example - direct query without conversion
+config := json`{"database": {"host": "localhost", "port": 5432}}`!
+echo config.database.host  // "localhost"
+
+// HTML example - query descendants
+page := html`<div><p>Hello</p><p>World</p></div>`!
+for p <- page.**.p {
+	echo p
+}
+```
+
+### Special Case: File System DTL
+
+The `fs` DTL is unique because it returns a NodeSet directly (not a single root node). For example, `fs`.`` means a NodeSet containing only the current directory as the root:
+
+```go
+// fs`.` returns a NodeSet of the current directory
+files := fs`.`!
+
+// Query direct children (files and directories in current dir)
+for item <- files.* {
+	echo item
+}
+
+// Query all descendants recursively
+for file <- files.**.file {
+	echo file
+}
 ```
 
 ## Implementation Details
@@ -139,6 +354,24 @@ json.New(`{"key": "value"}`)
 ```
 
 This design keeps the feature simple while allowing seamless integration with existing Go packages. The `domainTag` represents a package that must have a global `func New(string)` function with any return type.
+
+All built-in DTLs (except TPL) are implemented in the `encoding/` directory:
+
+```
+encoding/
+├── csv/       # CSV parser
+├── json/      # JSON parser
+├── yaml/      # YAML parser
+├── html/      # HTML parser (uses github.com/goplus/xgo/dql/html internally)
+├── xml/       # XML parser
+├── regexp/    # RE2 regular expressions
+├── regexposix/# POSIX regular expressions
+├── golang/    # Go source code parser
+├── xgo/       # XGo source code parser
+└── fs/        # File system access
+```
+
+Each package exports a `New()` function that accepts the literal content as a string and returns the parsed result.
 
 ## Creating Custom Formats
 
