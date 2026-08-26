@@ -18,6 +18,7 @@
 package run
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"reflect"
@@ -25,6 +26,7 @@ import (
 	"github.com/goplus/gogen"
 	"github.com/goplus/xgo/cl"
 	"github.com/goplus/xgo/cmd/internal/base"
+	"github.com/goplus/xgo/cmd/internal/projectdriver"
 	"github.com/goplus/xgo/tool"
 	"github.com/goplus/xgo/x/gocmd"
 	"github.com/goplus/xgo/x/xgoprojs"
@@ -75,11 +77,38 @@ func runCmd(cmd *base.Command, args []string) {
 		gogen.SetDebug(gogen.DbgFlagInstruction)
 	}
 
+	noChdir := *flagNoChdir
+	driverFlags := append([]string(nil), pass.Args...)
+	if *flagDebug {
+		driverFlags = append(driverFlags, "-debug=true")
+	}
+	if *flagQuiet {
+		driverFlags = append(driverFlags, "-quiet=true")
+	}
+	if *flagAsm {
+		driverFlags = append(driverFlags, "-asm=true")
+	}
+	if *flagNoChdir {
+		driverFlags = append(driverFlags, "-nc=true")
+	}
+	if *flagProf {
+		driverFlags = append(driverFlags, "-prof=true")
+	}
+	driverResult, driverErr := projectdriver.TryRun(context.Background(), "", proj, driverFlags, args, projectdriver.Streams{})
+	if driverErr != nil {
+		fmt.Fprintln(os.Stderr, driverErr)
+		os.Exit(1)
+	}
+	if driverResult.Handled {
+		if !driverResult.Status.Success() {
+			projectdriver.Exit(driverResult.Status)
+		}
+		return
+	}
 	if *flagProf {
 		panic("TODO: profile not impl")
 	}
 
-	noChdir := *flagNoChdir
 	conf, err := tool.NewDefaultConf(".", tool.ConfFlagNoTestFiles, pass.Tags())
 	if err != nil {
 		log.Panicln("tool.NewDefaultConf:", err)
