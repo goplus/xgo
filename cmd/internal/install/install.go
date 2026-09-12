@@ -18,6 +18,7 @@
 package install
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -27,6 +28,7 @@ import (
 	"github.com/goplus/mod/modfetch"
 	"github.com/goplus/xgo/cl"
 	"github.com/goplus/xgo/cmd/internal/base"
+	"github.com/goplus/xgo/cmd/internal/projectdriver"
 	"github.com/goplus/xgo/tool"
 	"github.com/goplus/xgo/x/gocmd"
 	"github.com/goplus/xgo/x/xgoprojs"
@@ -69,6 +71,21 @@ func runCmd(cmd *base.Command, args []string) {
 		gogen.SetDebug(gogen.DbgFlagAll &^ gogen.DbgFlagComments)
 		cl.SetDebug(cl.DbgFlagAll)
 		cl.SetDisableRecover(true)
+	}
+	driverFlags := append([]string(nil), pass.Args...)
+	if *flagDebug {
+		driverFlags = append(driverFlags, "-debug=true")
+	}
+	driverResult, driverErr := projectdriver.TryInstall(context.Background(), "", projs, driverFlags, projectdriver.Streams{})
+	if driverErr != nil {
+		fmt.Fprintln(os.Stderr, driverErr)
+		os.Exit(1)
+	}
+	if driverResult.Handled {
+		if !driverResult.Status.Success() {
+			projectdriver.Exit(driverResult.Status)
+		}
+		return
 	}
 
 	conf, err := tool.NewDefaultConf(".", tool.ConfFlagNoTestFiles, pass.Tags())
