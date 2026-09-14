@@ -502,10 +502,12 @@ func TestError(t *testing.T) {
 	if err == nil {
 		t.Fatal("BuildDir: no error?")
 	}
+	/* NOTE(xsw): Now XGo allow to declare a function without body
 	_, err = ctx.BuildFile("main.xgo", "func main()")
 	if err == nil {
 		t.Fatal("BuildFile: no error?")
 	}
+	*/
 	_, err = ctx.ParseFile("main.xgo", 123)
 	if err == nil {
 		t.Fatal("ParseFile: no error?")
