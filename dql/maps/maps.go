@@ -191,6 +191,32 @@ func yieldChildNodes(node Node, yield func(Node) bool) bool {
 	return true
 }
 
+// XGo_Index returns a NodeSet containing the child node at the specified
+// zero-based index.
+//   - [n]
+func (p NodeSet) XGo_Index(index int) NodeSet {
+	if p.Err != nil {
+		return p
+	}
+	if index < 0 {
+		return NodeSet{}
+	}
+	return NodeSet{
+		Data: func(yield func(Node) bool) {
+			p.Data(func(node Node) bool {
+				return yieldIndex(node, index, yield)
+			})
+		},
+	}
+}
+
+func yieldIndex(node Node, index int, yield func(Node) bool) bool {
+	if children, ok := node.Value.([]any); ok && index < len(children) {
+		return yield(Node{Name: "", Value: children[index]})
+	}
+	return true
+}
+
 // XGo_Any returns a NodeSet containing all descendant nodes (including the
 // nodes themselves) with the specified name.
 // If name is "", it returns all nodes.
@@ -238,11 +264,7 @@ func yieldAnyNodes(name string, node Node, yield func(Node) bool) bool {
 // yieldAnyNode recursively traverses into v if it is a map[string]any or []any,
 // looking for descendant nodes matching name.
 func yieldAnyNode(name, k string, v any, yield func(Node) bool) bool {
-	switch v.(type) {
-	case map[string]any, []any:
-		return yieldAnyNodes(name, Node{Name: k, Value: v}, yield)
-	}
-	return true
+	return yieldAnyNodes(name, Node{Name: k, Value: v}, yield)
 }
 
 // -----------------------------------------------------------------------------
