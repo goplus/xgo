@@ -3393,22 +3393,22 @@ type Point struct {
 }
 //line /foo/bar.xgo:7:1
 func (pt *Point) Test() {
-//line /foo/bar.xgo:8:1
+	//line /foo/bar.xgo:8:1
 	fmt.Println(pt.x, pt.y)
 }
 //line /foo/bar.xgo:11:1
 // testPoint is test point
 func testPoint() {
-//line /foo/bar.xgo:13:1
+	//line /foo/bar.xgo:13:1
 	var pt Point
-//line /foo/bar.xgo:14:1
+	//line /foo/bar.xgo:14:1
 	pt.Test()
 }
 //line /foo/bar.xgo:17
 func main() {
-//line /foo/bar.xgo:17:1
+	//line /foo/bar.xgo:17:1
 	fmt.Println("hello")
-//line /foo/bar.xgo:18:1
+	//line /foo/bar.xgo:18:1
 	testPoint()
 }
 `)
@@ -3447,22 +3447,22 @@ type Point struct {
 }
 //line ../bar.xgo:7:1
 func (pt *Point) Test() {
-//line ../bar.xgo:8:1
+	//line ../bar.xgo:8:1
 	fmt.Println(pt.x, pt.y)
 }
 //line ../bar.xgo:11:1
 // testPoint is test point
 func testPoint() {
-//line ../bar.xgo:13:1
+	//line ../bar.xgo:13:1
 	var pt Point
-//line ../bar.xgo:14:1
+	//line ../bar.xgo:14:1
 	pt.Test()
 }
 //line ../bar.xgo:17
 func main() {
-//line ../bar.xgo:17:1
+	//line ../bar.xgo:17:1
 	fmt.Println("hello")
-//line ../bar.xgo:18:1
+	//line ../bar.xgo:18:1
 	testPoint()
 }
 `
@@ -3544,16 +3544,16 @@ import "fmt"
 var a int
 //line /foo/bar.xgo:4
 func main() {
-//line /foo/bar.xgo:4:1
+	//line /foo/bar.xgo:4:1
 	fmt.Println(a)
-//line /foo/bar.xgo:6:1
+	//line /foo/bar.xgo:6:1
 	// doc b line6
 	var b int
-//line /foo/bar.xgo:8:1
+	//line /foo/bar.xgo:8:1
 	fmt.Println(b)
-//line /foo/bar.xgo:10:1
+	//line /foo/bar.xgo:10:1
 	var c int
-//line /foo/bar.xgo:11:1
+	//line /foo/bar.xgo:11:1
 	fmt.Println(c)
 }
 `)
@@ -3576,19 +3576,19 @@ func demo() {
 import "fmt"
 //line /foo/bar.xgo:2:1
 func demo() {
-//line /foo/bar.xgo:3:1
+	//line /foo/bar.xgo:3:1
 	// doc a line3
 	var a int
-//line /foo/bar.xgo:5:1
+	//line /foo/bar.xgo:5:1
 	fmt.Println(a)
-//line /foo/bar.xgo:7:1
+	//line /foo/bar.xgo:7:1
 	// doc b line7
 	var b int
-//line /foo/bar.xgo:9:1
+	//line /foo/bar.xgo:9:1
 	fmt.Println(b)
-//line /foo/bar.xgo:11:1
+	//line /foo/bar.xgo:11:1
 	var c int
-//line /foo/bar.xgo:12:1
+	//line /foo/bar.xgo:12:1
 	fmt.Println(c)
 }
 `)
@@ -3851,101 +3851,101 @@ import (
 )
 //line /foo/bar.xgo:6:1
 func add(x string, y string) (int, error) {
-//line /foo/bar.xgo:7:1
+	//line /foo/bar.xgo:7:1
 	var _autoGo_1 int
-//line /foo/bar.xgo:7:1
+	//line /foo/bar.xgo:7:1
 	{
-//line /foo/bar.xgo:7:1
+		//line /foo/bar.xgo:7:1
 		var _xgo_err error
-//line /foo/bar.xgo:7:1
+		//line /foo/bar.xgo:7:1
 		_autoGo_1, _xgo_err = strconv.Atoi(x)
-//line /foo/bar.xgo:7:1
+		//line /foo/bar.xgo:7:1
 		if _xgo_err != nil {
-//line /foo/bar.xgo:7:1
+			//line /foo/bar.xgo:7:1
 			_xgo_err = errors.NewFrame(_xgo_err, "strconv.atoi(x)", "/foo/bar.xgo", 7, "main.add")
-//line /foo/bar.xgo:7:1
+			//line /foo/bar.xgo:7:1
 			return 0, _xgo_err
 		}
-//line /foo/bar.xgo:7:1
+		//line /foo/bar.xgo:7:1
 		goto _autoGo_2
 	_autoGo_2:
-//line /foo/bar.xgo:7:1
+		//line /foo/bar.xgo:7:1
 	}
-//line /foo/bar.xgo:7:1
+	//line /foo/bar.xgo:7:1
 	var _autoGo_3 int
-//line /foo/bar.xgo:7:1
+	//line /foo/bar.xgo:7:1
 	{
-//line /foo/bar.xgo:7:1
+		//line /foo/bar.xgo:7:1
 		var _xgo_err error
-//line /foo/bar.xgo:7:1
+		//line /foo/bar.xgo:7:1
 		_autoGo_3, _xgo_err = strconv.Atoi(y)
-//line /foo/bar.xgo:7:1
+		//line /foo/bar.xgo:7:1
 		if _xgo_err != nil {
-//line /foo/bar.xgo:7:1
+			//line /foo/bar.xgo:7:1
 			_xgo_err = errors.NewFrame(_xgo_err, "strconv.atoi(y)", "/foo/bar.xgo", 7, "main.add")
-//line /foo/bar.xgo:7:1
+			//line /foo/bar.xgo:7:1
 			return 0, _xgo_err
 		}
-//line /foo/bar.xgo:7:1
+		//line /foo/bar.xgo:7:1
 		goto _autoGo_4
 	_autoGo_4:
-//line /foo/bar.xgo:7:1
+		//line /foo/bar.xgo:7:1
 	}
-//line /foo/bar.xgo:7:1
+	//line /foo/bar.xgo:7:1
 	return _autoGo_1 + _autoGo_3, nil
 }
 //line /foo/bar.xgo:10:1
 func addSafe(x string, y string) int {
-//line /foo/bar.xgo:11:1
+	//line /foo/bar.xgo:11:1
 	return func() (_xgo_ret int) {
-//line /foo/bar.xgo:11:1
+		//line /foo/bar.xgo:11:1
 		var _xgo_err error
-//line /foo/bar.xgo:11:1
+		//line /foo/bar.xgo:11:1
 		_xgo_ret, _xgo_err = strconv.Atoi(x)
-//line /foo/bar.xgo:11:1
+		//line /foo/bar.xgo:11:1
 		if _xgo_err != nil {
-//line /foo/bar.xgo:11:1
+			//line /foo/bar.xgo:11:1
 			return 0
 		}
-//line /foo/bar.xgo:11:1
+		//line /foo/bar.xgo:11:1
 		return
 	}() + func() (_xgo_ret int) {
-//line /foo/bar.xgo:11:1
+		//line /foo/bar.xgo:11:1
 		var _xgo_err error
-//line /foo/bar.xgo:11:1
+		//line /foo/bar.xgo:11:1
 		_xgo_ret, _xgo_err = strconv.Atoi(y)
-//line /foo/bar.xgo:11:1
+		//line /foo/bar.xgo:11:1
 		if _xgo_err != nil {
-//line /foo/bar.xgo:11:1
+			//line /foo/bar.xgo:11:1
 			return 0
 		}
-//line /foo/bar.xgo:11:1
+		//line /foo/bar.xgo:11:1
 		return
 	}()
 }
 //line /foo/bar.xgo:14
 func main() {
-//line /foo/bar.xgo:14:1
+	//line /foo/bar.xgo:14:1
 	fmt.Println(func() (_xgo_ret int) {
-//line /foo/bar.xgo:14:1
+		//line /foo/bar.xgo:14:1
 		var _xgo_err error
-//line /foo/bar.xgo:14:1
+		//line /foo/bar.xgo:14:1
 		_xgo_ret, _xgo_err = add("100", "23")
-//line /foo/bar.xgo:14:1
+		//line /foo/bar.xgo:14:1
 		if _xgo_err != nil {
-//line /foo/bar.xgo:14:1
+			//line /foo/bar.xgo:14:1
 			_xgo_err = errors.NewFrame(_xgo_err, "add(\"100\", \"23\")", "/foo/bar.xgo", 14, "main.main")
-//line /foo/bar.xgo:14:1
+			//line /foo/bar.xgo:14:1
 			panic(_xgo_err)
 		}
-//line /foo/bar.xgo:14:1
+		//line /foo/bar.xgo:14:1
 		return
 	}())
-//line /foo/bar.xgo:16:1
+	//line /foo/bar.xgo:16:1
 	sum, err := add("10", "abc")
-//line /foo/bar.xgo:17:1
+	//line /foo/bar.xgo:17:1
 	fmt.Println(sum, err)
-//line /foo/bar.xgo:19:1
+	//line /foo/bar.xgo:19:1
 	fmt.Println(addSafe("10", "abc"))
 }
 `)
