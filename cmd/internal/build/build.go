@@ -18,6 +18,7 @@
 package build
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -27,6 +28,7 @@ import (
 	"github.com/goplus/gogen"
 	"github.com/goplus/xgo/cl"
 	"github.com/goplus/xgo/cmd/internal/base"
+	"github.com/goplus/xgo/cmd/internal/projectdriver"
 	"github.com/goplus/xgo/tool"
 	"github.com/goplus/xgo/x/gocmd"
 	"github.com/goplus/xgo/x/xgoprojs"
@@ -54,7 +56,6 @@ func runCmd(cmd *base.Command, args []string) {
 	if err != nil {
 		log.Panicln("parse input arguments failed:", err)
 	}
-
 	if *flagDebug {
 		gogen.SetDebug(gogen.DbgFlagAll &^ gogen.DbgFlagComments)
 		cl.SetDebug(cl.DbgFlagAll)
@@ -72,6 +73,21 @@ func runCmd(cmd *base.Command, args []string) {
 	}
 	if len(args) != 0 {
 		log.Panicln("too many arguments:", args)
+	}
+	driverFlags := append([]string(nil), pass.Args...)
+	if *flagDebug {
+		driverFlags = append(driverFlags, "-debug=true")
+	}
+	driverResult, driverErr := projectdriver.TryBuild(context.Background(), "", proj, driverFlags, *flagOutput, projectdriver.Streams{})
+	if driverErr != nil {
+		fmt.Fprintln(os.Stderr, driverErr)
+		os.Exit(1)
+	}
+	if driverResult.Handled {
+		if !driverResult.Status.Success() {
+			projectdriver.Exit(driverResult.Status)
+		}
+		return
 	}
 
 	conf, err := tool.NewDefaultConf(".", tool.ConfFlagNoTestFiles, pass.Tags())

@@ -78,6 +78,7 @@ func PassBuildFlags(cmd *Command) *PassArgs {
 		"trimpath", "work")
 	p.Var("p", "asmflags", "compiler", "buildmode",
 		"gcflags", "gccgoflags", "installsuffix",
-		"ldflags", "pkgdir", "tags", "toolexec", "buildvcs")
+		"ldflags", "pkgdir", "tags", "toolexec", "buildvcs",
+		"mod", "modfile", "overlay")
 	return p
 }
