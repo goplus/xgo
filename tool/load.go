@@ -314,6 +314,9 @@ func LoadDir(dir string, conf *Config, genTestPkg bool, promptGenGo ...bool) (ou
 }
 
 func afterLoad(mod *xgomod.Module, xgo *env.XGo, out, test *gogen.Package, conf *Config) {
+	if out == nil { // compile failed; nothing to do
+		return
+	}
 	if mod.Path() == xgoMod { // nothing to do for XGo itself
 		return
 	}
@@ -402,6 +405,7 @@ func LoadFiles(dir string, files []string, conf *Config) (out *gogen.Package, er
 			if conf.IgnoreNotatedError {
 				err = ignNotatedErrs(err, pkg, fset)
 			}
+			return
 		}
 		break
 	}
