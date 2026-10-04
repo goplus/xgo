@@ -1031,11 +1031,36 @@ func compileType(ctx *blockCtx, t *ast.TypeSpec) {
 		return
 	}
 	if t.Assign != token.NoPos { // alias type
-		ctx.cb.AliasType(name, toType(ctx, t.Type))
+		typeParams := toTypeParams(ctx, t.TypeParams)
+		if len(typeParams) > 0 {
+			ctx.tlookup = &typeParamLookup{typeParams}
+			defer func() {
+				ctx.tlookup = nil
+			}()
+			org := ctx.inInst
+			ctx.inInst = 0
+			defer func() {
+				ctx.inInst = org
+			}()
+		}
+		ctx.cb.NewTypeDefs().NewType(name, typeParams, t.Name).AliasType(ctx.pkg, toType(ctx, t.Type))
 	} else {
 		cb := ctx.cb
 		enumType, isEnum := t.Type.(*ast.EnumType)
-		typeDecl := cb.NewType(name)
+		typeParams := toTypeParams(ctx, t.TypeParams)
+		typeDecl := cb.NewTypeDefs().NewType(name, typeParams, t.Name)
+		typeDecl.Type()
+		if len(typeParams) > 0 {
+			ctx.tlookup = &typeParamLookup{typeParams}
+			defer func() {
+				ctx.tlookup = nil
+			}()
+			org := ctx.inInst
+			ctx.inInst = 0
+			defer func() {
+				ctx.inInst = org
+			}()
+		}
 		var underlying types.Type
 		if isEnum {
 			underlying = inferEnumUnderlyingType(ctx, enumType)

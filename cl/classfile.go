@@ -545,7 +545,8 @@ func genClassProjectMain(pkg *gogen.Package, parent *pkgCtx, proj *classProject)
 				types.NewField(token.NoPos, pkg.Types, base.Name(), baseType, true),
 			}, pkg)
 
-			decl := pkg.NewTypeDefs().NewType(classType)
+			decl := pkg.NewTypeDefs().NewType(classType, nil)
+			decl.Type()
 			ld.typInit = func() { // decycle
 				if debugLoad {
 					log.Println("==> Load > InitType", classType)
