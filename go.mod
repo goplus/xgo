@@ -14,8 +14,6 @@ require (
 )
 
 require (
-	github.com/xushiwei/markdown v0.1.0 // indirect
-	github.com/yuin/goldmark v1.7.8 // indirect
 	golang.org/x/mod v0.40.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
 )
