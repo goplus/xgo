@@ -1004,7 +1004,8 @@ func preloadXGoFile(p *gogen.Package, ctx *blockCtx, file string, f *ast.File, c
 				old, _ := p.SetCurFile(goFile, true)
 				defer p.RestoreCurFile(old)
 
-				decl := p.NewTypeDefs().NewType(classType)
+				decl := p.NewTypeDefs().NewType(classType, nil)
+				decl.Type()
 				ld.typInit = func() { // decycle
 					if debugLoad {
 						log.Println("==> Load > InitType", classType)
@@ -1304,18 +1305,30 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 								if debugLoad {
 									log.Println("==> Load > AliasType", name)
 								}
-								typ := defs.AliasType(name, toType(ctx, t.Type), tName)
+								typeParams := toTypeParams(ctx, t.TypeParams)
+								if len(typeParams) > 0 {
+									ctx.tlookup = &typeParamLookup{typeParams}
+									defer func() {
+										ctx.tlookup = nil
+									}()
+									org := ctx.inInst
+									ctx.inInst = 0
+									defer func() {
+										ctx.inInst = org
+									}()
+								}
+								typ := defs.NewType(name, typeParams, tName).AliasType(ctx.pkg, toType(ctx, t.Type))
 								if rec := ctx.recorder(); rec != nil {
-									if obj, ok := typ.(interface{ Obj() *types.TypeName }); ok {
-										rec.Def(tName, obj.Obj())
-									}
+									rec.Def(tName, typ.Obj())
 								}
 								return
 							}
 							if debugLoad {
 								log.Println("==> Load > NewType", name)
 							}
-							decl := defs.NewType(name, tName)
+							typeParams := toTypeParams(ctx, t.TypeParams)
+							decl := defs.NewType(name, typeParams, tName)
+							decl.Type()
 							if t.Doc != nil {
 								defs.SetComments(t.Doc)
 							} else if d.Doc != nil {
@@ -1324,6 +1337,17 @@ func preloadFile(p *gogen.Package, ctx *blockCtx, f *ast.File, goFile string, ge
 							ld.typInit = func() { // decycle
 								if debugLoad {
 									log.Println("==> Load > InitType", name)
+								}
+								if len(typeParams) > 0 {
+									ctx.tlookup = &typeParamLookup{typeParams}
+									defer func() {
+										ctx.tlookup = nil
+									}()
+									org := ctx.inInst
+									ctx.inInst = 0
+									defer func() {
+										ctx.inInst = org
+									}()
 								}
 								var underlying types.Type
 								if enumType != nil {
