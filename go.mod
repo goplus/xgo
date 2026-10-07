@@ -7,7 +7,7 @@ require (
 	github.com/goccy/go-yaml v1.19.2
 	github.com/goplus/cobra v1.10.8 //xgo:class
 	github.com/goplus/gogen v1.24.8
-	github.com/goplus/lib v0.5.7
+	github.com/goplus/lib v0.5.10
 	github.com/goplus/mod v0.22.1
 	github.com/qiniu/x v1.18.3
 	golang.org/x/net v0.57.0
