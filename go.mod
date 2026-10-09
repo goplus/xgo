@@ -9,7 +9,7 @@ require (
 	github.com/goplus/gogen v1.24.8
 	github.com/goplus/lib v0.5.11
 	github.com/goplus/mod v0.22.1
-	github.com/qiniu/x v1.18.3
+	github.com/qiniu/x v1.19.1
 	golang.org/x/net v0.57.0
 )
 
