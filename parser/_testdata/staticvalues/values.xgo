@@ -1,0 +1,5 @@
+type Rect int
+
+const Rect.kind, global = "shape", "global"
+
+var Rect.count, other int
