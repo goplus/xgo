@@ -32,6 +32,15 @@ func Tidy(dir string, xgo *env.XGo) (err error) {
 	}
 
 	modRoot := modObj.Root()
+
+	// Remember the classfile dependencies (declared via `//gop:class` require
+	// directives) before running `go mod tidy`. The native `go mod tidy` only
+	// sees Go imports, so a classfile module that is referenced implicitly (via
+	// a classfile import, or not yet referenced by any source file) looks unused
+	// to it and gets dropped from go.mod. We re-add them afterwards so that
+	// `xgo mod tidy` behaves like running `xgo get` for classfile deps.
+	classMods := classfileRequires(modObj)
+
 	/*
 		depMods, err := GenDepMods(modObj, modRoot, true)
 		if err != nil {
@@ -72,7 +81,70 @@ func Tidy(dir string, xgo *env.XGo) (err error) {
 	cmd.Dir = modRoot
 	err = cmd.Run()
 	if err != nil {
-		err = errors.NewWith(err, `cmd.Run()`, -2, "(*exec.Cmd).Run")
+		return errors.NewWith(err, `cmd.Run()`, -2, "(*exec.Cmd).Run")
 	}
-	return
+
+	return keepClassfileRequires(modRoot, classMods)
+}
+
+// classfileRequire is a classfile module dependency declared in go.mod via a
+// `//gop:class` (or `//xgo:class`) require directive.
+type classfileRequire struct {
+	Path    string
+	Version string
+}
+
+// classfileRequires returns the classfile module requires of a module, keeping
+// the version recorded in go.mod for each one.
+func classfileRequires(modObj *xgomod.Module) []classfileRequire {
+	classMods := modObj.Opt.ClassMods
+	if len(classMods) == 0 {
+		return nil
+	}
+	isClass := make(map[string]bool, len(classMods))
+	for _, modPath := range classMods {
+		isClass[modPath] = true
+	}
+	reqs := make([]classfileRequire, 0, len(classMods))
+	for _, r := range modObj.File.Require {
+		if isClass[r.Mod.Path] {
+			reqs = append(reqs, classfileRequire{Path: r.Mod.Path, Version: r.Mod.Version})
+		}
+	}
+	return reqs
+}
+
+// keepClassfileRequires re-adds classfile module requires that `go mod tidy`
+// may have dropped, preserving the `//gop:class` marker so that the classfile
+// dependency declaration survives. It does nothing when every classfile require
+// is still present.
+func keepClassfileRequires(modRoot string, classMods []classfileRequire) (err error) {
+	if len(classMods) == 0 {
+		return nil
+	}
+	modObj, err := xgomod.Load(modRoot)
+	if err != nil {
+		return errors.NewWith(err, `xgomod.Load(modRoot)`, -2, "xgomod.Load", modRoot)
+	}
+	have := make(map[string]bool)
+	for _, r := range modObj.File.Require {
+		have[r.Mod.Path] = true
+	}
+	changed := false
+	for _, c := range classMods {
+		if have[c.Path] {
+			continue
+		}
+		if e := modObj.AddRequire(c.Path, c.Version, true); e != nil {
+			return errors.NewWith(e, `modObj.AddRequire(path, vers, true)`, -2, "(*xgomod.Module).AddRequire", c.Path, c.Version, true)
+		}
+		changed = true
+	}
+	if !changed {
+		return nil
+	}
+	if err = modObj.Save(); err != nil {
+		return errors.NewWith(err, `modObj.Save()`, -2, "(*xgomod.Module).Save")
+	}
+	return nil
 }
