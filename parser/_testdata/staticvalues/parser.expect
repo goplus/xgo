@@ -1,0 +1,107 @@
+package main
+
+file Rect.gox
+ast.GenDecl:
+  Tok: const
+  Specs:
+    ast.ValueSpec:
+      Names:
+        ast.Ident:
+          Name: global
+      Values:
+        ast.BasicLit:
+          Kind: INT
+          Value: 1
+ast.GenDecl:
+  Tok: const
+  Specs:
+    ast.ValueSpec:
+      Names:
+        ast.Ident:
+          Name: .kind
+        ast.Ident:
+          Name: Rect.name
+      Values:
+        ast.BasicLit:
+          Kind: STRING
+          Value: "shape"
+        ast.BasicLit:
+          Kind: STRING
+          Value: "rect"
+ast.GenDecl:
+  Tok: var
+  Specs:
+    ast.ValueSpec:
+      Names:
+        ast.Ident:
+          Name: .count
+      Type:
+        ast.Ident:
+          Name: int
+      Values:
+        ast.BasicLit:
+          Kind: INT
+          Value: 1
+    ast.ValueSpec:
+      Names:
+        ast.Ident:
+          Name: Rect.total
+        ast.Ident:
+          Name: .extra
+      Type:
+        ast.Ident:
+          Name: int
+      Values:
+        ast.BasicLit:
+          Kind: INT
+          Value: 2
+        ast.BasicLit:
+          Kind: INT
+          Value: 3
+    ast.ValueSpec:
+      Names:
+        ast.Ident:
+          Name: width
+      Type:
+        ast.Ident:
+          Name: int
+
+file values.xgo
+ast.GenDecl:
+  Tok: type
+  Specs:
+    ast.TypeSpec:
+      Name:
+        ast.Ident:
+          Name: Rect
+      Type:
+        ast.Ident:
+          Name: int
+ast.GenDecl:
+  Tok: const
+  Specs:
+    ast.ValueSpec:
+      Names:
+        ast.Ident:
+          Name: Rect.kind
+        ast.Ident:
+          Name: global
+      Values:
+        ast.BasicLit:
+          Kind: STRING
+          Value: "shape"
+        ast.BasicLit:
+          Kind: STRING
+          Value: "global"
+ast.GenDecl:
+  Tok: var
+  Specs:
+    ast.ValueSpec:
+      Names:
+        ast.Ident:
+          Name: Rect.count
+        ast.Ident:
+          Name: other
+      Type:
+        ast.Ident:
+          Name: int

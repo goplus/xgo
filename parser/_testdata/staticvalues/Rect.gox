@@ -1,0 +1,8 @@
+const global = 1
+const .kind, Rect.name = "shape", "rect"
+
+var (
+	.count             int = 1
+	Rect.total, .extra int = 2, 3
+	width              int
+)
