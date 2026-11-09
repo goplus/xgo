@@ -18,8 +18,6 @@ package tool
 
 import (
 	"testing"
-
-	"github.com/goplus/mod/xgomod"
 )
 
 // TestAfterLoadNilPackage guards against the regression reported in
@@ -28,9 +26,12 @@ import (
 // (and thus checkGopDeps -> gogen.(*Package).ForEachFile) must not be reached
 // with a nil package, otherwise it panics with a nil pointer dereference.
 func TestAfterLoadNilPackage(t *testing.T) {
-	// A real (empty) module whose Path() is not xgoMod, so afterLoad proceeds
-	// past the "XGo itself" short-circuit and would reach checkGopDeps.
-	mod := &xgomod.Module{}
+	// A real (empty) workspace whose directory is not XGo itself, so afterLoad
+	// proceeds past the early returns and would reach checkGopDeps.
+	w, err := LoadWorkspace(t.TempDir())
+	if err != nil {
+		t.Fatal("LoadWorkspace:", err)
+	}
 
 	// A non-nil XGoDeps forces the checkGopDeps path in afterLoad, which is
 	// exactly the `xgo run` code path from the panic in issue #2861.
@@ -38,7 +39,7 @@ func TestAfterLoadNilPackage(t *testing.T) {
 	conf := &Config{XGoDeps: &deps}
 
 	// This must return cleanly instead of panicking on a nil package.
-	afterLoad(mod, nil, nil, nil, conf)
+	afterLoad(w, t.TempDir(), nil, nil, nil, conf)
 
 	if deps != 0 {
 		t.Fatalf("XGoDeps = %d, want 0 for a nil package", deps)

@@ -23,6 +23,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"sort"
 
 	"github.com/goplus/mod"
@@ -74,7 +75,7 @@ func runCmd(_ *base.Command, args []string) {
 	xgoEnv["XGOROOT"] = env.XGOROOT()
 	xgoEnv["XGO_GOCMD"] = gocmd.Name()
 	xgoEnv["GOMODCACHE"] = modcache.GOMODCACHE
-	xgoEnv["GOXMOD"], _ = mod.GOXMOD("")
+	xgoEnv["GOXMOD"], _ = goxmodPath("")
 	xgoEnv["HOME"] = env.HOME()
 
 	vars := flag.Args()
@@ -82,9 +83,23 @@ func runCmd(_ *base.Command, args []string) {
 	outputEnvVars(xgoEnv, vars, *envJson)
 }
 
+// goxmodPath returns the gox.mod file (or the legacy gop.mod) of the module
+// that owns dirFrom, like the removed mod.GOXMOD did.
+func goxmodPath(dirFrom string) (file string, err error) {
+	gomod, err := (mod.Finder{}).FindGoMod(dirFrom)
+	if err != nil {
+		return
+	}
+	dir := filepath.Dir(gomod)
+	file = filepath.Join(dir, "gox.mod")
+	if _, e := os.Lstat(file); e == nil { // gox.mod exists
+		return
+	}
+	return filepath.Join(dir, "gop.mod"), nil
+}
+
 func outputEnvVars(gopEnv map[string]any, vars []string, outputJson bool) {
 	onlyValues := true
-
 	if len(vars) == 0 {
 		onlyValues = false
 

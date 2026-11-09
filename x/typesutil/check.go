@@ -23,7 +23,7 @@ import (
 	"strings"
 
 	"github.com/goplus/gogen"
-	"github.com/goplus/mod/xgomod"
+	"github.com/goplus/mod/goxmod"
 	"github.com/goplus/xgo/ast"
 	"github.com/goplus/xgo/cl"
 	"github.com/goplus/xgo/token"
@@ -72,8 +72,10 @@ type Config struct {
 	// If WorkingDir is not set, os.Getwd() is used.
 	WorkingDir string
 
-	// Mod represents an XGo module (optional).
-	Mod *xgomod.Module
+	// Mod represents the classfiles of the module that owns the package being
+	// checked (optional). It answers which file extensions are classfiles. When
+	// nil, only the built-in classfiles are recognized.
+	Mod *goxmod.Classes
 
 	// If IgnoreFuncBodies is set, skip compiling function bodies (optional).
 	IgnoreFuncBodies bool
@@ -153,14 +155,14 @@ func (p *Checker) Files(goFiles []*goast.File, xgoFiles []*ast.File) (err error)
 		Files:   xgofs,
 		GoFiles: gofs,
 	}
-	mod := opts.Mod
-	if mod == nil {
-		mod = xgomod.Default
+	cls := opts.Mod
+	if cls == nil {
+		cls = goxmod.DefaultClasses()
 	}
 	_, err = cl.NewPackage(pkgTypes.Path(), pkg, &cl.Config{
 		Types:          pkgTypes,
 		Fset:           fset,
-		LookupClass:    mod.LookupClass,
+		LookupClass:    cls.LookupClass,
 		Importer:       conf.Importer,
 		Recorder:       NewRecorder(p.xgoInfo),
 		NoFileLine:     true,

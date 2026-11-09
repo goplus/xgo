@@ -25,7 +25,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/goplus/mod/xgomod"
+	"github.com/goplus/mod"
 	"github.com/goplus/xgo/cl/outline"
 	"github.com/goplus/xgo/parser"
 	"github.com/goplus/xgo/x/xgoenv"
@@ -43,12 +43,17 @@ func Outline(dir string, conf *Config) (out outline.Package, err error) {
 		conf = new(Config)
 	}
 
-	mod := conf.Mod
-	if mod == nil {
-		if mod, err = LoadMod(dir); err != nil {
-			err = errors.NewWith(err, `LoadMod(dir)`, -2, "tool.LoadMod", dir)
+	w := conf.Workspace
+	if w == nil {
+		if w, err = LoadWorkspace(dir); err != nil {
+			err = errors.NewWith(err, `LoadWorkspace(dir)`, -2, "tool.LoadWorkspace", dir)
 			return
 		}
+	}
+	cls, err := classesOf(w, dir)
+	if err != nil {
+		err = errors.NewWith(err, `classesOf(w, dir)`, -2, "tool.classesOf", w, dir)
+		return
 	}
 
 	filterConf := conf.Filter
@@ -67,7 +72,7 @@ func Outline(dir string, conf *Config) (out outline.Package, err error) {
 		fset = token.NewFileSet()
 	}
 	pkgs, err := parser.ParseDirEx(fset, dir, parser.Config{
-		ClassInfo: mod.ClassInfo,
+		ClassInfo: cls.ClassInfo,
 		Filter:    filter,
 		Mode:      parser.ParseComments,
 	})
@@ -85,9 +90,10 @@ func Outline(dir string, conf *Config) (out outline.Package, err error) {
 		if xgo == nil {
 			xgo = xgoenv.Get()
 		}
-		imp = NewImporter(mod, xgo, fset)
+		imp = NewImporter(w, xgo, fset)
 	}
 
+	modRoot, modPath := ownerModule(w, dir)
 	for name, pkg := range pkgs {
 		if out.Valid() {
 			err = fmt.Errorf("%w: %s, %s", ErrMultiPackges, name, out.Pkg().Name())
@@ -96,12 +102,16 @@ func Outline(dir string, conf *Config) (out outline.Package, err error) {
 		if len(pkg.Files)+len(pkg.GoFiles) == 0 { // no Go/XGo source files
 			break
 		}
-		relPart, _ := filepath.Rel(mod.Root(), dir)
-		pkgPath := path.Join(mod.Path(), filepath.ToSlash(relPart))
+		pkgPath := modPath
+		if modRoot != "" {
+			if relPart, e := filepath.Rel(modRoot, dir); e == nil {
+				pkgPath = path.Join(modPath, filepath.ToSlash(relPart))
+			}
+		}
 		out, err = outline.NewPackage(pkgPath, pkg, &outline.Config{
 			Fset:        fset,
 			Importer:    imp,
-			LookupClass: mod.LookupClass,
+			LookupClass: cls.LookupClass,
 		})
 		if err != nil {
 			return
@@ -113,18 +123,31 @@ func Outline(dir string, conf *Config) (out outline.Package, err error) {
 	return
 }
 
+// ownerModule returns the module root directory and module path of the
+// workspace module that owns dir, or ("", "") for a loose directory.
+func ownerModule(w *Workspace, dir string) (modRoot, modPath string) {
+	gomod := ownerGoMod(w, dir)
+	if gomod == "" {
+		return "", ""
+	}
+	return filepath.Dir(gomod), modPathOf(gomod)
+}
+
 // -----------------------------------------------------------------------------
 
 func OutlinePkgPath(workDir, pkgPath string, conf *Config, allowExtern bool) (out outline.Package, err error) {
-	mod := conf.Mod
-	if mod == nil {
-		if mod, err = LoadMod(workDir); err != nil {
-			err = errors.NewWith(err, `LoadMod(dir)`, -2, "tool.LoadMod", workDir)
+	if conf == nil {
+		conf = new(Config)
+	}
+	w := conf.Workspace
+	if w == nil {
+		if w, err = LoadWorkspace(workDir); err != nil {
+			err = errors.NewWith(err, `LoadWorkspace(workDir)`, -2, "tool.LoadWorkspace", workDir)
 			return
 		}
 	}
 
-	if NotFound(err) && allowExtern {
+	if w.IsDefault() && allowExtern {
 		remotePkgPathDo(pkgPath, func(pkgDir, modDir string) {
 			modFile := chmodModfile(modDir)
 			defer os.Chmod(modFile, modReadonly)
@@ -133,15 +156,13 @@ func OutlinePkgPath(workDir, pkgPath string, conf *Config, allowExtern bool) (ou
 			err = e
 		})
 		return
-	} else if err != nil {
-		return
 	}
 
-	pkg, err := mod.Lookup(pkgPath)
+	pkg, err := w.Lookup(pkgPath)
 	if err != nil {
 		return
 	}
-	if pkg.Type == xgomod.PkgtExtern {
+	if pkg.Type == mod.PkgtExtern {
 		modFile := chmodModfile(pkg.ModDir)
 		defer os.Chmod(modFile, modReadonly)
 	}
