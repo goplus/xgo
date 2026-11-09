@@ -36,8 +36,6 @@ jobs:
         - windows-latest
         - macos-latest
         go:
-        - 1.25.x
-        - 1.26.x
         - 1.27.x
     runs-on: ${{ matrix.os }}
     steps:
