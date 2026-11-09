@@ -36,8 +36,6 @@ jobs:
         - windows-latest
         - macos-latest
         go:
-        - 1.25.x
-        - 1.26.x
         - 1.27.x
     runs-on: ${{ matrix.os }}
     steps:
@@ -66,7 +64,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v7
         with:
-          go-version: "1.25"
+          go-version: "1.27.x"
 
       - name: Check formatting
         run: |
