@@ -18,6 +18,4 @@ require (
 	golang.org/x/sys v0.47.0 // indirect
 )
 
-retract v1.1.12
-
 replace github.com/goplus/xgo => ../
