@@ -18,14 +18,15 @@ package mod
 
 import (
 	"log"
+	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 
-	"github.com/goplus/mod/modload"
-	"github.com/goplus/mod/xgomod"
 	"github.com/goplus/xgo/cmd/internal/base"
 	"github.com/goplus/xgo/env"
+	"github.com/goplus/xgo/tool"
+	"golang.org/x/mod/modfile"
 )
 
 // gop mod init
@@ -63,7 +64,7 @@ Run 'gop help mod init' for more information.`)
 	}
 
 	modPath := args[0]
-	mod, err := modload.Create(".", modPath, goMainVer(), env.MainVersion())
+	mod, err := tool.CreateGoMod(".", modPath, goMainVer(), env.MainVersion())
 	check(err)
 
 	if *flagLLGo {
@@ -89,9 +90,13 @@ func goMainVer() string {
 }
 
 func llgoLibVer() string {
-	if modGop, e1 := xgomod.LoadFrom(filepath.Join(env.XGOROOT(), "go.mod"), ""); e1 == nil {
-		if pkg, e2 := modGop.Lookup("github.com/goplus/lib"); e2 == nil {
-			return pkg.Real.Version
+	if data, e1 := os.ReadFile(filepath.Join(env.XGOROOT(), "go.mod")); e1 == nil {
+		if f, e2 := modfile.Parse("go.mod", data, nil); e2 == nil {
+			for _, r := range f.Require {
+				if r.Mod.Path == "github.com/goplus/lib" {
+					return r.Mod.Version
+				}
+			}
 		}
 	}
 	return "v0.2.0"

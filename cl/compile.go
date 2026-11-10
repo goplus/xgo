@@ -187,7 +187,7 @@ type Config struct {
 	RelativeBase string
 
 	// LookupClass lookups a class by specified file extension (required).
-	// See (*github.com/goplus/mod/gopmod.Module).LookupClass.
+	// See (*github.com/goplus/mod/goxmod.Classes).LookupClass.
 	LookupClass func(ext string) (c *Project, ok bool)
 
 	// An Importer resolves import paths to Packages (optional).

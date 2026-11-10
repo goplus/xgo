@@ -21,11 +21,13 @@ import (
 	"io/fs"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/goplus/gogen"
+	"github.com/goplus/mod"
 	"github.com/goplus/mod/env"
-	"github.com/goplus/mod/xgomod"
+	"github.com/goplus/mod/goxmod"
 	"github.com/goplus/xgo/ast"
 	"github.com/goplus/xgo/cl"
 	"github.com/goplus/xgo/parser"
@@ -36,13 +38,13 @@ import (
 )
 
 var (
-	ErrNotFound      = xgomod.ErrNotFound
+	ErrNotFound      = mod.ErrNoModule
 	ErrIgnoreNotated = errors.New("notated error ignored")
 )
 
 // NotFound returns if cause err is ErrNotFound or not
 func NotFound(err error) bool {
-	return xgomod.IsNotFound(err)
+	return errors.Err(err) == mod.ErrNoModule
 }
 
 // IgnoreNotated returns if cause err is ErrIgnoreNotated or not.
@@ -116,9 +118,15 @@ func isNotatedErr(err error, pkg *ast.Package, fset *token.FileSet) (notatedErr 
 
 // Config represents a configuration for loading XGo packages.
 type Config struct {
-	XGo      *env.XGo
-	Fset     *token.FileSet
-	Mod      *xgomod.Module
+	XGo  *env.XGo
+	Fset *token.FileSet
+
+	// Workspace is the caller's workspace for this run. It resolves imports
+	// (for generation entry points) and answers Classes(dir) for the directory
+	// being compiled or hashed. If nil, the workspace is discovered from the
+	// directory being loaded.
+	Workspace *Workspace
+
 	Importer *Importer
 
 	Filter func(fs.FileInfo) bool
@@ -146,18 +154,18 @@ const (
 
 // NewDefaultConf creates a dfault configuration for common cases.
 func NewDefaultConf(dir string, flags ConfFlags, tags ...string) (conf *Config, err error) {
-	mod, err := LoadMod(dir)
+	w, err := LoadWorkspace(dir)
 	if err != nil {
 		return
 	}
 	xgo := xgoenv.Get()
 	fset := token.NewFileSet()
-	imp := NewImporter(mod, xgo, fset)
+	imp := NewImporter(w, xgo, fset)
 	if len(tags) > 0 {
 		imp.SetTags(strings.Join(tags, ","))
 	}
 	conf = &Config{
-		XGo: xgo, Fset: fset, Mod: mod, Importer: imp,
+		XGo: xgo, Fset: fset, Workspace: w, Importer: imp,
 		IgnoreNotatedError: flags&ConfFlagIgnoreNotatedError != 0,
 		DontUpdateGoMod:    flags&ConfFlagDontUpdateGoMod != 0,
 	}
@@ -172,11 +180,6 @@ func NewDefaultConf(dir string, flags ConfFlags, tags ...string) (conf *Config, 
 }
 
 func (conf *Config) NewGoCmdConf() *gocmd.Config {
-	if cl := conf.Mod.Opt.Compiler; cl != nil {
-		if os.Getenv("XGO_GOCMD") == "" {
-			os.Setenv("XGO_GOCMD", cl.Name)
-		}
-	}
 	return &gocmd.Config{
 		XGo: conf.XGo,
 	}
@@ -193,21 +196,12 @@ func (conf *Config) UpdateCache(verbose ...bool) {
 	}
 }
 
-// LoadMod loads an XGo module from a specified directory.
-func LoadMod(dir string) (mod *xgomod.Module, err error) {
-	mod, err = xgomod.Load(dir)
-	if err != nil && !xgomod.IsNotFound(err) {
-		err = errors.NewWith(err, `xgomod.Load(dir, 0)`, -2, "xgomod.Load", dir, 0)
-		return
-	}
-	if mod == nil {
-		mod = xgomod.Default
-	}
-	err = mod.ImportClasses()
-	if err != nil {
-		err = errors.NewWith(err, `mod.ImportClasses()`, -2, "(*xgomod.Module).ImportClasses", mod)
-	}
-	return
+// LoadMod loads the workspace that owns a specified directory. It never fails
+// with "no module": a loose directory yields a default workspace.
+//
+// Deprecated: use LoadWorkspace.
+func LoadMod(dir string) (w *Workspace, err error) {
+	return LoadWorkspace(dir)
 }
 
 // FilterNoTestFiles filters to skip all testing files.
@@ -237,12 +231,19 @@ func LoadDir(dir string, conf *Config, genTestPkg bool, promptGenGo ...bool) (ou
 		conf = new(Config)
 	}
 
-	mod := conf.Mod
-	if mod == nil {
-		if mod, err = LoadMod(dir); err != nil {
-			err = errors.NewWith(err, `LoadMod(dir)`, -2, "tool.LoadMod", dir)
+	w := conf.Workspace
+	if w == nil {
+		if w, err = LoadWorkspace(dir); err != nil {
+			err = errors.NewWith(err, `LoadWorkspace(dir)`, -2, "tool.LoadWorkspace", dir)
 			return
 		}
+	}
+	// The classfiles that apply to this directory belong to the module that
+	// owns it, not to the workspace as a whole.
+	cls, err := classesOf(w, dir)
+	if err != nil {
+		err = errors.NewWith(err, `classesOf(w, dir)`, -2, "tool.classesOf", w, dir)
+		return
 	}
 
 	fset := conf.Fset
@@ -250,7 +251,7 @@ func LoadDir(dir string, conf *Config, genTestPkg bool, promptGenGo ...bool) (ou
 		fset = token.NewFileSet()
 	}
 	pkgs, err := parser.ParseDirEx(fset, dir, parser.Config{
-		ClassInfo: mod.ClassInfo,
+		ClassInfo: cls.ClassInfo,
 		Filter:    conf.Filter,
 		Mode:      parser.ParseComments | parser.SaveAbsFile,
 	})
@@ -267,15 +268,15 @@ func LoadDir(dir string, conf *Config, genTestPkg bool, promptGenGo ...bool) (ou
 	}
 	imp := conf.Importer
 	if imp == nil {
-		imp = NewImporter(mod, xgo, fset)
+		imp = NewImporter(w, xgo, fset)
 	}
 
 	var pkgTest *ast.Package
 	var clConf = &cl.Config{
 		Fset:         fset,
-		RelativeBase: relativeBaseOf(mod),
+		RelativeBase: relativeBaseOf(w),
 		Importer:     imp,
-		LookupClass:  mod.LookupClass,
+		LookupClass:  cls.LookupClass,
 	}
 
 	for name, pkg := range pkgs {
@@ -309,18 +310,31 @@ func LoadDir(dir string, conf *Config, genTestPkg bool, promptGenGo ...bool) (ou
 	if genTestPkg && pkgTest != nil {
 		test, err = cl.NewPackage("", pkgTest, clConf)
 	}
-	afterLoad(mod, xgo, out, test, conf)
+	afterLoad(w, dir, xgo, out, test, conf)
 	return
 }
 
-func afterLoad(mod *xgomod.Module, xgo *env.XGo, out, test *gogen.Package, conf *Config) {
+func afterLoad(w *Workspace, dir string, xgo *env.XGo, out, test *gogen.Package, conf *Config) {
 	if out == nil { // compile failed; nothing to do
 		return
 	}
-	if mod.Path() == xgoMod { // nothing to do for XGo itself
+	if w == nil || w.IsDefault() { // no module: nothing to persist
+		if conf.XGoDeps != nil {
+			*conf.XGoDeps = checkGopDeps(out)
+		}
 		return
 	}
-	updateMod := !conf.DontUpdateGoMod && mod.HasModfile()
+	gomod := ownerGoMod(w, dir)
+	if gomod == "" { // the directory is not owned by a workspace module
+		if conf.XGoDeps != nil {
+			*conf.XGoDeps = checkGopDeps(out)
+		}
+		return
+	}
+	if modPathOf(gomod) == xgoMod { // nothing to do for XGo itself
+		return
+	}
+	updateMod := !conf.DontUpdateGoMod
 	if updateMod || conf.XGoDeps != nil {
 		flags := checkGopDeps(out)
 		if conf.XGoDeps != nil { // for `xgo run`
@@ -331,7 +345,7 @@ func afterLoad(mod *xgomod.Module, xgo *env.XGo, out, test *gogen.Package, conf 
 				flags |= checkGopDeps(test)
 			}
 			if flags != 0 {
-				mod.SaveWithXGoMod(xgo, flags)
+				saveXGoMod(gomod, xgo, flags)
 			}
 		}
 	}
@@ -344,9 +358,37 @@ func checkGopDeps(pkg *gogen.Package) (flags int) {
 	return
 }
 
-func relativeBaseOf(mod *xgomod.Module) string {
-	if mod.HasModfile() {
-		return mod.Root()
+// ownerGoMod returns the go.mod path of the workspace module that owns dir, or
+// "" when no workspace module does (a loose directory or a foreign nested
+// module). Ownership follows Classes(dir): if that reports the directory is not
+// in the workspace, there is no go.mod to update.
+func ownerGoMod(w *Workspace, dir string) string {
+	if _, err := w.Classes(dir); err != nil {
+		return ""
+	}
+	abs, err := filepath.Abs(dir)
+	if err != nil {
+		return ""
+	}
+	// Walk up from dir looking for the nearest go.mod. Classes(dir) already
+	// guaranteed the owning module is a workspace module, so the first go.mod
+	// found on the way up is that module's.
+	for {
+		gomod := filepath.Join(abs, "go.mod")
+		if fi, e := os.Stat(gomod); e == nil && !fi.IsDir() {
+			return gomod
+		}
+		parent := filepath.Dir(abs)
+		if parent == abs {
+			return ""
+		}
+		abs = parent
+	}
+}
+
+func relativeBaseOf(w *Workspace) string {
+	if w != nil && !w.IsDefault() {
+		return w.Dir()
 	}
 	dir, _ := os.Getwd()
 	return dir
@@ -360,12 +402,23 @@ func LoadFiles(dir string, files []string, conf *Config) (out *gogen.Package, er
 		conf = new(Config)
 	}
 
-	mod := conf.Mod
-	if mod == nil {
-		if mod, err = LoadMod(dir); err != nil {
-			err = errors.NewWith(err, `LoadMod(dir)`, -2, "tool.LoadMod", dir)
+	w := conf.Workspace
+	if w == nil {
+		if w, err = LoadWorkspace(dir); err != nil {
+			err = errors.NewWith(err, `LoadWorkspace(dir)`, -2, "tool.LoadWorkspace", dir)
 			return
 		}
+	}
+	// The classfiles that apply belong to the module that owns the files; use
+	// the directory of the first file (they are all in one package).
+	clsDir := dir
+	if len(files) > 0 {
+		clsDir = filepath.Dir(files[0])
+	}
+	cls, err := classesOf(w, clsDir)
+	if err != nil {
+		err = errors.NewWith(err, `classesOf(w, clsDir)`, -2, "tool.classesOf", w, clsDir)
+		return
 	}
 
 	fset := conf.Fset
@@ -373,7 +426,7 @@ func LoadFiles(dir string, files []string, conf *Config) (out *gogen.Package, er
 		fset = token.NewFileSet()
 	}
 	pkgs, err := parser.ParseEntries(fset, files, parser.Config{
-		ClassInfo: mod.ClassInfo,
+		ClassInfo: cls.ClassInfo,
 		Filter:    conf.Filter,
 		Mode:      parser.ParseComments | parser.SaveAbsFile,
 	})
@@ -392,13 +445,13 @@ func LoadFiles(dir string, files []string, conf *Config) (out *gogen.Package, er
 	for _, pkg := range pkgs {
 		imp := conf.Importer
 		if imp == nil {
-			imp = NewImporter(mod, xgo, fset)
+			imp = NewImporter(w, xgo, fset)
 		}
 		clConf := &cl.Config{
 			Fset:         fset,
-			RelativeBase: relativeBaseOf(mod),
+			RelativeBase: relativeBaseOf(w),
 			Importer:     imp,
-			LookupClass:  mod.LookupClass,
+			LookupClass:  cls.LookupClass,
 		}
 		out, err = cl.NewPackage("", pkg, clConf)
 		if err != nil {
@@ -409,7 +462,7 @@ func LoadFiles(dir string, files []string, conf *Config) (out *gogen.Package, er
 		}
 		break
 	}
-	afterLoad(mod, xgo, out, nil, conf)
+	afterLoad(w, clsDir, xgo, out, nil, conf)
 	return
 }
 
@@ -425,8 +478,8 @@ var (
 // GetFileClassType get xgo module file classType.
 //
 // Deprecated: Don't use it
-func GetFileClassType(mod *xgomod.Module, file *ast.File, filename string) (classType string, isTest bool) {
-	return cl.GetFileClassType(file, filename, mod.LookupClass)
+func GetFileClassType(cls *goxmod.Classes, file *ast.File, filename string) (classType string, isTest bool) {
+	return cl.GetFileClassType(file, filename, cls.LookupClass)
 }
 
 // -----------------------------------------------------------------------------

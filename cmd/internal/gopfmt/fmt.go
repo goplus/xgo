@@ -147,7 +147,7 @@ func (w *walker) walk(path string, d fs.DirEntry, err error) error {
 		dir, _ := filepath.Split(path)
 		fn, ok := w.dirMap[dir]
 		if !ok {
-			if mod, err := tool.LoadMod(path); err == nil {
+			if mod, err := tool.ClassesOf(dir); err == nil {
 				fn = mod.ClassInfo
 			} else {
 				fn = xgoparser.DefaultClassInfo

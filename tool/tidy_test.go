@@ -21,8 +21,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"github.com/goplus/mod/xgomod"
 )
 
 func writeGoMod(t *testing.T, dir, body string) {
@@ -47,11 +45,10 @@ require (
 	github.com/qiniu/x v1.13.10 // indirect
 )
 `)
-	modObj, err := xgomod.Load(dir)
+	reqs, err := classfileRequires(filepath.Join(dir, "go.mod"))
 	if err != nil {
-		t.Fatal("xgomod.Load:", err)
+		t.Fatal("classfileRequires:", err)
 	}
-	reqs := classfileRequires(modObj)
 	got := map[string]string{}
 	for _, r := range reqs {
 		got[r.Path] = r.Version
@@ -80,11 +77,11 @@ go 1.24
 
 require github.com/qiniu/x v1.13.10 // indirect
 `)
-	modObj, err := xgomod.Load(dir)
+	reqs, err := classfileRequires(filepath.Join(dir, "go.mod"))
 	if err != nil {
-		t.Fatal("xgomod.Load:", err)
+		t.Fatal("classfileRequires:", err)
 	}
-	if reqs := classfileRequires(modObj); len(reqs) != 0 {
+	if len(reqs) != 0 {
 		t.Fatalf("classfileRequires = %v, want none", reqs)
 	}
 }
@@ -117,11 +114,10 @@ go 1.24
 	}
 
 	// Reloading must report it as a classfile require again.
-	modObj, err := xgomod.Load(dir)
+	reqs, err := classfileRequires(filepath.Join(dir, "go.mod"))
 	if err != nil {
-		t.Fatal("xgomod.Load:", err)
+		t.Fatal("classfileRequires:", err)
 	}
-	reqs := classfileRequires(modObj)
 	if len(reqs) != 1 || reqs[0].Path != "github.com/goplus/yap" {
 		t.Fatalf("reloaded classfile requires = %v, want github.com/goplus/yap", reqs)
 	}

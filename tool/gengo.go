@@ -24,9 +24,9 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/goplus/mod"
 	"github.com/goplus/mod/modcache"
 	"github.com/goplus/mod/modfetch"
-	"github.com/goplus/mod/xgomod"
 	"github.com/qiniu/x/errors"
 )
 
@@ -68,8 +68,9 @@ func genGoDir(dir string, conf *Config, genTestPkg, recursively bool, flags GenF
 	}
 	if recursively {
 		var (
-			list errors.List
-			fn   func(path string, d fs.DirEntry, err error) error
+			list     errors.List
+			fn       func(path string, d fs.DirEntry, err error) error
+			localMod = localModuleDirs(conf, dir)
 		)
 		if flags&GenFlagSingleFile != 0 {
 			fn = func(path string, d fs.DirEntry, err error) error {
@@ -81,7 +82,7 @@ func genGoDir(dir string, conf *Config, genTestPkg, recursively bool, flags GenF
 		} else {
 			fn = func(path string, d fs.DirEntry, err error) error {
 				if err == nil && d.IsDir() {
-					if strings.HasPrefix(d.Name(), "_") || (path != dir && hasMod(path)) { // skip _
+					if strings.HasPrefix(d.Name(), "_") || (path != dir && hasMod(path) && !localMod[cleanDir(path)]) { // skip _ and foreign nested modules
 						return filepath.SkipDir
 					}
 					if e := genGoIn(path, conf, genTestPkg, flags); e != nil && notIgnNotated(e, conf) {
@@ -125,6 +126,38 @@ func hasMod(dir string) bool {
 	return err == nil
 }
 
+func cleanDir(dir string) string {
+	if abs, err := filepath.Abs(dir); err == nil {
+		return abs
+	}
+	return filepath.Clean(dir)
+}
+
+// localModuleDirs returns the set of directories of the workspace's local
+// modules (its main modules and local-replaced modules), keyed by absolute
+// path. A nested go.mod below the walk root is only entered when it is one of
+// these: a foreign nested module is still skipped, but a `use`d or
+// local-replaced module of the workspace is generated, matching how the go
+// command expands ./... in a workspace. For a go.mod-only workspace the set is
+// just the module itself, so the walk behaves as before.
+func localModuleDirs(conf *Config, dir string) map[string]bool {
+	w, err := workspaceOf(conf, dir)
+	if err != nil || w == nil {
+		return nil
+	}
+	mods, err := w.Modules()
+	if err != nil {
+		return nil
+	}
+	set := make(map[string]bool, len(mods))
+	for _, m := range mods {
+		if m.IsLocal() && m.Real.Path != "" { // local source: a module directory
+			set[cleanDir(m.Real.Path)] = true
+		}
+	}
+	return set
+}
+
 func notIgnNotated(e error, conf *Config) bool {
 	return !(conf != nil && conf.IgnoreNotatedError && IgnoreNotated(e))
 }
@@ -166,6 +199,17 @@ func genGoSingleFile(file string, extn int, conf *Config, flags GenFlags) (err e
 }
 
 func genGoIn(dir string, conf *Config, genTestPkg bool, flags GenFlags, gen ...*bool) (err error) {
+	// Mark this directory as being generated so that a package importing its
+	// own module's root package does not trigger a recursive generation of it.
+	if imp := conf.Importer; imp != nil {
+		d := cleanDir(dir)
+		if imp.generating[d] {
+			// already in progress on the stack above; nothing to do here
+		} else {
+			imp.generating[d] = true
+			defer delete(imp.generating, d)
+		}
+	}
 	out, test, err := LoadDir(dir, conf, genTestPkg, (flags&GenFlagPrompt) != 0)
 	if err != nil {
 		if NotFound(err) { // no XGo source files
@@ -238,24 +282,70 @@ func GenGoPkgPathEx(workDir, pkgPath string, conf *Config, allowExtern bool, fla
 		return remotePkgPath(pkgPath, conf, false, flags)
 	}
 
-	mod, err := xgomod.Load(workDir)
-	if NotFound(err) && allowExtern {
-		return remotePkgPath(pkgPath, conf, recursively, flags)
-	} else if err != nil {
+	// A file-system path (".", "..", "./x", "../x", absolute) is a directory
+	// argument, as in the go command. It is not an import path: Lookup rejects
+	// it, so it is resolved against workDir and generated directly.
+	if isDirArg(pkgPath) {
+		localDir = absJoin(workDir, pkgPath)
+		err = genGoDir(localDir, conf, false, recursively, flags)
 		return
 	}
 
-	pkg, err := mod.Lookup(pkgPath)
+	w, err := workspaceOf(conf, workDir)
+	if err != nil {
+		return
+	}
+	if w.IsDefault() && allowExtern { // no module here: fetch from the network, as before
+		return remotePkgPath(pkgPath, conf, recursively, flags)
+	}
+	pkg, err := w.Lookup(pkgPath)
 	if err != nil {
 		return
 	}
 	localDir = pkg.Dir
-	if pkg.Type == xgomod.PkgtExtern {
+	if pkg.Type == mod.PkgtExtern { // read-only module cache entry
 		os.Chmod(localDir, modWritable)
 		defer os.Chmod(localDir, modReadonly)
 	}
 	err = genGoDir(localDir, conf, false, recursively, flags)
 	return
+}
+
+// isDirArg reports whether pkgPath is a file-system directory argument rather
+// than an import path: ".", "..", a path starting with "./" or "../" (or their
+// OS-separator forms), or an absolute path.
+func isDirArg(pkgPath string) bool {
+	if pkgPath == "." || pkgPath == ".." {
+		return true
+	}
+	if filepath.IsAbs(pkgPath) {
+		return true
+	}
+	return strings.HasPrefix(pkgPath, "./") || strings.HasPrefix(pkgPath, "../") ||
+		strings.HasPrefix(pkgPath, `.\`) || strings.HasPrefix(pkgPath, `..\`)
+}
+
+// absJoin resolves a directory argument against workDir, returning an absolute
+// path. An absolute pkgPath is used as is.
+func absJoin(workDir, pkgPath string) string {
+	p := filepath.FromSlash(pkgPath)
+	if !filepath.IsAbs(p) {
+		p = filepath.Join(workDir, p)
+	}
+	if abs, err := filepath.Abs(p); err == nil {
+		return abs
+	}
+	return p
+}
+
+// workspaceOf returns the workspace a run should use: the caller's workspace
+// from conf when it set one (so a recursive run does not reload it per
+// directory), otherwise the workspace discovered from dir.
+func workspaceOf(conf *Config, dir string) (*Workspace, error) {
+	if conf != nil && conf.Workspace != nil {
+		return conf.Workspace, nil
+	}
+	return LoadWorkspace(dir)
 }
 
 func remotePkgPathDo(pkgPath string, doSth func(pkgDir, modDir string), onErr func(e error)) {
