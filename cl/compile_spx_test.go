@@ -19,11 +19,17 @@
 package cl_test
 
 import (
+	"go/types"
+	"strings"
 	"testing"
 
+	"github.com/goplus/mod/modfile"
+	"github.com/goplus/xgo/ast"
 	"github.com/goplus/xgo/cl"
 	"github.com/goplus/xgo/cl/cltest"
+	"github.com/goplus/xgo/parser"
 	"github.com/goplus/xgo/parser/fsx/memfs"
+	"github.com/goplus/xgo/x/typesutil"
 )
 
 func gopSpxTest(t *testing.T, gmx, spxcode, expected string) {
@@ -135,6 +141,225 @@ var (
 `, `
 println "hi"
 `, "Game.t5gmx", "Kai.t5spx")
+}
+
+func TestClassFieldErrorRecovery(t *testing.T) {
+	for _, tt := range []struct {
+		name   string
+		source string
+		errors []string
+		fields map[string]string
+	}{
+		{"Slice", "var items []item = [M]", []string{"undefined: M"}, map[string]string{"items": "[]item"}},
+		{"Scalar", "var items item = M", []string{"undefined: M"}, map[string]string{"items": "item"}},
+		{
+			name: "Inferred",
+			source: `var (
+	items = M
+	count = 42
+)`,
+			errors: []string{"undefined: M"},
+			fields: map[string]string{"count": "int"},
+		},
+		{
+			name: "MultipleNames",
+			source: `var (
+	left, right int = M, N
+	count = 42
+)`,
+			errors: []string{"undefined: M"},
+			fields: map[string]string{"left": "int", "right": "int", "count": "int"},
+		},
+		{
+			name: "MultipleErrors",
+			source: `var (
+	items []item = [M]
+	other item = N
+	count = 42
+)`,
+			errors: []string{"undefined: M", "undefined: N"},
+			fields: map[string]string{"items": "[]item", "other": "item", "count": "int"},
+		},
+		{
+			name: "InitializedFields",
+			source: `var (
+	before = 1
+	items []item = [M]
+	after = before + 1
+)`,
+			errors: []string{"undefined: M"},
+			fields: map[string]string{"before": "int", "items": "[]item", "after": "int"},
+		},
+		{
+			name: "FieldReference",
+			source: `var (
+	items []item = [M]
+	count = len(items)
+)`,
+			errors: []string{"undefined: M"},
+			fields: map[string]string{"items": "[]item", "count": "int"},
+		},
+		{
+			name: "TypeMismatch",
+			source: `var (
+	items int = "bad"
+	count = 42
+)`,
+			errors: []string{"as type int in assignment"},
+			fields: map[string]string{"items": "int", "count": "int"},
+		},
+		{
+			name: "InvalidFieldType",
+			source: `var (
+	items MissingType
+	count = 42
+)`,
+			errors: []string{"MissingType is not a type"},
+			fields: map[string]string{"count": "int"},
+		},
+		{
+			name: "PartialSlice",
+			source: `var (
+	items []int = [1, M]
+	count = 42
+)`,
+			errors: []string{"undefined: M"},
+			fields: map[string]string{"items": "[]int", "count": "int"},
+		},
+		{
+			name: "Arrow",
+			source: `var (
+	items func(int) int = x => x + M
+	count = 42
+)`,
+			errors: []string{"undefined: M"},
+			fields: map[string]string{"items": "func(int) int", "count": "int"},
+		},
+		{
+			name: "ArrowPartialReturn",
+			source: `var (
+	items func() int = => "prefix" + M
+	count = 42
+)`,
+			errors: []string{"undefined: M"},
+			fields: map[string]string{"items": "func() int", "count": "int"},
+		},
+		{
+			name: "ArrowReturnType",
+			source: `var (
+	items func(int) int = x => false
+	count = 42
+)`,
+			errors: []string{"as type int in return argument"},
+			fields: map[string]string{"items": "func(int) int", "count": "int"},
+		},
+		{
+			name: "BlockLambda",
+			source: `var (
+	items func(int) int = x => { return M }
+	count = 42
+)`,
+			errors: []string{"undefined: M"},
+			fields: map[string]string{"items": "func(int) int", "count": "int"},
+		},
+		{"Complete", "var items []item = [&Mushroom1{}]", nil, map[string]string{"items": "[]item"}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			for _, kind := range []struct {
+				name, suffix, className string
+			}{
+				{"Class", ".gox", "Lita"},
+				{"Framework", "_spx.gox", "Lita"},
+				{"Project", "_spx.gox", "Game"},
+			} {
+				t.Run(kind.name, func(t *testing.T) {
+					filename := "Lita" + kind.suffix
+					if kind.name == "Project" {
+						filename = "main_spx.gox"
+					}
+					files := map[string]string{
+						"/foo/" + filename:             "type item interface { Name() string }\n" + tt.source + "\n",
+						"/foo/Mushroom1" + kind.suffix: "func Name() string { return \"mushroom\" }\n",
+					}
+					names := []string{filename, "Mushroom1" + kind.suffix}
+					if kind.name == "Framework" {
+						names = append(names, "main_spx.gox")
+						files["/foo/main_spx.gox"] = "var Mushroom1 *Mushroom1\n"
+					}
+					conf := *cltest.Conf
+					pkgs, err := parser.ParseFSDir(conf.Fset, memfs.New(map[string][]string{"/foo": names}, files), "/foo", parser.Config{
+						ClassInfo: func(fname string) (map[string]int, bool, bool) {
+							ext := modfile.ClassExt(fname)
+							c, ok := cltest.LookupClass(ext)
+							if !ok {
+								return nil, false, false
+							}
+							return c.AutoLambdas, c.IsProj(ext, fname), true
+						},
+					})
+					if err != nil {
+						t.Fatal(err)
+					}
+					info := &typesutil.Info{Defs: make(map[*ast.Ident]types.Object)}
+					conf.Recorder = typesutil.NewRecorder(info)
+					pkg, err := cl.NewPackage("main", pkgs["main"], &conf)
+					var messages []string
+					if err != nil {
+						messages = strings.Split(strings.TrimSpace(err.Error()), "\n")
+					}
+					if len(messages) != len(tt.errors) {
+						t.Fatalf("errors: %v, want %v", messages, tt.errors)
+					}
+					for i, want := range tt.errors {
+						if !strings.Contains(messages[i], want) {
+							t.Errorf("error: %s, want %s", messages[i], want)
+						}
+					}
+					for _, name := range []string{kind.className, "Mushroom1"} {
+						obj := pkg.Types.Scope().Lookup(name)
+						if obj == nil {
+							t.Fatalf("missing class %s", name)
+						}
+						struc, ok := obj.Type().Underlying().(*types.Struct)
+						if !ok {
+							t.Fatalf("%s underlying: %T, want struct", name, obj.Type().Underlying())
+						}
+						if name == "Mushroom1" {
+							if !types.AssignableTo(types.NewPointer(obj.Type()), pkg.Types.Scope().Lookup("item").Type()) {
+								t.Error("Mushroom1 does not implement item")
+							}
+							continue
+						}
+						for field, want := range tt.fields {
+							var got *types.Var
+							for i := 0; i < struc.NumFields(); i++ {
+								if f := struc.Field(i); f.Name() == field {
+									got = f
+									break
+								}
+							}
+							if got == nil {
+								t.Fatalf("missing field %s", field)
+							}
+							if typ := types.TypeString(got.Type(), func(*types.Package) string { return "" }); typ != want {
+								t.Errorf("%s type: %s, want %s", field, typ, want)
+							}
+							var recorded bool
+							for _, def := range info.Defs {
+								if def == got {
+									recorded = true
+									break
+								}
+							}
+							if !recorded {
+								t.Errorf("field %s was not recorded", field)
+							}
+						}
+					}
+				})
+			}
+		})
+	}
 }
 
 func TestErrAutoLambda(t *testing.T) {
