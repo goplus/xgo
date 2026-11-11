@@ -90,6 +90,61 @@ func bar() {
 	}
 }
 
+func TestForPhraseStmt(t *testing.T) {
+	for _, tt := range []struct{ name, src, want string }{
+		{"Arrow", "for v <- [1] { println v }", "for v in [1] {\n\tprintln v\n}"},
+		{"In", "for v in [1] { println v }", "for v in [1] {\n\tprintln v\n}"},
+		{"Filtered", "for i, v <- [1], v > 0 { println i, v }", "for i, v in [1] if v > 0 {\n\tprintln i, v\n}"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			fset := token.NewFileSet()
+			file, err := parser.ParseEntry(fset, "main.xgo", tt.src, parser.Config{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			stmt := file.ShadowEntry.Body.List[0]
+			var dst bytes.Buffer
+			if err := format.Node(&dst, fset, stmt); err != nil {
+				t.Fatal(err)
+			}
+			diffBytes(t, dst.Bytes(), []byte(tt.want))
+		})
+	}
+}
+
+func TestForPhraseStmtInFunc(t *testing.T) {
+	const want = "func run() {\n\tfor v in [1] {\n\t\tprintln v\n\t}\n}\n"
+	for _, tt := range []struct{ name, src string }{
+		{"OneLine", "func run() { for v <- [1] { println v } }\n"},
+		{"MultiLine", "func run() {\nfor v <- [1] {\nprintln v\n}\n}\n"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			res, err := format.Source([]byte(tt.src), nil, "main.xgo")
+			if err != nil {
+				t.Fatal(err)
+			}
+			diffBytes(t, res, []byte(want))
+
+			fset := token.NewFileSet()
+			file, err := parser.ParseEntry(fset, "main.xgo", tt.src, parser.Config{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			var dst bytes.Buffer
+			if err := format.Node(&dst, fset, file); err != nil {
+				t.Fatal(err)
+			}
+			diffBytes(t, dst.Bytes(), []byte(want))
+
+			res, err = format.Source(res, nil, "main.xgo")
+			if err != nil {
+				t.Fatal(err)
+			}
+			diffBytes(t, res, []byte(want))
+		})
+	}
+}
+
 func diffBytes(t *testing.T, dst, src []byte) {
 	line := 1
 	offs := 0 // line offset
