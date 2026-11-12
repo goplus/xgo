@@ -1702,9 +1702,9 @@ func (p *parser) parseTupleFieldList() (params []*ast.Field) {
 				named++
 
 			case token.LBRACK:
-				// Could be "name [n]T" or "name []T" or just an array/slice type
+				// Could be "name [n]T", "name []T", or an unnamed generic type instance.
 				f.name, f.typ = p.parseArrayFieldOrTypeInstance(f.name, stateType)
-				if f.typ != nil {
+				if f.name != nil {
 					named++
 				}
 
