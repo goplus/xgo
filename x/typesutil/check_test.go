@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/goplus/mod/xgomod"
@@ -293,6 +294,91 @@ func init() {
 				t.Fatal("bad overload", o)
 			}
 		}
+	}
+}
+
+func TestCheckValidAliases(t *testing.T) {
+	for _, tt := range []struct{ name, source, goSource string }{
+		{"Forward", "type First = Second\ntype Second = int\n", ""},
+		{"Chain", "type First = Second\ntype Second = Third\ntype Third = int\n", ""},
+		{"NamedRecursive", "type Node struct { Next *Node }\ntype Alias = Node\n", ""},
+		{"AliasBeforeNamed", "type Alias = Node\ntype Node struct { Next *Alias }\n", ""},
+		{"StructBeforeNamed", "type Alias = struct { Next *Node }\ntype Node Alias\n", ""},
+		{"LocalNamed", "func run() { type Node struct { Next *Node }; type Alias = Node }\n", ""},
+		{"LocalOuter", "type Box = int\nfunc run() { type Alias = Box }\n", ""},
+		{"GenericInstance", "type Alias = Box[int]\n", "package main\ntype Box[T any] struct { Value T }\n"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			var checkerErrs []error
+			goFile := ""
+			if tt.goSource != "" {
+				goFile = "types.go"
+			}
+			_, _, err := checkFilesWithErrorHandler(token.NewFileSet(), "main.xgo", tt.source, "", "", goFile, tt.goSource, func(err error) {
+				checkerErrs = append(checkerErrs, err)
+			})
+			if err != nil || len(checkerErrs) != 0 {
+				t.Fatalf("valid alias rejected: %v, %v", err, checkerErrs)
+			}
+		})
+	}
+}
+
+func TestCheckRecursiveAliases(t *testing.T) {
+	for _, tt := range []struct{ name, source string }{
+		{"Self", "type Box = Box\n"},
+		{"Mutual", "type Box = Other\ntype Other = Box\n"},
+		{"Chain", "type A = B\ntype B = C\ntype C = A\n"},
+		{"Struct", "type Box = struct { Next *Box }\n"},
+		{"Function", "type Box = func(Box)\n"},
+		{"Channel", "type Box = chan Box\n"},
+		{"Local", "func run() { type Box = Box }\n"},
+		{"Shadowed", "type Box = int\nfunc run() { type Box = Box }\n"},
+		{"Unicode", "type \u540d = \u540d\n"},
+		{"LineDirective", "//line virtual.xgo:100:20\ntype Box = Box\n"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			source := tt.source + "var Good = 1\n"
+			fset := token.NewFileSet()
+			var checkerErrs []error
+			info, _, err := checkFilesWithErrorHandler(fset, "main.xgo", source, "", "", "", "", func(err error) {
+				checkerErrs = append(checkerErrs, err)
+			})
+			if err == nil || len(checkerErrs) == 0 {
+				t.Fatal("recursive alias must report an error")
+			}
+			errorCount := 1
+			if list, ok := err.(errors.List); ok {
+				errorCount = len(list)
+			}
+			if len(checkerErrs) != errorCount {
+				t.Fatalf("checker omitted errors: returned %v, reported %v", err, checkerErrs)
+			}
+			for _, err := range checkerErrs {
+				ce, ok := err.(typesutil.Error)
+				if !ok {
+					t.Fatalf("error has no source information: %T: %v", err, err)
+				}
+				name, ok := strings.CutSuffix(ce.Msg, " is not a type")
+				if !ok {
+					t.Fatalf("unexpected error: %v", ce)
+				}
+				start, end := fset.PositionFor(ce.Pos, false), fset.PositionFor(ce.End, false)
+				if ce.Fset != fset || start.Filename != "main.xgo" || end.Filename != start.Filename ||
+					!ce.Pos.IsValid() || !ce.End.IsValid() || end.Offset <= start.Offset || end.Offset > len(source) {
+					t.Fatalf("invalid error range: %v to %v", start, end)
+				}
+				if got := source[start.Offset:end.Offset]; got != name {
+					t.Fatalf("error covers %q, want %q", got, name)
+				}
+			}
+			for ident, obj := range info.Defs {
+				if ident.Name == "Good" && obj != nil && obj.Type() == types.Typ[types.Int] {
+					return
+				}
+			}
+			t.Fatal("unrelated declaration was not retained")
+		})
 	}
 }
 
