@@ -331,7 +331,13 @@ func tryIdentType(ctx *blockCtx, ident *ast.Ident) (typ types.Type, err error) {
 	}
 	if t, ok := v.(*types.TypeName); ok {
 		obj = t
-		return t.Type(), nil
+		// Alias names enter scope before their target types are resolved.
+		// Recursive aliases can therefore refer to a type name with a nil type.
+		typ = t.Type()
+		if typ == nil {
+			return nil, ctx.newCodeErrorf(ident.Pos(), ident.End(), "%s is not a type", ident.Name)
+		}
+		return typ, nil
 	}
 	if v, _ := lookupPkgRef(ctx, gogen.PkgRef{}, ident, objPkgRef); v != nil {
 		if t, ok := v.(*types.TypeName); ok {

@@ -808,6 +808,23 @@ println abc
 `)
 }
 
+func TestErrRecursiveAlias(t *testing.T) {
+	for _, tt := range []struct {
+		name, msg, source string
+	}{
+		{"Self", "bar.xgo:1:12: Box is not a type", "type Box = Box\n"},
+		{"Pointer", "bar.xgo:1:13: Box is not a type", "type Box = *Box\n"},
+		{"Slice", "bar.xgo:1:14: Box is not a type", "type Box = []Box\n"},
+		{"Map", "bar.xgo:1:20: Box is not a type", "type Box = map[int]Box\n"},
+		{"Local", "bar.xgo:1:25: Box is not a type", "func run() { type Box = Box }\n"},
+		{"Shadowed", "bar.xgo:2:25: Box is not a type", "type Box = int\nfunc run() { type Box = Box }\n"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			codeErrorTest(t, tt.msg, tt.source)
+		})
+	}
+}
+
 func TestErrTypeRedefine(t *testing.T) {
 	codeErrorTest(t,
 		"bar.xgo:9:6: Point redeclared in this block\n\tprevious declaration at bar.xgo:5:6",
