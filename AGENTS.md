@@ -36,8 +36,22 @@ When submitting a new PR to the `gogen` repository for a change, also submit a P
 - **Quick Start Guide**: Add feature documentation to `doc/docs.md` with practical examples
 - **Table of Contents**: Update TOC in quick start to include new feature section
 - **Language Specification**: Update specification documents (see Language Specification Structure below)
+- **Tooling Conventions**: Update [XGo tooling conventions](doc/tooling-conventions.md) for new or changed conventions
+  (see [maintenance rules](#maintaining-tooling-conventions) for changes outside the workflow for new syntax)
 - **Examples**: Provide clear, runnable code examples demonstrating the feature
 - **Prerequisite**: Phase 2 PR must be merged before starting Phase 3
+
+### Maintaining tooling conventions
+
+Keep [XGo tooling conventions](doc/tooling-conventions.md) synchronized with changes to behavior exposed to tools,
+including encodings, module/classfile metadata, analysis APIs, and generated output.
+
+Review `github.com/goplus/gogen` and `github.com/goplus/mod` dependency updates for new or changed conventions. Add
+missing entries and update affected ones, including applicability, accepted historical forms, and relative links to
+detailed specifications.
+
+Outside the workflow for new syntax, include required guide updates in the same PR as the implementation or dependency
+change. Check this requirement during review.
 
 ### Communication Protocol
 - When I request syntax additions, first confirm the exact grammar specification
