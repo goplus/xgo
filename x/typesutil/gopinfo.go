@@ -156,9 +156,12 @@ func (info *Info) ObjectOf(id *ast.Ident) types.Object {
 	return info.Uses[id]
 }
 
-// TypeOf returns the type of expression e, or nil if not found.
+// TypeOf returns the type of expression e, or nil if e is absent or its type is not found.
 // Precondition: the Types, Uses and Defs maps are populated.
 func (info *Info) TypeOf(e ast.Expr) types.Type {
+	if e == nil {
+		return nil
+	}
 	if t, ok := info.Types[e]; ok {
 		return t.Type
 	}
@@ -210,7 +213,11 @@ func NewRecorder(info *Info) cl.Recorder {
 // identifier z in a variable declaration 'var z int' is found
 // only in the Defs map, and identifiers denoting packages in
 // qualified identifiers are collected in the Uses map.
+// A nil expression is ignored.
 func (info xgoRecorder) Type(e ast.Expr, tv types.TypeAndValue) {
+	if e == nil {
+		return
+	}
 	if debugVerbose {
 		log.Println("==> Type:", e, tv.Type)
 	}

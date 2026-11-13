@@ -167,7 +167,11 @@ func (rec *goxRecorder) checkExprByValue(v ast.Expr) bool {
 	return false
 }
 
+// Type records the type of expr and forwards it to the wrapped Recorder. A nil expression is ignored.
 func (rec *goxRecorder) Type(expr ast.Expr, tv types.TypeAndValue) {
+	if expr == nil {
+		return
+	}
 	rec.types[expr] = tv
 	rec.Recorder.Type(expr, tv)
 }
