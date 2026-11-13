@@ -58,6 +58,30 @@ jobs:
       with:
         slug: goplus/xgo
 
+  TestWasm:
+    strategy:
+      matrix:
+        go:
+        # Keep an affected Go release to exercise the nil interface hashing workaround.
+        - 1.26.10
+        - 1.27.x
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v7
+
+    - name: Set up Go
+      uses: actions/setup-go@v7
+      with:
+        go-version: ${{ matrix.go }}
+
+    - name: Test nil expression handling on WebAssembly
+      env:
+        GOOS: js
+        GOARCH: wasm
+      run: |
+        PATH="$(go env GOROOT)/lib/wasm:$PATH"
+        go test -v -run '^(TestGoxRecorderType|TestGoxRecorderRecordCompositeLit|TestInfoTypeOf|TestRecorderType)$' ./cl ./x/typesutil
+
   FormatCheck:
     runs-on: ubuntu-latest
     steps:
