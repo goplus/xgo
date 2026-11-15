@@ -1456,6 +1456,8 @@ func makeLambdaResults(pkg *gogen.Package, out *types.Tuple) *types.Tuple {
 	return types.NewTuple(results...)
 }
 
+// compileArrowExpr compiles an implicit return and restores the enclosing
+// function even when an expression or return type check fails.
 func compileArrowExpr(ctx *blockCtx, v *ast.ArrowExpr, sig *types.Signature) error {
 	pkg := ctx.pkg
 	params, err := makeLambdaParams(ctx, v.Pos(), v.End(), v.Lhs, sig.Params())
@@ -1464,16 +1466,25 @@ func compileArrowExpr(ctx *blockCtx, v *ast.ArrowExpr, sig *types.Signature) err
 	}
 	results := makeLambdaResults(pkg, sig.Results())
 	ctx.cb.NewClosure(params, results, false).BodyStart(pkg)
+	defer ctx.cb.End(v)
+	compiled := false
+	defer func() {
+		if !compiled {
+			// Discard partial arguments without replacing the expression error.
+			ctx.cb.ResetStmt()
+		}
+		if rec := ctx.recorder(); rec != nil {
+			rec.Scope(v, ctx.cb.Scope())
+		}
+		ctx.cb.Return(len(v.Rhs))
+	}()
 	if len(v.Lhs) > 0 {
 		defNames(ctx, v.Lhs, ctx.cb.Scope())
 	}
 	for _, v := range v.Rhs {
 		compileExpr(ctx, 1, v)
 	}
-	if rec := ctx.recorder(); rec != nil {
-		rec.Scope(v, ctx.cb.Scope())
-	}
-	ctx.cb.Return(len(v.Rhs)).End(v)
+	compiled = true
 	return nil
 }
 

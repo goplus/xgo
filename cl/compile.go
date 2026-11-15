@@ -1076,21 +1076,8 @@ func preloadXGoFile(p *gogen.Package, ctx *blockCtx, file string, f *ast.File, c
 							tags = append(tags, toFieldTag(spec.Tag))
 						})
 						for _, v := range classDecl.Specs {
-							var pos token.Pos
-							var names []string
-							var fldType types.Type
 							spec = v.(*ast.ValueSpec)
-							if spec.Type != nil {
-								fldType = toType(ctx, spec.Type)
-							}
-							if specNames := spec.Names; len(specNames) > 0 {
-								names = makeNames(specNames)
-								pos = specNames[0].Pos()
-							} else {
-								pos = spec.Type.Pos()
-							}
-							initExpr := makeInitExpr(ctx, spec, fldType, names)
-							defs.NewAndInit(initExpr, pos, fldType, names...)
+							loadClassField(ctx, defs, spec)
 						}
 						defs.End()
 						ctx.prelimStruct = nil
@@ -2004,6 +1991,29 @@ func loadConsts(ctx *blockCtx, cdecl *gogen.ConstDefs, v *ast.ValueSpec, iotav i
 	}
 	cdecl.New(fn, iotav, v.Pos(), typ, names...)
 	defNames(ctx, v.Names, nil)
+}
+
+// loadClassField preserves explicitly typed fields and continues type loading
+// when a field declaration or initializer cannot be compiled.
+func loadClassField(ctx *blockCtx, defs *gogen.ClassDefs, spec *ast.ValueSpec) {
+	var typ types.Type
+	names := makeNames(spec.Names)
+	if enableRecover {
+		defer func() {
+			if e := recover(); e != nil {
+				ctx.handleRecover(e, spec)
+				ctx.cb.ResetStmt()
+				if typ != nil {
+					defs.NewAndInit(nil, spec.Pos(), typ, names...)
+				}
+			}
+		}()
+	}
+	if spec.Type != nil {
+		typ = toType(ctx, spec.Type)
+	}
+	initExpr := makeInitExpr(ctx, spec, typ, names)
+	defs.NewAndInit(initExpr, spec.Pos(), typ, names...)
 }
 
 func loadVars(ctx *blockCtx, v *ast.ValueSpec, doc *ast.CommentGroup, global bool) {
