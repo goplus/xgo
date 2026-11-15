@@ -18,6 +18,7 @@ package parser
 
 import (
 	"io/fs"
+	"reflect"
 	"testing"
 
 	"github.com/goplus/xgo/ast"
@@ -391,10 +392,82 @@ func TestErrType(t *testing.T) {
 `, `/foo/bar.xgo:1:9: expected type, found 'EOF'`, ``)
 }
 
+func TestParseTupleType(t *testing.T) {
+	for _, tt := range []struct {
+		name  string
+		typ   string
+		paren bool
+		names [][]string
+	}{
+		{"ParenthesizedBuiltin", "(int)", true, nil},
+		{"ParenthesizedGeneric", "(Reader[int])", true, nil},
+		{"MultipleTypeArguments", "(Pair[int, string])", true, nil},
+		{"TrailingTypeArgumentComma", "(Reader[int,])", true, nil},
+		{"NestedTypeArgument", "(Reader[Box[int]])", true, nil},
+		{"BuiltinTuple", "(int, string)", false, [][]string{nil, nil}},
+		{"GenericTuple", "(Reader[int], Pair[int, string])", false, [][]string{nil, nil}},
+		{"GenericThenBuiltin", "(Reader[int], string)", false, [][]string{nil, nil}},
+		{"BuiltinThenGeneric", "(string, Reader[int])", false, [][]string{nil, nil}},
+		{"QualifiedGeneric", "(f.Reader[int], string)", false, [][]string{nil, nil}},
+		{"NamedGeneric", "(reader Reader[int])", false, [][]string{{"reader"}}},
+		{"GroupedNames", "(first, second Reader[int])", false, [][]string{{"first", "second"}}},
+		{"NamedArray", "(values [2]int)", false, [][]string{{"values"}}},
+		{"NamedSlice", "(values []int)", false, [][]string{{"values"}}},
+		{"GenericArrayElement", "(values [2]Reader[int])", false, [][]string{{"values"}}},
+		{"GenericSliceElement", "(values []Reader[int])", false, [][]string{{"values"}}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			file, err := ParseFile(token.NewFileSet(), "main.xgo", "var value "+tt.typ+"\n", 0)
+			if err != nil {
+				t.Fatal(err)
+			}
+			decl := file.Decls[0].(*ast.GenDecl)
+			spec := decl.Specs[0].(*ast.ValueSpec)
+			if tt.paren {
+				if _, ok := spec.Type.(*ast.ParenExpr); !ok {
+					t.Fatalf("expected parenthesized type, got %T", spec.Type)
+				}
+			} else {
+				tuple, ok := spec.Type.(*ast.TupleType)
+				if !ok {
+					t.Fatalf("expected tuple type, got %T", spec.Type)
+				}
+				var names [][]string
+				for _, field := range tuple.Fields.List {
+					var fieldNames []string
+					for _, name := range field.Names {
+						if name == nil {
+							t.Fatal("tuple field contains a nil name")
+						}
+						fieldNames = append(fieldNames, name.Name)
+					}
+					names = append(names, fieldNames)
+				}
+				if !reflect.DeepEqual(names, tt.names) {
+					t.Fatalf("field names: got %v, want %v", names, tt.names)
+				}
+			}
+			ast.Inspect(file, func(node ast.Node) bool {
+				if node != nil {
+					node.Pos()
+					node.End()
+				}
+				return true
+			})
+		})
+	}
+}
+
 func TestErrTupleType(t *testing.T) {
 	testErrCode(t, `var a (a float64, x int, chan int)
 `, `/foo/bar.xgo:1:8: mixed named and unnamed fields in tuple type`, ``)
 	testErrCode(t, `var a (a float64, x int, string)
+`, `/foo/bar.xgo:1:8: mixed named and unnamed fields in tuple type`, ``)
+
+	testErrCode(t, `var a (Reader[int], x string)
+`, `/foo/bar.xgo:1:8: mixed named and unnamed fields in tuple type`, ``)
+
+	testErrCode(t, `var a (x string, Reader[int])
 `, `/foo/bar.xgo:1:8: mixed named and unnamed fields in tuple type`, ``)
 }
 
