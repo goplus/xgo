@@ -1145,9 +1145,10 @@ func (p *printer) printNode(node any) error {
 	p.nextComment()
 
 	// format node
+	//
+	// Match statements first because ForPhraseStmt also implements ast.Expr
+	// through its embedded ForPhrase.
 	switch n := node.(type) {
-	case ast.Expr:
-		p.expr(n)
 	case ast.Stmt:
 		// A labeled statement will un-indent to position the label.
 		// Set p.indent to 1 so we don't get indent "underflow".
@@ -1155,6 +1156,8 @@ func (p *printer) printNode(node any) error {
 			p.indent = 1
 		}
 		p.stmt(n, false)
+	case ast.Expr:
+		p.expr(n)
 	case ast.Decl:
 		p.decl(n)
 	case ast.Spec:
