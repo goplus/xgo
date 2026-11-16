@@ -874,3 +874,43 @@ func main() {
 }
 `)
 }
+
+func TestEmbeddedTypeArgs(t *testing.T) {
+	gopMixedClTest(t, "main", `package main
+type Box[T any] struct { Value T }
+type Alias[T any] = Box[T]
+type Pair[A, B any] struct {
+	Left A
+	Right B
+}
+type PairAlias[A, B any] = Pair[A, B]
+`, `
+type Holder struct {
+	Box[int]
+	*Alias[string]
+	Pair[int, string]
+	PairAlias[string, int]
+}
+
+var value Holder
+println value.Box.Value, value.Alias.Value
+println value.Pair.Left, value.PairAlias.Right
+`, `package main
+
+import "fmt"
+
+type Holder struct {
+	Box[int]
+	*Alias[string]
+	Pair[int, string]
+	PairAlias[string, int]
+}
+
+var value Holder
+
+func main() {
+	fmt.Println(value.Box.Value, value.Alias.Value)
+	fmt.Println(value.Pair.Left, value.PairAlias.Right)
+}
+`)
+}

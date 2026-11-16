@@ -496,14 +496,19 @@ func toStructType(ctx *blockCtx, v *ast.StructType) *types.Struct {
 
 		typ := toType(ctx, field.Type)
 		if len(field.Names) == 0 { // embedded
-			name := getTypeName(typ)
+			ident := parseTypeEmbedName(field.Type)
+			name := ident.Name
 			if chk.chkRedecl(ctx, name, field.Type.Pos(), field.Type.End(), fieldKindUser) {
 				continue
 			}
-			if t, ok := typ.(*types.Named); ok { // #1196: embedded type should ensure loaded
+			// Load the base type before computing promoted methods (#1196).
+			base := types.Unalias(typ)
+			if pointer, ok := base.(*types.Pointer); ok {
+				base = types.Unalias(pointer.Elem())
+			}
+			if t, ok := base.(*types.Named); ok {
 				ctx.loadNamed(ctx.pkg, t)
 			}
-			ident := parseTypeEmbedName(field.Type)
 			fld := types.NewField(ident.NamePos, pkg, name, typ, true)
 			fields = append(fields, fld)
 			tags = append(tags, toFieldTag(field.Tag))

@@ -2459,3 +2459,129 @@ func main() {
 }
 `)
 }
+
+func TestEmbeddedFieldInfo(t *testing.T) {
+	const declarations = `
+type Base struct { Value int }
+type Alias = Base
+type Chain = Alias
+type Reference = *Base
+type Anonymous = struct { Value int }
+type Number = int
+type Empty = any
+`
+	const genericDeclarations = `package main
+type Box[T any] struct { Value T }
+type BoxAlias[T any] = Box[T]
+type Pair[A, B any] struct {
+	Left A
+	Right B
+}
+type PairAlias[A, B any] = Pair[A, B]
+`
+	for _, tt := range []struct {
+		name, embedded, field, importPath string
+		alias, generic, class             bool
+		typeArgs                          int
+	}{
+		{name: "Named", embedded: "Base", field: "Base"},
+		{name: "Alias", embedded: "Alias", field: "Alias", alias: true},
+		{name: "Chain", embedded: "Chain", field: "Chain", alias: true},
+		{name: "Pointer", embedded: "*Alias", field: "Alias", alias: true},
+		{name: "PointerAlias", embedded: "Reference", field: "Reference", alias: true},
+		{name: "Anonymous", embedded: "Anonymous", field: "Anonymous", alias: true},
+		{name: "Scalar", embedded: "Number", field: "Number", alias: true},
+		{name: "EmptyInterface", embedded: "Empty", field: "Empty", alias: true},
+		{name: "ImportedAlias", embedded: "os.FileInfo", field: "FileInfo", importPath: "os", alias: true},
+		{name: "ImportedGeneric", embedded: "atomic.Pointer[int]", field: "Pointer", importPath: "sync/atomic", typeArgs: 1},
+		{name: "Generic", embedded: "Box[int]", field: "Box", generic: true, typeArgs: 1},
+		{name: "GenericAlias", embedded: "BoxAlias[int]", field: "BoxAlias", alias: true, generic: true, typeArgs: 1},
+		{name: "MultipleTypeArgs", embedded: "*Pair[int, string]", field: "Pair", generic: true, typeArgs: 2},
+		{name: "MultipleAliasTypeArgs", embedded: "PairAlias[int, string]", field: "PairAlias", alias: true, generic: true, typeArgs: 2},
+		{name: "ClassAlias", embedded: "Alias", field: "Alias", alias: true, class: true},
+		{name: "ClassPointer", embedded: "*Alias", field: "Alias", alias: true, class: true},
+		{name: "ClassGenericAlias", embedded: "Instance", field: "Instance", alias: true, generic: true, class: true},
+		{name: "ClassMultipleTypeArgs", embedded: "*MultiInstance", field: "MultiInstance", alias: true, generic: true, class: true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			filename := "main.xgo"
+			decls := declarations
+			goSource := ""
+			if tt.generic {
+				goSource = genericDeclarations
+				if tt.class {
+					decls += "type Instance = BoxAlias[int]\ntype MultiInstance = PairAlias[int, string]\n"
+				}
+			}
+			source := "type Holder struct {\n\t" + tt.embedded + "\n}\n" + decls + "var value Holder\n_ = value." + tt.field + "\n"
+			if tt.class {
+				filename = "Holder.gox"
+				source = decls + "var (\n\t" + tt.embedded + "\n)\n_ = this." + tt.field + "\n"
+			}
+			if tt.importPath != "" {
+				source = "import \"" + tt.importPath + "\"\n" + source
+			}
+			fset := token.NewFileSet()
+			pkg, info, _, err := parseMixedSource(xgomod.Default, fset, filename, source, "types.go", goSource, parser.Config{}, false)
+			if err != nil {
+				t.Fatal(err)
+			}
+			obj := pkg.Scope().Lookup("Holder")
+			if obj == nil {
+				t.Fatal("missing Holder type")
+			}
+			struc, ok := obj.Type().Underlying().(*types.Struct)
+			if !ok || struc.NumFields() != 1 {
+				t.Fatalf("Holder underlying = %v, want one embedded field", obj.Type().Underlying())
+			}
+			field := struc.Field(0)
+			if field.Name() != tt.field || !field.Embedded() {
+				t.Fatalf("field = %v, want embedded %s", field, tt.field)
+			}
+			typ := field.Type()
+			if pointer, ok := typ.(*types.Pointer); ok {
+				typ = pointer.Elem()
+			}
+			var args *types.TypeList
+			switch typ := typ.(type) {
+			case *types.Alias:
+				if !tt.alias {
+					t.Errorf("field type = %v, want a named type", typ)
+				}
+				args = typ.TypeArgs()
+			case *types.Named:
+				if tt.alias {
+					t.Errorf("field type = %v, want an alias", typ)
+				}
+				args = typ.TypeArgs()
+			default:
+				t.Fatalf("field type = %T, want alias or named type", typ)
+			}
+			if args.Len() != tt.typeArgs {
+				t.Errorf("type arguments = %d, want %d", args.Len(), tt.typeArgs)
+			}
+			definitions, uses := 0, 0
+			for id, obj := range info.Defs {
+				if obj != field {
+					continue
+				}
+				definitions++
+				if id.Name != tt.field || field.Pos() != id.Pos() {
+					t.Errorf("field definition = %s at %v, want %s at %v", id.Name, field.Pos(), tt.field, id.Pos())
+				}
+				name, ok := info.Uses[id].(*types.TypeName)
+				if !ok || name.Name() != tt.field || name.IsAlias() != tt.alias {
+					t.Errorf("embedded type reference = %v, want type %s (alias %v)", info.Uses[id], tt.field, tt.alias)
+				}
+			}
+			for _, obj := range info.Uses {
+				if obj == field {
+					uses++
+				}
+			}
+			if definitions != 1 || uses != 1 {
+				t.Errorf("field bindings = %d definitions, %d uses, want one of each", definitions, uses)
+			}
+		})
+	}
+}

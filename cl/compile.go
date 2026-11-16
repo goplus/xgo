@@ -1143,6 +1143,7 @@ func preloadXGoFile(p *gogen.Package, ctx *blockCtx, file string, f *ast.File, c
 	}
 }
 
+// parseTypeEmbedName returns the source identifier naming an embedded field.
 func parseTypeEmbedName(typ ast.Expr) *ast.Ident {
 retry:
 	switch t := typ.(type) {
@@ -1151,6 +1152,12 @@ retry:
 	case *ast.SelectorExpr:
 		return t.Sel
 	case *ast.StarExpr:
+		typ = t.X
+		goto retry
+	case *ast.IndexExpr:
+		typ = t.X
+		goto retry
+	case *ast.IndexListExpr:
 		typ = t.X
 		goto retry
 	}
