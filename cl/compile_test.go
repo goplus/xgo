@@ -2877,6 +2877,96 @@ func main() {
 `)
 }
 
+func TestFuncDecoratorAliases(t *testing.T) {
+	const wantVoid = `package main
+
+func _xgodeco_run() {
+}
+func run() {
+	Wrap(2, func() {
+		_xgodeco_run()
+		return
+	})
+	return
+}
+`
+	const wantError = `package main
+
+func _xgodeco_run() (err error) {
+	return nil
+}
+func run() (err error) {
+	Wrap(2, func() error {
+		err = _xgodeco_run()
+		return err
+	})
+	return
+}
+`
+	for _, tt := range []struct {
+		name, declarations, callback string
+		returnsError                 bool
+	}{
+		{"Plain", "", "func()", false},
+		{"PlainError", "", "func() error", true},
+		{"CallbackAlias", "type Callback = func()", "Callback", false},
+		{"CallbackAliasChain", "type Callback = func()\ntype Next = Callback", "Next", false},
+		{"ErrorAlias", "type Failure = error", "func() Failure", true},
+		{"ErrorAliasChain", "type Failure = error\ntype Next = Failure", "func() Next", true},
+		{"CallbackAndErrorAliases", "type Failure = error\ntype Callback = func() Failure", "Callback", true},
+		{"GenericCallbackAlias", "type Callback[T any] = func() T", "Callback[error]", true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			source, want := "@wrap(2)\nfunc run() {}\n", wantVoid
+			if tt.returnsError {
+				source, want = "@wrap(2)\nfunc run() (err error) { return nil }\n", wantError
+			}
+			gopMixedClTest(t, "main", "package main\n"+tt.declarations+"\nfunc Wrap(value int, fn "+tt.callback+") { fn() }\n", source, want)
+		})
+	}
+}
+
+func TestFuncDecoratorErrorResults(t *testing.T) {
+	const declarations = `type Failure = error
+type Problem string
+type ProblemAlias = Problem
+type PointerProblem string
+type PointerAlias = *PointerProblem
+
+func (p Problem) Error() string {
+	return string(p)
+}
+func (p *PointerProblem) Error() string {
+	return string(*p)
+}
+`
+	for _, tt := range []struct{ name, result string }{
+		{"Error", "error"},
+		{"ErrorAlias", "Failure"},
+		{"ConcreteError", "Problem"},
+		{"ConcreteErrorAlias", "ProblemAlias"},
+		{"ConcretePointerError", "*PointerProblem"},
+		{"ConcretePointerErrorAlias", "PointerAlias"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			gopMixedClTest(t, "main", "package main\nfunc Wrap(fn func() error) { fn() }\n",
+				declarations+"\n@wrap\nfunc run() (err "+tt.result+") { return }\n", `package main
+
+`+declarations+`func _xgodeco_run() (err `+tt.result+`) {
+	return
+}
+func run() (err `+tt.result+`) {
+	Wrap(func() error {
+		err = _xgodeco_run()
+		return err
+	})
+	return
+}
+`)
+		})
+	}
+}
+
 func TestFuncAsParam(t *testing.T) {
 	gopClTest(t, `import "fmt"
 

@@ -1179,6 +1179,33 @@ func process() {
 func process() {
 }
 `)
+
+	for _, tt := range []struct{ name, callback string }{
+		{"PlainErrorCallback", "func() error"},
+		{"AliasedErrorCallback", "Callback"},
+		{"AliasedErrorResult", "func() Failure"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			for _, target := range []struct{ name, function string }{
+				{"NoResults", "func process() {}"},
+				{"NonErrorResult", "func process() int { return 1 }"},
+				{"NamedNonErrorResult", "func process() (n int) { return }"},
+				{"AliasedNonErrorResult", "func process() (n Result) { return }"},
+				{"NonErrorLastResult", "func process() (err error, n int) { return }"},
+			} {
+				t.Run(target.name, func(t *testing.T) {
+					codeErrorTest(t, "bar.xgo:7:2: decorator `wrap` requires a function with an error result", `
+type Failure = error
+type Callback = func() Failure
+type Result = int
+func wrap(fn `+tt.callback+`) {}
+
+@wrap
+`+target.function+"\n")
+				})
+			}
+		})
+	}
 }
 
 func TestOverloadFuncDecl(t *testing.T) {
