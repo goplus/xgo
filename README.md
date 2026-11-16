@@ -383,6 +383,8 @@ The XGo project welcomes all contributors. We appreciate your help!
 
 For more details, see [Contributing & compiler design](doc/contributing.md).
 
+For tool integrations, see [Tooling conventions](doc/tooling-conventions.md).
+
 
 ## Give a Star! ⭐
 
