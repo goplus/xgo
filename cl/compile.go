@@ -1606,18 +1606,19 @@ var (
 	sigDecoFuncs = [...]*types.Signature{sigMainFunc, sigDecoFuncError}
 )
 
+// getDecoratorForm returns the explicit argument count and callback kind of a decorator.
 func getDecoratorForm(decoTyp types.Type) (int, int) {
 	if decoSig, ok := decoTyp.(*types.Signature); ok {
 		params := decoSig.Params()
 		if n := params.Len(); n > 0 {
-			if fnSig, ok := params.At(n - 1).Type().(*types.Signature); ok {
+			if fnSig, ok := types.Unalias(params.At(n - 1).Type()).(*types.Signature); ok {
 				if fnSig.Params().Len() == 0 {
 					results := fnSig.Results()
 					switch results.Len() {
 					case 0:
 						return n - 1, decoFunc // func()
 					case 1:
-						if results.At(0).Type() == gogen.TyError {
+						if types.Unalias(results.At(0).Type()) == gogen.TyError {
 							return n - 1, decoFuncError // func() error
 						}
 					}
@@ -1643,6 +1644,7 @@ func compileDecoratedFun(ctx *blockCtx, deco *ast.FuncDecorator) int {
 	panic(ctx.newCodeErrorf(decoName.Pos(), decoName.End(), "invalid decorator `%v`", decoName))
 }
 
+// genDecoratedFunc generates a wrapper that invokes the function through its decorators.
 func genDecoratedFunc(ctx *blockCtx, name string, fnDeco *gogen.Func, d *ast.FuncDecl) {
 	pkg := ctx.pkg
 	pkgTypes := pkg.Types
@@ -1670,8 +1672,12 @@ func genDecoratedFunc(ctx *blockCtx, name string, fnDeco *gogen.Func, d *ast.Fun
 	decorators := d.Decorators
 	last := len(decorators) - 1
 	decoKinds := make([]int, len(decorators))
+	nret := rets.Len()
 	for i, deco := range decorators {
 		decoKind := compileDecoratedFun(ctx, deco)
+		if decoKind == decoFuncError && (nret == 0 || !gogen.AssignableTo(pkg, types.Unalias(rets.At(nret-1).Type()), gogen.TyError)) {
+			panic(ctx.newCodeErrorf(deco.Fun.Pos(), deco.Fun.End(), "decorator `%v` requires a function with an error result", ctx.LoadExpr(deco.Fun)))
+		}
 		for _, arg := range deco.Args {
 			compileExpr(ctx, 1, arg)
 		}
@@ -1679,7 +1685,6 @@ func genDecoratedFunc(ctx *blockCtx, name string, fnDeco *gogen.Func, d *ast.Fun
 		decoKinds[i] = decoKind
 	}
 	nparam := params.Len()
-	nret := rets.Len()
 	for i := last; i >= 0; i-- {
 		decoKind := decoKinds[i]
 		if i == last {
