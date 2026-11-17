@@ -17,12 +17,19 @@
 package xgoenv
 
 import (
-	modenv "github.com/goplus/mod/env"
 	"github.com/goplus/xgo/env"
 )
 
-func Get() *modenv.XGo {
-	return &modenv.XGo{
+// XGo represents the XGo environment information.
+type XGo struct {
+	Version   string
+	BuildDate string
+	Root      string // XGOROOT
+}
+
+// Get returns the current XGo environment information.
+func Get() *XGo {
+	return &XGo{
 		Version:   env.Version(),
 		BuildDate: env.BuildDate(),
 		Root:      env.XGOROOT(),

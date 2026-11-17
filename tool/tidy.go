@@ -21,13 +21,14 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"github.com/goplus/mod/env"
+	"github.com/goplus/mod"
+	"github.com/goplus/xgo/x/xgoenv"
 	"github.com/qiniu/x/errors"
 	"golang.org/x/mod/modfile"
 )
 
-func Tidy(dir string, xgo *env.XGo) (err error) {
-	w, err := LoadWorkspace(dir)
+func Tidy(dir string, xgo *xgoenv.XGo) (err error) {
+	w, err := mod.LoadFromDir(dir)
 	if err != nil {
 		return errors.NewWith(err, `LoadWorkspace(dir)`, -2, "tool.LoadWorkspace", dir)
 	}
@@ -35,7 +36,7 @@ func Tidy(dir string, xgo *env.XGo) (err error) {
 		return errors.NewWith(ErrNotFound, `no go.mod found`, -2, "tool.Tidy", dir)
 	}
 
-	modRoot := w.Dir()
+	modRoot := w.Dir
 	gomod := filepath.Join(modRoot, "go.mod")
 
 	// Remember the classfile dependencies (declared via `//gop:class` or
@@ -109,8 +110,8 @@ func keepClassfileRequires(modRoot string, classMods []classfileRequire) (err er
 	if err != nil {
 		return errors.NewWith(err, `LoadGoMod(modRoot)`, -2, "tool.LoadGoMod", modRoot)
 	}
-	have := make(map[string]bool, len(modObj.file.Require))
-	for _, r := range modObj.file.Require {
+	have := make(map[string]bool, len(modObj.Require))
+	for _, r := range modObj.Require {
 		have[r.Mod.Path] = true
 	}
 	changed := false
@@ -118,7 +119,7 @@ func keepClassfileRequires(modRoot string, classMods []classfileRequire) (err er
 		if have[c.Path] {
 			continue
 		}
-		if e := modObj.AddRequire(c.Path, c.Version, true); e != nil {
+		if e := AddRequire(modObj, c.Path, c.Version, true); e != nil {
 			return errors.NewWith(e, `modObj.AddRequire(path, vers, true)`, -2, "(*tool.GoMod).AddRequire", c.Path, c.Version, true)
 		}
 		changed = true
@@ -126,7 +127,7 @@ func keepClassfileRequires(modRoot string, classMods []classfileRequire) (err er
 	if !changed {
 		return nil
 	}
-	if err = modObj.Save(); err != nil {
+	if err = SaveGoMod(modObj); err != nil {
 		return errors.NewWith(err, `modObj.Save()`, -2, "(*tool.GoMod).Save")
 	}
 	return nil

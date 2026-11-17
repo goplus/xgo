@@ -18,6 +18,8 @@ package tool
 
 import (
 	"testing"
+
+	"github.com/goplus/mod"
 )
 
 // TestAfterLoadNilPackage guards against the regression reported in
@@ -28,9 +30,9 @@ import (
 func TestAfterLoadNilPackage(t *testing.T) {
 	// A real (empty) workspace whose directory is not XGo itself, so afterLoad
 	// proceeds past the early returns and would reach checkGopDeps.
-	w, err := LoadWorkspace(t.TempDir())
+	w, err := mod.LoadFromDir(t.TempDir())
 	if err != nil {
-		t.Fatal("LoadWorkspace:", err)
+		t.Fatal("mod.LoadFromDir:", err)
 	}
 
 	// A non-nil XGoDeps forces the checkGopDeps path in afterLoad, which is

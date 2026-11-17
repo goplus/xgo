@@ -29,7 +29,6 @@ import (
 	"github.com/goplus/gogen"
 	"github.com/goplus/gogen/target"
 	"github.com/goplus/mod"
-	"github.com/goplus/mod/env"
 	"github.com/goplus/mod/modfile"
 	"github.com/goplus/xgo/cl"
 	"github.com/goplus/xgo/parser"
@@ -38,17 +37,18 @@ import (
 	"github.com/goplus/xgo/scanner"
 	"github.com/goplus/xgo/token"
 	"github.com/goplus/xgo/tool"
+	"github.com/goplus/xgo/x/xgoenv"
 	"github.com/qiniu/x/test"
 )
 
 var (
 	XGoRoot string
-	XGo     *env.XGo
+	XGo     *xgoenv.XGo
 	Conf    *cl.Config
 )
 
 func init() {
-	XGo = &env.XGo{Version: "1.0"}
+	XGo = &xgoenv.XGo{Version: "1.0"}
 	gogen.SetDebug(gogen.DbgFlagAll)
 	cl.SetDebug(cl.DbgFlagAll | cl.FlagNoMarkAutogen)
 	fset := token.NewFileSet()
@@ -267,7 +267,7 @@ func testFrom(t *testing.T, pkgDir, sel string, genGo, genJS bool) {
 	conf := Conf
 	goMod := pkgDir + "/go.mod"
 	if _, err := os.Stat(goMod); err == nil {
-		if w, err := tool.LoadWorkspace(pkgDir); err == nil {
+		if w, err := mod.LoadFromDir(pkgDir); err == nil {
 			confCopy := *Conf
 			confCopy.Importer = tool.NewImporter(w, XGo, conf.Fset)
 			conf = &confCopy

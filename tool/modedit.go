@@ -21,8 +21,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/goplus/mod/env"
 	"github.com/goplus/mod/goxmod"
+	"github.com/goplus/xgo/x/xgoenv"
 	"golang.org/x/mod/modfile"
 )
 
@@ -34,26 +34,15 @@ import (
 // -----------------------------------------------------------------------------
 
 const (
-	defaultGoVer  = "1.18"
-	defaultXgoVer = "1.5"
+	defaultGoVer  = "1.23"
+	defaultXgoVer = "1.7"
 )
-
-// GoMod is an editable go.mod for the module-management commands (xgo mod init,
-// xgo get, xgo mod tidy) and for the go.mod auto-update that follows a
-// successful compile. It is a thin editor over golang.org/x/mod/modfile;
-// nothing here reads the module graph. The compiler directive (llgo/tinygo)
-// and classfile markers are recorded in go.mod itself, as the go command and
-// XGo toolchain read them, so no separate gox.mod is written.
-type GoMod struct {
-	file  *modfile.File // parsed go.mod
-	gomod string        // path of go.mod
-}
 
 // CreateGoMod creates a new module in dir with the given module path, writing
 // nothing to disk yet (call Save). goVer defaults when empty. xgoVer is accepted
 // for signature compatibility with the previous modload.Create; the XGo version
 // is not recorded in go.mod. It errors if a go.mod already exists in dir.
-func CreateGoMod(dir, modPath, goVer, xgoVer string) (*GoMod, error) {
+func CreateGoMod(dir, modPath, goVer, xgoVer string) (*modfile.File, error) {
 	abs, err := filepath.Abs(dir)
 	if err != nil {
 		return nil, err
@@ -74,11 +63,11 @@ func CreateGoMod(dir, modPath, goVer, xgoVer string) (*GoMod, error) {
 		return nil, err
 	}
 	f.Syntax.Name = gomod
-	return &GoMod{file: f, gomod: gomod}, nil
+	return f, nil
 }
 
 // LoadGoMod reads and parses the go.mod of the module rooted at dir.
-func LoadGoMod(dir string) (*GoMod, error) {
+func LoadGoMod(dir string) (*modfile.File, error) {
 	abs, err := filepath.Abs(dir)
 	if err != nil {
 		return nil, err
@@ -92,21 +81,12 @@ func LoadGoMod(dir string) (*GoMod, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &GoMod{file: f, gomod: gomod}, nil
-}
-
-// Path returns the module path.
-func (p *GoMod) Path() string {
-	if p.file.Module != nil {
-		return p.file.Module.Mod.Path
-	}
-	return ""
+	return f, nil
 }
 
 // AddCompiler records a compiler directive (llgo/tinygo) as a comment on the
 // go directive in go.mod, the way the XGo toolchain reads it.
-func (p *GoMod) AddCompiler(compiler, ver string) {
-	f := p.file
+func AddCompiler(f *modfile.File, compiler, ver string) {
 	if f.Go == nil {
 		f.AddGoStmt(defaultGoVer)
 	}
@@ -120,8 +100,7 @@ func (p *GoMod) AddCompiler(compiler, ver string) {
 
 // AddRequire adds a require line, marking it as a classfile require
 // (//xgo:class) when hasProj is set.
-func (p *GoMod) AddRequire(path, vers string, hasProj bool) error {
-	f := p.file
+func AddRequire(f *modfile.File, path, vers string, hasProj bool) error {
 	if err := f.AddRequire(path, vers); err != nil {
 		return err
 	}
@@ -142,16 +121,14 @@ func (p *GoMod) AddRequire(path, vers string, hasProj bool) error {
 }
 
 // Save writes go.mod to disk. The compiler directive (llgo/tinygo) lives in the
-// go.mod `go` line suffix, so a plain module init writes no gox.mod — matching
-// the old modload.Create/Save, which only wrote gox.mod when the module
-// declared classfile projects.
-func (p *GoMod) Save() error {
-	p.file.Cleanup()
-	data, err := p.file.Format()
+// go.mod `go` line suffix.
+func SaveGoMod(f *modfile.File) error {
+	f.Cleanup()
+	data, err := f.Format()
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(p.gomod, data, 0644)
+	return os.WriteFile(f.Syntax.Name, data, 0644)
 }
 
 // -----------------------------------------------------------------------------
@@ -160,7 +137,7 @@ func (p *GoMod) Save() error {
 // to the go.mod at gomod when the compiled package depends on them, matching
 // the old (*xgomod.Module).SaveWithXGoMod. flags come from gogen's
 // CheckXGoDeps (FlagDepModXGo / FlagDepModX).
-func saveXGoMod(gomod string, xgo *env.XGo, flags int) error {
+func saveXGoMod(gomod string, xgo *xgoenv.XGo, flags int) error {
 	data, err := os.ReadFile(gomod)
 	if err != nil {
 		return err
@@ -225,7 +202,7 @@ func checkXGoDeps(f *modfile.File) (flags int) {
 }
 
 // xgoVerOf returns the XGo version to require, trimming a trailing " devel".
-func xgoVerOf(xgo *env.XGo) string {
+func xgoVerOf(xgo *xgoenv.XGo) string {
 	ver := xgo.Version
 	if pos := strings.IndexByte(ver, ' '); pos > 0 {
 		ver = ver[:pos]
@@ -238,7 +215,7 @@ func xgoVerOf(xgo *env.XGo) string {
 
 // xModVerOf returns the github.com/qiniu/x version required by the XGo
 // installation's own go.mod, or "" if it cannot be determined.
-func xModVerOf(xgo *env.XGo) string {
+func xModVerOf(xgo *xgoenv.XGo) string {
 	data, err := os.ReadFile(filepath.Join(xgo.Root, "go.mod"))
 	if err != nil {
 		return ""

@@ -22,7 +22,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/goplus/mod/env"
+	"github.com/goplus/xgo/x/xgoenv"
 )
 
 // TestCreateGoMod exercises the module-init path (go.mod + gox.mod writer) that
@@ -33,14 +33,14 @@ func TestCreateGoMod(t *testing.T) {
 	if err != nil {
 		t.Fatal("CreateGoMod:", err)
 	}
-	if m.Path() != "example.com/app" {
-		t.Fatalf("Path = %q, want example.com/app", m.Path())
+	if m.Module.Mod.Path != "example.com/app" {
+		t.Fatalf("Path = %q, want example.com/app", m.Module.Mod.Path)
 	}
-	m.AddCompiler("llgo", "1.0")
-	if err := m.AddRequire("github.com/goplus/lib", "v0.2.0", false); err != nil {
+	AddCompiler(m, "llgo", "1.0")
+	if err := AddRequire(m, "github.com/goplus/lib", "v0.2.0", false); err != nil {
 		t.Fatal("AddRequire:", err)
 	}
-	if err := m.Save(); err != nil {
+	if err := SaveGoMod(m); err != nil {
 		t.Fatal("Save:", err)
 	}
 	gomod, err := os.ReadFile(filepath.Join(dir, "go.mod"))
@@ -122,7 +122,7 @@ require (
 	if err != nil {
 		t.Fatal("LoadGoMod:", err)
 	}
-	if flags := checkXGoDeps(m.file); flags != (flagDepModXGo | flagDepModX) {
+	if flags := checkXGoDeps(m); flags != (flagDepModXGo | flagDepModX) {
 		t.Fatalf("checkXGoDeps = %d, want both", flags)
 	}
 }
@@ -133,7 +133,7 @@ func TestSaveXGoMod(t *testing.T) {
 	dir := t.TempDir()
 	writeGoMod(t, dir, "module example.com/app\n\ngo 1.24\n")
 	gomod := filepath.Join(dir, "go.mod")
-	xgo := &env.XGo{Version: "v1.5.0", Root: dir}
+	xgo := &xgoenv.XGo{Version: "v1.5.0", Root: dir}
 
 	// Depends on github.com/goplus/xgo: it should be added.
 	if err := saveXGoMod(gomod, xgo, flagDepModXGo); err != nil {
@@ -157,13 +157,13 @@ func TestSaveXGoMod(t *testing.T) {
 
 // TestXgoVerOf trims a trailing devel suffix and defaults when empty.
 func TestXgoVerOf(t *testing.T) {
-	if got := xgoVerOf(&env.XGo{Version: "v1.2.0 devel"}); got != "v1.2.0" {
+	if got := xgoVerOf(&xgoenv.XGo{Version: "v1.2.0 devel"}); got != "v1.2.0" {
 		t.Fatalf("xgoVerOf(devel) = %q, want v1.2.0", got)
 	}
-	if got := xgoVerOf(&env.XGo{Version: "v1.3.0"}); got != "v1.3.0" {
+	if got := xgoVerOf(&xgoenv.XGo{Version: "v1.3.0"}); got != "v1.3.0" {
 		t.Fatalf("xgoVerOf = %q, want v1.3.0", got)
 	}
-	if got := xgoVerOf(&env.XGo{}); !strings.HasPrefix(got, "v") {
+	if got := xgoVerOf(&xgoenv.XGo{}); !strings.HasPrefix(got, "v") {
 		t.Fatalf("xgoVerOf(empty) = %q, want a default version", got)
 	}
 }

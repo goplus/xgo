@@ -341,15 +341,15 @@ func absJoin(workDir, pkgPath string) string {
 // workspaceOf returns the workspace a run should use: the caller's workspace
 // from conf when it set one (so a recursive run does not reload it per
 // directory), otherwise the workspace discovered from dir.
-func workspaceOf(conf *Config, dir string) (*Workspace, error) {
+func workspaceOf(conf *Config, dir string) (*mod.Workspace, error) {
 	if conf != nil && conf.Workspace != nil {
 		return conf.Workspace, nil
 	}
-	return LoadWorkspace(dir)
+	return mod.LoadFromDir(dir)
 }
 
 func remotePkgPathDo(pkgPath string, doSth func(pkgDir, modDir string), onErr func(e error)) {
-	modVer, leftPart, err := modfetch.GetPkg(pkgPath, "")
+	modVer, leftPart, err := modfetch.GetPkg(pkgPath)
 	if err != nil {
 		onErr(err)
 	} else if dir, err := modcache.Path(modVer); err != nil {

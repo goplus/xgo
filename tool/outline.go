@@ -29,7 +29,6 @@ import (
 	"github.com/goplus/xgo/cl/outline"
 	"github.com/goplus/xgo/parser"
 	"github.com/goplus/xgo/x/xgoenv"
-	"github.com/qiniu/x/errors"
 )
 
 // -----------------------------------------------------------------------------
@@ -45,14 +44,12 @@ func Outline(dir string, conf *Config) (out outline.Package, err error) {
 
 	w := conf.Workspace
 	if w == nil {
-		if w, err = LoadWorkspace(dir); err != nil {
-			err = errors.NewWith(err, `LoadWorkspace(dir)`, -2, "tool.LoadWorkspace", dir)
+		if w, err = mod.LoadFromDir(dir); err != nil {
 			return
 		}
 	}
-	cls, err := classesOf(w, dir)
+	cls, err := w.Classes(dir)
 	if err != nil {
-		err = errors.NewWith(err, `classesOf(w, dir)`, -2, "tool.classesOf", w, dir)
 		return
 	}
 
@@ -125,7 +122,7 @@ func Outline(dir string, conf *Config) (out outline.Package, err error) {
 
 // ownerModule returns the module root directory and module path of the
 // workspace module that owns dir, or ("", "") for a loose directory.
-func ownerModule(w *Workspace, dir string) (modRoot, modPath string) {
+func ownerModule(w *mod.Workspace, dir string) (modRoot, modPath string) {
 	gomod := ownerGoMod(w, dir)
 	if gomod == "" {
 		return "", ""
@@ -141,8 +138,7 @@ func OutlinePkgPath(workDir, pkgPath string, conf *Config, allowExtern bool) (ou
 	}
 	w := conf.Workspace
 	if w == nil {
-		if w, err = LoadWorkspace(workDir); err != nil {
-			err = errors.NewWith(err, `LoadWorkspace(workDir)`, -2, "tool.LoadWorkspace", workDir)
+		if w, err = mod.LoadFromDir(workDir); err != nil {
 			return
 		}
 	}

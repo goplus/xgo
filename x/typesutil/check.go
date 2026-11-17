@@ -75,7 +75,7 @@ type Config struct {
 	// Mod represents the classfiles of the module that owns the package being
 	// checked (optional). It answers which file extensions are classfiles. When
 	// nil, only the built-in classfiles are recognized.
-	Mod *goxmod.Classes
+	Mod goxmod.Classes
 
 	// If IgnoreFuncBodies is set, skip compiling function bodies (optional).
 	IgnoreFuncBodies bool
@@ -156,9 +156,6 @@ func (p *Checker) Files(goFiles []*goast.File, xgoFiles []*ast.File) (err error)
 		GoFiles: gofs,
 	}
 	cls := opts.Mod
-	if cls == nil {
-		cls = goxmod.DefaultClasses()
-	}
 	_, err = cl.NewPackage(pkgTypes.Path(), pkg, &cl.Config{
 		Types:          pkgTypes,
 		Fset:           fset,

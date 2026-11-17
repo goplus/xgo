@@ -26,7 +26,6 @@ import (
 
 	"github.com/goplus/gogen"
 	"github.com/goplus/mod"
-	"github.com/goplus/mod/env"
 	"github.com/goplus/mod/goxmod"
 	"github.com/goplus/xgo/ast"
 	"github.com/goplus/xgo/cl"
@@ -118,14 +117,14 @@ func isNotatedErr(err error, pkg *ast.Package, fset *token.FileSet) (notatedErr 
 
 // Config represents a configuration for loading XGo packages.
 type Config struct {
-	XGo  *env.XGo
+	XGo  *xgoenv.XGo
 	Fset *token.FileSet
 
 	// Workspace is the caller's workspace for this run. It resolves imports
 	// (for generation entry points) and answers Classes(dir) for the directory
 	// being compiled or hashed. If nil, the workspace is discovered from the
 	// directory being loaded.
-	Workspace *Workspace
+	Workspace *mod.Workspace
 
 	Importer *Importer
 
@@ -154,7 +153,7 @@ const (
 
 // NewDefaultConf creates a dfault configuration for common cases.
 func NewDefaultConf(dir string, flags ConfFlags, tags ...string) (conf *Config, err error) {
-	w, err := LoadWorkspace(dir)
+	w, err := mod.LoadFromDir(dir)
 	if err != nil {
 		return
 	}
@@ -196,14 +195,6 @@ func (conf *Config) UpdateCache(verbose ...bool) {
 	}
 }
 
-// LoadMod loads the workspace that owns a specified directory. It never fails
-// with "no module": a loose directory yields a default workspace.
-//
-// Deprecated: use LoadWorkspace.
-func LoadMod(dir string) (w *Workspace, err error) {
-	return LoadWorkspace(dir)
-}
-
 // FilterNoTestFiles filters to skip all testing files.
 func FilterNoTestFiles(fi fs.FileInfo) bool {
 	fname := fi.Name()
@@ -233,16 +224,12 @@ func LoadDir(dir string, conf *Config, genTestPkg bool, promptGenGo ...bool) (ou
 
 	w := conf.Workspace
 	if w == nil {
-		if w, err = LoadWorkspace(dir); err != nil {
-			err = errors.NewWith(err, `LoadWorkspace(dir)`, -2, "tool.LoadWorkspace", dir)
+		if w, err = mod.LoadFromDir(dir); err != nil {
 			return
 		}
 	}
-	// The classfiles that apply to this directory belong to the module that
-	// owns it, not to the workspace as a whole.
-	cls, err := classesOf(w, dir)
+	cls, err := w.Classes(dir)
 	if err != nil {
-		err = errors.NewWith(err, `classesOf(w, dir)`, -2, "tool.classesOf", w, dir)
 		return
 	}
 
@@ -314,7 +301,7 @@ func LoadDir(dir string, conf *Config, genTestPkg bool, promptGenGo ...bool) (ou
 	return
 }
 
-func afterLoad(w *Workspace, dir string, xgo *env.XGo, out, test *gogen.Package, conf *Config) {
+func afterLoad(w *mod.Workspace, dir string, xgo *xgoenv.XGo, out, test *gogen.Package, conf *Config) {
 	if out == nil { // compile failed; nothing to do
 		return
 	}
@@ -362,7 +349,7 @@ func checkGopDeps(pkg *gogen.Package) (flags int) {
 // "" when no workspace module does (a loose directory or a foreign nested
 // module). Ownership follows Classes(dir): if that reports the directory is not
 // in the workspace, there is no go.mod to update.
-func ownerGoMod(w *Workspace, dir string) string {
+func ownerGoMod(w *mod.Workspace, dir string) string {
 	if _, err := w.Classes(dir); err != nil {
 		return ""
 	}
@@ -386,9 +373,9 @@ func ownerGoMod(w *Workspace, dir string) string {
 	}
 }
 
-func relativeBaseOf(w *Workspace) string {
-	if w != nil && !w.IsDefault() {
-		return w.Dir()
+func relativeBaseOf(w *mod.Workspace) string {
+	if !w.IsDefault() {
+		return w.Dir
 	}
 	dir, _ := os.Getwd()
 	return dir
@@ -404,8 +391,7 @@ func LoadFiles(dir string, files []string, conf *Config) (out *gogen.Package, er
 
 	w := conf.Workspace
 	if w == nil {
-		if w, err = LoadWorkspace(dir); err != nil {
-			err = errors.NewWith(err, `LoadWorkspace(dir)`, -2, "tool.LoadWorkspace", dir)
+		if w, err = mod.LoadFromDir(dir); err != nil {
 			return
 		}
 	}
@@ -415,9 +401,8 @@ func LoadFiles(dir string, files []string, conf *Config) (out *gogen.Package, er
 	if len(files) > 0 {
 		clsDir = filepath.Dir(files[0])
 	}
-	cls, err := classesOf(w, clsDir)
+	cls, err := w.Classes(clsDir)
 	if err != nil {
-		err = errors.NewWith(err, `classesOf(w, clsDir)`, -2, "tool.classesOf", w, clsDir)
 		return
 	}
 
@@ -431,12 +416,10 @@ func LoadFiles(dir string, files []string, conf *Config) (out *gogen.Package, er
 		Mode:      parser.ParseComments | parser.SaveAbsFile,
 	})
 	if err != nil {
-		err = errors.NewWith(err, `parser.ParseFiles(fset, files, parser.ParseComments)`, -2, "parser.ParseFiles", fset, files, parser.ParseComments)
 		return
 	}
 	if len(pkgs) != 1 {
-		err = errors.NewWith(ErrMultiPackges, `len(pkgs) != 1`, -1, "!=", len(pkgs), 1)
-		return
+		return nil, ErrMultiPackges
 	}
 	xgo := conf.XGo
 	if xgo == nil {

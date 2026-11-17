@@ -34,10 +34,10 @@ import (
 	"github.com/goplus/gogen/packages"
 	"github.com/goplus/gogen/packages/cache"
 	"github.com/goplus/mod"
-	"github.com/goplus/mod/env"
 	"github.com/goplus/mod/goxmod"
 	"github.com/goplus/mod/modfetch"
 	"github.com/goplus/mod/modfile"
+	"github.com/goplus/xgo/x/xgoenv"
 )
 
 // -----------------------------------------------------------------------------
@@ -45,9 +45,8 @@ import (
 // Importer represents an XGo importer.
 type Importer struct {
 	impFrom *packages.Importer
-	ws      *Workspace // the caller's workspace: answers Classes(dir)
-	res     *Workspace // resolves imports: ws, or the XGo-root fallback
-	xgo     *env.XGo
+	ws      *mod.Workspace
+	xgo     *xgoenv.XGo
 	fset    *token.FileSet
 
 	Flags GenFlags // can change this for loading XGo modules
@@ -58,43 +57,26 @@ type Importer struct {
 
 // NewImporter creates an XGo Importer. w may be nil, in which case the default
 // workspace for the current directory is used.
-func NewImporter(w *Workspace, xgo *env.XGo, fset *token.FileSet) *Importer {
+func NewImporter(w *mod.Workspace, xgo *xgoenv.XGo, fset *token.FileSet) *Importer {
 	const (
 		defaultFlags = GenFlagPrompt | GenFlagPrintError
 	)
 	if w == nil {
-		w, _ = LoadWorkspace(".")
+		w, _ = mod.LoadFromDir(".")
 	}
-	// Fallback keeps its meaning: a default workspace (no module information at
-	// all) borrows the XGo installation's own go.mod so that loose scripts can
-	// still resolve what the toolchain itself depends on. This is only for
-	// import resolution; the caller's workspace still answers Classes(dir), so
-	// the XGo-root go.mod never leaks its classes into user code.
-	res := w
 	if w.IsDefault() {
-		if gw, err := loadGoModWorkspace(filepath.Join(xgo.Root, "go.mod")); err == nil {
-			res = gw
+		if gw, err := mod.LoadGoMod(filepath.Join(xgo.Root, "go.mod")); err == nil {
+			w = gw
 		}
 	}
-	impFrom := packages.NewImporter(fset, res.Dir())
+	impFrom := packages.NewImporter(fset, w.Dir)
 	ret := &Importer{
-		ws: w, res: res, xgo: xgo, impFrom: impFrom, fset: fset,
-		Flags:       defaultFlags,
+		ws: w, xgo: xgo, impFrom: impFrom, fset: fset, Flags: defaultFlags,
 		importStack: make(map[string]bool),
 		generating:  make(map[string]bool),
 	}
 	impFrom.SetCache(cache.New(ret.PkgHash))
 	return ret
-}
-
-// loadGoModWorkspace loads the workspace for a single go.mod file (the XGo-root
-// fallback), wrapped with its directory as the resolution base.
-func loadGoModWorkspace(gomod string) (*Workspace, error) {
-	w, err := mod.LoadGoMod(gomod)
-	if err != nil {
-		return nil, err
-	}
-	return newWorkspace(w, filepath.Dir(gomod), "", gomod), nil
 }
 
 func (p *Importer) SetTags(tags string) {
@@ -113,15 +95,16 @@ func (p *Importer) CacheFile() string {
 	fname := ""
 	h := sha256.New()
 	io.WriteString(h, runtime.Version())
-	if root := p.res.Dir(); root != "" {
+	if root := p.ws.Dir; root != "" {
 		io.WriteString(h, root)
 		fname = filepath.Base(root)
 	}
 	// GOWORK can point two workspaces at the same directory, so the go.work path
 	// (when there is one) also feeds the hash.
-	if gowork := p.res.gowork; gowork != "" {
+	/* TODO(xsw):
+	if gowork := p.ws.gowork; gowork != "" {
 		io.WriteString(h, gowork)
-	}
+	} */
 	if tags := p.impFrom.Tags(); tags != "" {
 		io.WriteString(h, tags)
 	}
@@ -137,7 +120,7 @@ func (p *Importer) Cache() *cache.Impl {
 // PkgHash calculates hash value for a package.
 // It is required by cache.New func.
 func (p *Importer) PkgHash(pkgPath string, self bool) string {
-	if pkg, e := p.res.Lookup(pkgPath); e == nil {
+	if pkg, e := p.ws.Lookup(pkgPath); e == nil {
 		switch pkg.Type {
 		case mod.PkgtStandard:
 			return cache.HashSkip
@@ -180,7 +163,7 @@ func (p *Importer) Import(pkgPath string) (pkg *types.Package, err error) {
 	if isPkgInMod(pkgPath, xMod) {
 		return p.impFrom.ImportFrom(pkgPath, p.xgo.Root, 0)
 	}
-	ret, e := p.res.Lookup(pkgPath)
+	ret, e := p.ws.Lookup(pkgPath)
 	if e != nil {
 		// Defer to `go list` (which reports the "not in std" error) when either
 		// the caller has no module information at all (a loose script), or the
@@ -255,7 +238,7 @@ func (p *Importer) genGoExtern(dir string, isExtern bool) (err error) {
 // directory: only when no go.work is in effect, so the module is self-contained
 // as it was before workspaces.
 func (p *Importer) shouldTidy() bool {
-	return !p.res.HasGoWork()
+	return p.ws.File != nil
 }
 
 func isPkgInMod(pkgPath, modPath string) bool {
@@ -281,16 +264,16 @@ func looksStandard(pkgPath string) bool {
 func defaultGoMod(modPath string) []byte {
 	return []byte(`module ` + modPath + `
 
-go 1.16
+go 1.23
 `)
 }
 
 func (p *Importer) dirHash(dir string, self bool) string {
-	cls, _ := classesOf(p.ws, dir)
+	cls, _ := p.ws.Classes(dir)
 	return dirHash(cls, p.xgo, dir, self)
 }
 
-func dirHash(cls *goxmod.Classes, xgo *env.XGo, dir string, self bool) string {
+func dirHash(cls goxmod.Classes, xgo *xgoenv.XGo, dir string, self bool) string {
 	h := sha256.New()
 	if self {
 		fmt.Fprintf(h, "go\t%s\n", runtime.Version())
@@ -317,12 +300,12 @@ func dirHash(cls *goxmod.Classes, xgo *env.XGo, dir string, self bool) string {
 // of the directory's own module. When cls is nil (the classfile set could not
 // be determined) only the fixed extensions count; the error surfaces when that
 // directory is actually compiled.
-func canCl(cls *goxmod.Classes, fname string) bool {
+func canCl(cls goxmod.Classes, fname string) bool {
 	switch path.Ext(fname) {
 	case ".go", ".xgo", ".gop", ".gox":
 		return true
 	}
-	return cls != nil && cls.IsClass(modfile.ClassExt(fname))
+	return cls.IsClass(modfile.ClassExt(fname))
 }
 
 // -----------------------------------------------------------------------------
