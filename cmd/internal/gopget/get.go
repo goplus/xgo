@@ -59,15 +59,13 @@ func runCmd(cmd *base.Command, args []string) {
 }
 
 func get(pkgPath string) {
-	modBase := ""
 	mod, err := tool.LoadGoMod(".")
 	noMod := os.IsNotExist(err)
 	if !noMod {
 		check(err)
-		modBase = mod.Path()
 	}
 
-	pkgModVer, _, err := modfetch.GetPkg(pkgPath, modBase)
+	pkgModVer, _, err := modfetch.GetPkg(pkgPath)
 	check(err)
 	if noMod {
 		return
@@ -76,10 +74,10 @@ func get(pkgPath string) {
 	pkgModRoot, err := modcache.Path(pkgModVer)
 	check(err)
 
-	check(mod.AddRequire(pkgModVer.Path, pkgModVer.Version, tool.HasProject(pkgModRoot)))
+	check(tool.AddRequire(mod, pkgModVer.Path, pkgModVer.Version, tool.HasProject(pkgModRoot)))
 	fmt.Fprintf(os.Stderr, "gop get: added %s %s\n", pkgModVer.Path, pkgModVer.Version)
 
-	check(mod.Save())
+	check(tool.SaveGoMod(mod))
 }
 
 func check(err error) {

@@ -68,13 +68,13 @@ Run 'gop help mod init' for more information.`)
 	check(err)
 
 	if *flagLLGo {
-		mod.AddCompiler("llgo", "1.0")
-		mod.AddRequire("github.com/goplus/lib", llgoLibVer(), false)
+		tool.AddCompiler(mod, "llgo", "1.0")
+		tool.AddRequire(mod, "github.com/goplus/lib", llgoLibVer(), false)
 	} else if *flagTinyGo {
-		mod.AddCompiler("tinygo", "0.32")
+		tool.AddCompiler(mod, "tinygo", "0.32")
 	}
 
-	err = mod.Save()
+	err = tool.SaveGoMod(mod)
 	check(err)
 }
 
@@ -99,5 +99,5 @@ func llgoLibVer() string {
 			}
 		}
 	}
-	return "v0.2.0"
+	return "v0.7.0"
 }

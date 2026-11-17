@@ -127,7 +127,7 @@ module YourModulePath
 
 go 1.21 // llgo 1.0
 
-require github.com/goplus/lib v0.2.0
+require github.com/goplus/lib v0.7.0
 ```
 
 Based on LLGo, XGo can import libraries written in C/C++ and Python.
