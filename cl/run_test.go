@@ -222,3 +222,47 @@ func TestBigint_run(t *testing.T) {
 }
 
 // -----------------------------------------------------------------------------
+
+func TestEmbeddedAliasFields(t *testing.T) {
+	t.Run("Selections", func(t *testing.T) {
+		source, err := os.ReadFile("_testxgo/embedded-alias/in.xgo")
+		if err != nil {
+			t.Fatal(err)
+		}
+		testRun(t, string(source), "4 7\n13 17\n19\n")
+	})
+
+	t.Run("MethodSet", func(t *testing.T) {
+		for _, tt := range []struct {
+			name, embedded, receiver string
+		}{
+			{name: "ValueAlias", embedded: "Alias", receiver: "Base"},
+			{name: "PointerToAlias", embedded: "*Alias", receiver: "*Base"},
+			{name: "PointerAlias", embedded: "Reference", receiver: "*Base"},
+			{name: "DirectPointer", embedded: "*Base", receiver: "*Base"},
+		} {
+			t.Run(tt.name, func(t *testing.T) {
+				testRun(t, `func main() {
+	var reader interface { Read() int } = Holder{}
+	println reader.Read()
+}
+type Holder struct { `+tt.embedded+` }
+type Alias = Base
+type Reference = *Base
+type Base int
+func (`+tt.receiver+`) Read() int { return 0 }
+`, "0\n")
+			})
+		}
+	})
+
+	t.Run("RecursivePointer", func(t *testing.T) {
+		testRun(t, `type Link = Node
+type Node struct { *Link }
+var value Node
+println value.Link == nil
+`, "true\n")
+	})
+}
+
+// -----------------------------------------------------------------------------

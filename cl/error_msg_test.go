@@ -1309,3 +1309,22 @@ var c Client
 c.Complete "hello", maxTokens = 1024
 `)
 }
+
+func TestErrEmbeddedAliasFields(t *testing.T) {
+	for _, tt := range []struct {
+		name, field string
+	}{
+		{name: "RepeatedAlias", field: "*Alias"},
+		{name: "NamedField", field: "Alias int"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			codeErrorTest(t, "bar.xgo:5:2: Alias redeclared\n\tbar.xgo:4:2 other declaration of Alias", `type Base struct {}
+type Alias = Base
+type Holder struct {
+	Alias
+	`+tt.field+`
+}
+`)
+		})
+	}
+}

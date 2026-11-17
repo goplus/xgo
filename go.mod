@@ -18,3 +18,5 @@ require (
 )
 
 retract v1.1.12
+
+replace github.com/goplus/gogen => github.com/aofei/fork.goplus.gogen v0.0.0-20261116043740-689068fbff73
