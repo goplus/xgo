@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/goplus/mod"
 	"github.com/goplus/mod/goxmod"
 	"github.com/goplus/xgo/x/xgoenv"
 	"golang.org/x/mod/modfile"
@@ -66,22 +67,20 @@ func CreateGoMod(dir, modPath, goVer, xgoVer string) (*modfile.File, error) {
 	return f, nil
 }
 
-// LoadGoMod reads and parses the go.mod of the module rooted at dir.
-func LoadGoMod(dir string) (*modfile.File, error) {
-	abs, err := filepath.Abs(dir)
+func FindAndLoadGoMod(dir string) (_ *modfile.File, err error) {
+	gomod, err := mod.Finder{}.FindGoMod(dir)
 	if err != nil {
-		return nil, err
+		return
 	}
-	gomod := filepath.Join(abs, "go.mod")
+	return loadGoMod(gomod)
+}
+
+func loadGoMod(gomod string) (*modfile.File, error) {
 	data, err := os.ReadFile(gomod)
 	if err != nil {
 		return nil, err
 	}
-	f, err := modfile.Parse(gomod, data, nil)
-	if err != nil {
-		return nil, err
-	}
-	return f, nil
+	return modfile.Parse(gomod, data, nil)
 }
 
 // AddCompiler records a compiler directive (llgo/tinygo) as a comment on the

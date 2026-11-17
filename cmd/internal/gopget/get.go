@@ -59,7 +59,7 @@ func runCmd(cmd *base.Command, args []string) {
 }
 
 func get(pkgPath string) {
-	mod, err := tool.LoadGoMod(".")
+	mod, err := tool.FindAndLoadGoMod(".")
 	noMod := os.IsNotExist(err)
 	if !noMod {
 		check(err)

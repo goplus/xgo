@@ -30,7 +30,7 @@ import (
 func Tidy(dir string, xgo *xgoenv.XGo) (err error) {
 	w, err := mod.LoadFromDir(dir)
 	if err != nil {
-		return errors.NewWith(err, `LoadWorkspace(dir)`, -2, "tool.LoadWorkspace", dir)
+		return
 	}
 	if w.IsDefault() {
 		return errors.NewWith(ErrNotFound, `no go.mod found`, -2, "tool.Tidy", dir)
@@ -48,13 +48,13 @@ func Tidy(dir string, xgo *xgoenv.XGo) (err error) {
 	// classfile deps.
 	classMods, err := classfileRequires(gomod)
 	if err != nil {
-		return errors.NewWith(err, `classfileRequires(gomod)`, -2, "tool.classfileRequires", gomod)
+		return
 	}
 
 	conf := &Config{XGo: xgo, Workspace: w}
 	err = genGoDir(modRoot, conf, true, true, 0)
 	if err != nil {
-		return errors.NewWith(err, `genGoDir(modRoot, conf, true, true)`, -2, "tool.genGoDir", modRoot, conf, true, true)
+		return
 	}
 
 	cmd := exec.Command("go", "mod", "tidy")
@@ -63,7 +63,7 @@ func Tidy(dir string, xgo *xgoenv.XGo) (err error) {
 	cmd.Dir = modRoot
 	err = cmd.Run()
 	if err != nil {
-		return errors.NewWith(err, `cmd.Run()`, -2, "(*exec.Cmd).Run")
+		return
 	}
 
 	return keepClassfileRequires(modRoot, classMods)
@@ -106,9 +106,9 @@ func keepClassfileRequires(modRoot string, classMods []classfileRequire) (err er
 	if len(classMods) == 0 {
 		return nil
 	}
-	modObj, err := LoadGoMod(modRoot)
+	modObj, err := loadGoMod(filepath.Join(modRoot, "go.mod"))
 	if err != nil {
-		return errors.NewWith(err, `LoadGoMod(modRoot)`, -2, "tool.LoadGoMod", modRoot)
+		return
 	}
 	have := make(map[string]bool, len(modObj.Require))
 	for _, r := range modObj.Require {
@@ -119,16 +119,13 @@ func keepClassfileRequires(modRoot string, classMods []classfileRequire) (err er
 		if have[c.Path] {
 			continue
 		}
-		if e := AddRequire(modObj, c.Path, c.Version, true); e != nil {
-			return errors.NewWith(e, `modObj.AddRequire(path, vers, true)`, -2, "(*tool.GoMod).AddRequire", c.Path, c.Version, true)
+		if err = AddRequire(modObj, c.Path, c.Version, true); err != nil {
+			return
 		}
 		changed = true
 	}
 	if !changed {
 		return nil
 	}
-	if err = SaveGoMod(modObj); err != nil {
-		return errors.NewWith(err, `modObj.Save()`, -2, "(*tool.GoMod).Save")
-	}
-	return nil
+	return SaveGoMod(modObj)
 }

@@ -118,7 +118,7 @@ require (
 	github.com/qiniu/x v1.19.3
 )
 `)
-	m, err := LoadGoMod(dir)
+	m, err := loadGoMod(filepath.Join(dir, "go.mod"))
 	if err != nil {
 		t.Fatal("LoadGoMod:", err)
 	}
