@@ -1,0 +1,25 @@
+name: PR Build
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  TestReleaseBuild:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v7
+
+    - name: Set up Go
+      uses: actions/setup-go@v7
+      with:
+        go-version: 1.27.x
+
+    - name: Build with GoReleaser
+      uses: goreleaser/goreleaser-action@v7
+      with:
+        distribution: goreleaser
+        version: latest
+        args: build --snapshot --clean --single-target -p 2
