@@ -103,7 +103,7 @@ jobs:
         compression-level: 0
 
   TestReleaseBuild:
-    name: TestReleaseBuild (${{ matrix.package }})
+    name: TestReleaseBuild (${{ matrix.package }}${{ matrix.winget_arch && ' via WinGet' || '' }})
     needs: BuildRelease
     strategy:
       fail-fast: false
@@ -113,6 +113,10 @@ jobs:
           package: linux-amd64.deb
         - runner: ubuntu-24.04-arm
           package: linux-arm64.deb
+        - runner: ubuntu-latest
+          package: linux-amd64.snap
+        - runner: ubuntu-24.04-arm
+          package: linux-arm64.snap
         - runner: macos-15-intel
           package: darwin-amd64.tar.gz
         - runner: macos-15
@@ -121,6 +125,12 @@ jobs:
           package: windows-amd64.zip
         - runner: windows-11-arm
           package: windows-arm64.zip
+        - runner: windows-latest
+          package: windows-amd64.zip
+          winget_arch: x64
+        - runner: windows-11-arm
+          package: windows-arm64.zip
+          winget_arch: arm64
     runs-on: ${{ matrix.runner }}
     env:
       PACKAGE_SUFFIX: ${{ matrix.package }}
@@ -138,7 +148,7 @@ jobs:
         path: ${{ runner.temp }}/xgo-release-packages
 
     - name: Install DEB
-      if: runner.os == 'Linux'
+      if: endsWith(matrix.package, '.deb')
       shell: bash
       run: |
         packages=("$RUNNER_TEMP/xgo-release-packages"/*."$PACKAGE_SUFFIX")
@@ -146,6 +156,25 @@ jobs:
         test -f "${packages[0]}"
         sudo apt-get update
         sudo apt-get install -y "${packages[0]}"
+
+    - name: Install Snap and run Hello World
+      if: endsWith(matrix.package, '.snap')
+      shell: bash
+      run: |
+        packages=("$RUNNER_TEMP/xgo-release-packages"/*."$PACKAGE_SUFFIX")
+        test "${#packages[@]}" -eq 1
+        test -f "${packages[0]}"
+        sudo apt-get update
+        sudo apt-get install -y snapd
+        sudo timeout 180s snap wait system seed.loaded
+        sudo snap install --dangerous --classic "${packages[0]}"
+
+        program_dir=$(mktemp -d "$RUNNER_TEMP/xgo-snap-smoke.XXXXXX")
+        cd "$program_dir"
+        printf '%s\n' 'echo "Hello, world!"' > hello.xgo
+        hello_output=$(snap run xgo run hello.xgo)
+        printf 'Installed xgo Snap printed %s\n' "$hello_output"
+        test "$hello_output" = 'Hello, world!'
 
     - name: Extract macOS tarball
       if: runner.os == 'macOS'
@@ -160,7 +189,7 @@ jobs:
         printf '%s\n' "$install_dir/bin" >> "$GITHUB_PATH"
 
     - name: Extract Windows ZIP
-      if: runner.os == 'Windows'
+      if: runner.os == 'Windows' && !matrix.winget_arch
       shell: pwsh
       run: |
         $packageDir = Join-Path $env:RUNNER_TEMP 'xgo-release-packages'
@@ -172,8 +201,65 @@ jobs:
         Expand-Archive -LiteralPath $packages[0].FullName -DestinationPath $installDir
         Join-Path $installDir 'bin' >> $env:GITHUB_PATH
 
+    - name: Set up WinGet
+      if: matrix.winget_arch
+      shell: pwsh
+      run: |
+        $PSNativeCommandUseErrorActionPreference = $true
+        if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
+          Install-PackageProvider -Name NuGet -Force | Out-Null
+          Install-Module -Name Microsoft.WinGet.Client -Force -Repository PSGallery
+          Repair-WinGetPackageManager -AllUsers
+        }
+        winget --version
+        winget settings --enable LocalManifestFiles
+
+    - name: Install PR package with WinGet
+      if: matrix.winget_arch
+      shell: pwsh
+      env:
+        WINGET_ARCH: ${{ matrix.winget_arch }}
+      run: |
+        $PSNativeCommandUseErrorActionPreference = $true
+        $packageDir = Join-Path $env:RUNNER_TEMP 'xgo-release-packages'
+        $installers = @(Get-ChildItem -LiteralPath (Join-Path $packageDir 'winget') -Recurse -File -Filter 'goplus.xgo.installer.yaml')
+        if ($installers.Count -ne 1) {
+          throw "Expected one WinGet installer manifest, found $($installers.Count)."
+        }
+
+        $manifestDir = Join-Path $env:RUNNER_TEMP 'xgo-winget-manifests'
+        Copy-Item -LiteralPath $installers[0].DirectoryName -Destination $manifestDir -Recurse
+        $installerManifest = Join-Path $manifestDir $installers[0].Name
+        $manifest = Get-Content -LiteralPath $installerManifest -Raw
+        # Serve unpublished ZIPs such as xgo*.windows-amd64.zip from this runner.
+        $installerUrls = [regex]'(?m)^([ \t]*InstallerUrl:[ \t]+)https://\S+/([^/\s]+\.zip)(?=\r?$)'
+        if ($installerUrls.Matches($manifest).Count -ne 3) {
+          throw 'Expected three WinGet installer URLs for the snapshot ZIPs.'
+        }
+        $localManifest = $installerUrls.Replace($manifest, '${1}http://127.0.0.1:8765/${2}')
+        Set-Content -LiteralPath $installerManifest -Value $localManifest -Encoding utf8NoBOM -NoNewline
+
+        $server = Start-Process -FilePath python -WorkingDirectory $packageDir -NoNewWindow -PassThru `
+          -ArgumentList '-m', 'http.server', '8765', '--bind', '127.0.0.1'
+        try {
+          for ($attempt = 1; $attempt -le 15; $attempt++) {
+            try {
+              Invoke-WebRequest -Uri 'http://127.0.0.1:8765/' -Method Head -TimeoutSec 2 | Out-Null
+              break
+            } catch {
+              if ($server.HasExited -or $attempt -eq 15) { throw }
+              Start-Sleep -Seconds 1
+            }
+          }
+          winget install --manifest $manifestDir --architecture $env:WINGET_ARCH --scope user `
+            --accept-source-agreements --accept-package-agreements --disable-interactivity
+        } finally {
+          if (-not $server.HasExited) { Stop-Process -Id $server.Id }
+        }
+        Join-Path $env:LOCALAPPDATA 'Microsoft\WinGet\Links' >> $env:GITHUB_PATH
+
     - name: Run Hello World on Linux and macOS
-      if: runner.os == 'Linux' || runner.os == 'macOS'
+      if: endsWith(matrix.package, '.deb') || runner.os == 'macOS'
       shell: bash
       env:
         XGO_COMMAND_PREFIX: ${{ runner.os == 'Linux' && '/usr/bin/' || '' }}
