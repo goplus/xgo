@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=golang:1.24-bookworm
+ARG BASE_IMAGE=golang:1.27-bookworm
 
 FROM $BASE_IMAGE AS build
 
@@ -13,11 +13,11 @@ set -eux
 
 XGOROOT=/usr/local/xgo
 mkdir -p "$XGOROOT"
+git ls-tree --full-tree --name-only -r HEAD | grep -vE "^\." | xargs -I {} cp --parents {} "$XGOROOT"/
 
 if [ "$USE_GORELEASER_ARTIFACTS" -eq 1 ]; then
 	cp -rp "$TARGETPLATFORM"/* "$XGOROOT"/
 else
-	git ls-tree --full-tree --name-only -r HEAD | grep -vE "^\." | xargs -I {} cp --parents {} "$XGOROOT"/
 	./all.bash
 	mv bin "$XGOROOT"/
 fi

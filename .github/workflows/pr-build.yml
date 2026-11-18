@@ -56,6 +56,23 @@ jobs:
         if-no-files-found: error
         compression-level: 0
 
+    - name: Run Hello World in release images
+      shell: bash
+      run: |
+        for arch in 386 amd64 arm64; do
+          printf 'Testing release image for linux/%s\n' "$arch"
+          docker run --rm --pull=never --platform "linux/$arch" "xgo:latest-$arch" sh -euc '
+            for xgo_command in xgo gop; do
+              program_dir=$(mktemp -d)
+              cd "$program_dir"
+              printf "%s\n" "echo \"Hello, world!\"" > hello.xgo
+              hello_output=$("$xgo_command" run hello.xgo)
+              printf "%s printed %s\n" "$xgo_command" "$hello_output"
+              test "$hello_output" = "Hello, world!"
+            done
+          '
+        done
+
   TestReleaseBuild:
     name: TestReleaseBuild (${{ matrix.package }}${{ matrix.winget_arch && ' via WinGet' || '' }})
     needs: BuildRelease
@@ -160,11 +177,8 @@ jobs:
       shell: pwsh
       run: |
         $PSNativeCommandUseErrorActionPreference = $true
-        if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
-          Install-PackageProvider -Name NuGet -Force | Out-Null
-          Install-Module -Name Microsoft.WinGet.Client -Force -Repository PSGallery
-          Repair-WinGetPackageManager -AllUsers
-        }
+        Install-PSResource -Name Microsoft.WinGet.Client -Repository PSGallery -TrustRepository
+        Repair-WinGetPackageManager -AllUsers -Version '1.29.380'
         winget --version
         winget settings --enable LocalManifestFiles
 
@@ -206,7 +220,7 @@ jobs:
               Start-Sleep -Seconds 1
             }
           }
-          winget install --manifest $manifestDir --architecture $env:WINGET_ARCH --scope user `
+          winget install --manifest $manifestDir --architecture $env:WINGET_ARCH `
             --accept-source-agreements --accept-package-agreements --disable-interactivity
         } finally {
           if (-not $server.HasExited) { Stop-Process -Id $server.Id }
