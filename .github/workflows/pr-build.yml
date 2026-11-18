@@ -12,17 +12,79 @@ jobs:
     steps:
     - uses: actions/checkout@v7
 
+    - name: Install Snapcraft
+      uses: samuelmeuli/action-snapcraft@v3
+
     - name: Set up Go
       uses: actions/setup-go@v7
       with:
         go-version: 1.27.x
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v4
 
     - name: Build release packages
       uses: goreleaser/goreleaser-action@v7
       with:
         distribution: goreleaser
         version: latest
-        args: release --snapshot --clean --skip=docker,snapcraft,winget -p 4
+        args: release --snapshot --clean --skip=publish -p 4
+
+    - name: Check Snap packages
+      shell: bash
+      run: |
+        for arch in 386 amd64 arm64; do
+          packages=(.dist/*.linux-"$arch".snap)
+          if [ "${#packages[@]}" -ne 1 ] || [ ! -s "${packages[0]}" ]; then
+            echo "Expected one nonempty Snap package for linux/$arch."
+            exit 1
+          fi
+          ls -lh "${packages[0]}"
+        done
+
+    - name: Check WinGet manifests
+      shell: bash
+      run: |
+        python -m pip install --no-input pyyaml
+        python - <<'PY'
+        import hashlib
+        from pathlib import Path
+
+        import yaml
+
+        dist = Path('.dist')
+        manifest_types = {
+            'goplus.xgo.yaml': 'version',
+            'goplus.xgo.installer.yaml': 'installer',
+            'goplus.xgo.locale.en-US.yaml': 'defaultLocale',
+        }
+        manifests = {}
+        for filename, manifest_type in manifest_types.items():
+            files = list(dist.glob(f'winget/**/{filename}'))
+            if len(files) != 1:
+                raise SystemExit(f'Expected one {filename}, found {len(files)}.')
+            manifest = yaml.safe_load(files[0].read_text(encoding='utf-8'))
+            if manifest['ManifestType'] != manifest_type:
+                raise SystemExit(f'Unexpected manifest type in {files[0]}.')
+            manifests[manifest_type] = manifest
+
+        installers = manifests['installer']['Installers']
+        if sorted(item['Architecture'] for item in installers) != ['arm64', 'x64', 'x86']:
+            raise SystemExit('Expected WinGet installers for arm64, x64, and x86.')
+        for item in installers:
+            aliases = {file['PortableCommandAlias'] for file in item['NestedInstallerFiles']}
+            if aliases != {'xgo', 'gop'}:
+                raise SystemExit(f"Unexpected command aliases for {item['Architecture']}: {aliases}")
+            archive = dist / item['InstallerUrl'].rsplit('/', 1)[-1]
+            with archive.open('rb') as package:
+                sha256 = hashlib.file_digest(package, 'sha256').hexdigest()
+            if sha256 != item['InstallerSha256'].lower():
+                raise SystemExit(f'WinGet checksum does not match {archive}.')
+            print(f"Verified WinGet installer for {item['Architecture']}: {archive.name}")
+        PY
 
     - name: Upload release packages
       uses: actions/upload-artifact@v7
@@ -33,7 +95,9 @@ jobs:
           .dist/*.zip
           .dist/*.deb
           .dist/*.rpm
+          .dist/*.snap
           .dist/*.checksums.txt
+          .dist/winget/**/*.yaml
         include-hidden-files: true
         if-no-files-found: error
         compression-level: 0
