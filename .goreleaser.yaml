@@ -43,6 +43,20 @@ builds:
       - darwin
     mod_timestamp: "{{ .CommitTimestamp }}"
 
+    hooks:
+      post:
+        # Each build has its own output directory. Keep xgo next to the
+        # staging link so the packaged bin/gop -> xgo also resolves.
+        - cmd: |-
+            sh -ec '
+              case "$2" in
+                linux|darwin)
+                  mv "$1" "$(dirname "$1")/xgo"
+                  ln -s xgo "$1"
+                  ;;
+              esac
+            ' -- "{{ .Path }}" "{{ .Os }}"
+
 archives:
   - format: tar.gz
     name_template: >-
