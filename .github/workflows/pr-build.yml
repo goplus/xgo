@@ -3,6 +3,10 @@ name: PR Build
 on:
   pull_request:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -74,37 +78,29 @@ jobs:
         done
 
   TestReleaseBuild:
-    name: TestReleaseBuild (${{ matrix.package }}${{ matrix.winget_arch && ' via WinGet' || '' }})
+    name: TestReleaseBuild (${{ matrix.target }})
     needs: BuildRelease
     strategy:
       fail-fast: false
       matrix:
         include:
         - runner: ubuntu-latest
-          package: linux-amd64.deb
+          target: linux-amd64
         - runner: ubuntu-24.04-arm
-          package: linux-arm64.deb
-        - runner: ubuntu-latest
-          package: linux-amd64.snap
-        - runner: ubuntu-24.04-arm
-          package: linux-arm64.snap
+          target: linux-arm64
         - runner: macos-15-intel
-          package: darwin-amd64.tar.gz
+          target: darwin-amd64
         - runner: macos-15
-          package: darwin-arm64.tar.gz
+          target: darwin-arm64
         - runner: windows-latest
-          package: windows-amd64.zip
-        - runner: windows-11-arm
-          package: windows-arm64.zip
-        - runner: windows-latest
-          package: windows-amd64.zip
+          target: windows-amd64
           winget_arch: x64
         - runner: windows-11-arm
-          package: windows-arm64.zip
+          target: windows-arm64
           winget_arch: arm64
     runs-on: ${{ matrix.runner }}
     env:
-      PACKAGE_SUFFIX: ${{ matrix.package }}
+      PACKAGE_TARGET: ${{ matrix.target }}
     steps:
     - name: Set up Go
       uses: actions/setup-go@v7
@@ -113,29 +109,60 @@ jobs:
         cache: false
 
     - name: Download release packages
+      id: download
       uses: actions/download-artifact@v8
       with:
         name: xgo-release-packages
         path: ${{ runner.temp }}/xgo-release-packages
 
+    - name: Update APT
+      id: apt
+      if: runner.os == 'Linux'
+      run: sudo apt-get update
+
     - name: Install DEB
-      if: endsWith(matrix.package, '.deb')
+      if: runner.os == 'Linux'
       shell: bash
       run: |
-        packages=("$RUNNER_TEMP/xgo-release-packages"/*."$PACKAGE_SUFFIX")
+        packages=("$RUNNER_TEMP/xgo-release-packages"/*."$PACKAGE_TARGET".deb)
         test "${#packages[@]}" -eq 1
         test -f "${packages[0]}"
-        sudo apt-get update
         sudo apt-get install -y "${packages[0]}"
 
-    - name: Install Snap and run Hello World
-      if: endsWith(matrix.package, '.snap')
+    - name: Extract macOS tarball
+      if: runner.os == 'macOS'
       shell: bash
       run: |
-        packages=("$RUNNER_TEMP/xgo-release-packages"/*."$PACKAGE_SUFFIX")
+        packages=("$RUNNER_TEMP/xgo-release-packages"/*."$PACKAGE_TARGET".tar.gz)
         test "${#packages[@]}" -eq 1
         test -f "${packages[0]}"
-        sudo apt-get update
+        install_dir="$RUNNER_TEMP/xgo-install"
+        mkdir "$install_dir"
+        tar -xf "${packages[0]}" -C "$install_dir"
+        printf '%s\n' "$install_dir/bin" >> "$GITHUB_PATH"
+
+    - name: Run Hello World on Linux and macOS
+      if: runner.os == 'Linux' || runner.os == 'macOS'
+      shell: bash
+      env:
+        XGO_COMMAND_PREFIX: ${{ runner.os == 'Linux' && '/usr/bin/' || '' }}
+      run: |
+        for xgo_command in xgo gop; do
+          program_dir=$(mktemp -d "$RUNNER_TEMP/xgo-smoke-$xgo_command.XXXXXX")
+          cd "$program_dir"
+          printf '%s\n' 'echo "Hello, world!"' > hello.xgo
+          hello_output=$("$XGO_COMMAND_PREFIX$xgo_command" run hello.xgo)
+          printf '%s printed %s\n' "$xgo_command" "$hello_output"
+          test "$hello_output" = 'Hello, world!'
+        done
+
+    - name: Install Snap and run Hello World
+      if: ${{ !cancelled() && runner.os == 'Linux' && steps.apt.outcome == 'success' }}
+      shell: bash
+      run: |
+        packages=("$RUNNER_TEMP/xgo-release-packages"/*."$PACKAGE_TARGET".snap)
+        test "${#packages[@]}" -eq 1
+        test -f "${packages[0]}"
         sudo apt-get install -y snapd
         sudo timeout 180s snap wait system seed.loaded
         sudo snap install --dangerous --classic "${packages[0]}"
@@ -147,43 +174,51 @@ jobs:
         printf 'Installed xgo Snap printed %s\n' "$hello_output"
         test "$hello_output" = 'Hello, world!'
 
-    - name: Extract macOS tarball
-      if: runner.os == 'macOS'
-      shell: bash
-      run: |
-        packages=("$RUNNER_TEMP/xgo-release-packages"/*."$PACKAGE_SUFFIX")
-        test "${#packages[@]}" -eq 1
-        test -f "${packages[0]}"
-        install_dir="$RUNNER_TEMP/xgo-install"
-        mkdir "$install_dir"
-        tar -xf "${packages[0]}" -C "$install_dir"
-        printf '%s\n' "$install_dir/bin" >> "$GITHUB_PATH"
-
     - name: Extract Windows ZIP
-      if: runner.os == 'Windows' && !matrix.winget_arch
+      if: runner.os == 'Windows'
       shell: pwsh
       run: |
         $packageDir = Join-Path $env:RUNNER_TEMP 'xgo-release-packages'
-        $packages = @(Get-ChildItem -LiteralPath $packageDir -Filter "*.$env:PACKAGE_SUFFIX" -File)
+        $packages = @(Get-ChildItem -LiteralPath $packageDir -Filter "*.$env:PACKAGE_TARGET.zip" -File)
         if ($packages.Count -ne 1) {
-          throw "Expected one $env:PACKAGE_SUFFIX package, found $($packages.Count)."
+          throw "Expected one $env:PACKAGE_TARGET ZIP, found $($packages.Count)."
         }
         $installDir = Join-Path $env:RUNNER_TEMP 'xgo-install'
         Expand-Archive -LiteralPath $packages[0].FullName -DestinationPath $installDir
-        Join-Path $installDir 'bin' >> $env:GITHUB_PATH
+
+    - name: Run Hello World from Windows ZIP
+      if: runner.os == 'Windows'
+      shell: pwsh
+      env:
+        XGO_COMMAND_PREFIX: ${{ runner.temp }}/xgo-install/bin/
+      run: &windows_smoke |
+        $PSNativeCommandUseErrorActionPreference = $true
+        foreach ($xgoCommand in 'xgo', 'gop') {
+          $programDir = Join-Path $env:RUNNER_TEMP "xgo-smoke-$xgoCommand-$([guid]::NewGuid())"
+          New-Item -ItemType Directory -Path $programDir | Out-Null
+          Set-Location -LiteralPath $programDir
+          Set-Content -Path hello.xgo -Value 'echo "Hello, world!"' -Encoding utf8NoBOM
+          $helloOutput = (& "${env:XGO_COMMAND_PREFIX}$xgoCommand.exe" run hello.xgo) -join "`n"
+          Write-Output "$xgoCommand printed $helloOutput"
+          if ($helloOutput -cne 'Hello, world!') {
+            throw "Unexpected Hello World output from $xgoCommand."
+          }
+        }
 
     - name: Set up WinGet
-      if: matrix.winget_arch
+      id: winget_setup
+      if: ${{ !cancelled() && runner.os == 'Windows' && steps.download.outcome == 'success' }}
       shell: pwsh
       run: |
         $PSNativeCommandUseErrorActionPreference = $true
         Install-PSResource -Name Microsoft.WinGet.Client -Repository PSGallery -TrustRepository
-        Repair-WinGetPackageManager -AllUsers -Version '1.29.380'
+        Repair-WinGetPackageManager -Latest
         winget --version
         winget settings --enable LocalManifestFiles
 
     - name: Validate and install PR package with WinGet
-      if: matrix.winget_arch
+      id: winget_install
+      if: ${{ !cancelled() && steps.winget_setup.outcome == 'success' }}
       shell: pwsh
       env:
         WINGET_ARCH: ${{ matrix.winget_arch }}
@@ -227,34 +262,7 @@ jobs:
         }
         Join-Path $env:LOCALAPPDATA 'Microsoft\WinGet\Links' >> $env:GITHUB_PATH
 
-    - name: Run Hello World on Linux and macOS
-      if: endsWith(matrix.package, '.deb') || runner.os == 'macOS'
-      shell: bash
-      env:
-        XGO_COMMAND_PREFIX: ${{ runner.os == 'Linux' && '/usr/bin/' || '' }}
-      run: |
-        for xgo_command in xgo gop; do
-          program_dir=$(mktemp -d "$RUNNER_TEMP/xgo-smoke-$xgo_command.XXXXXX")
-          cd "$program_dir"
-          printf '%s\n' 'echo "Hello, world!"' > hello.xgo
-          hello_output=$("$XGO_COMMAND_PREFIX$xgo_command" run hello.xgo)
-          printf '%s printed %s\n' "$xgo_command" "$hello_output"
-          test "$hello_output" = 'Hello, world!'
-        done
-
-    - name: Run Hello World on Windows
-      if: runner.os == 'Windows'
+    - name: Run Hello World from WinGet
+      if: ${{ !cancelled() && steps.winget_install.outcome == 'success' }}
       shell: pwsh
-      run: |
-        $PSNativeCommandUseErrorActionPreference = $true
-        foreach ($xgoCommand in 'xgo', 'gop') {
-          $programDir = Join-Path $env:RUNNER_TEMP "xgo-smoke-$xgoCommand"
-          New-Item -ItemType Directory -Path $programDir | Out-Null
-          Set-Location -LiteralPath $programDir
-          Set-Content -Path hello.xgo -Value 'echo "Hello, world!"' -Encoding utf8NoBOM
-          $helloOutput = (& $xgoCommand run hello.xgo) -join "`n"
-          Write-Output "$xgoCommand printed $helloOutput"
-          if ($helloOutput -cne 'Hello, world!') {
-            throw "Unexpected Hello World output from $xgoCommand."
-          }
-        }
+      run: *windows_smoke
