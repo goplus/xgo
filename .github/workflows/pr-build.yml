@@ -23,3 +23,14 @@ jobs:
         distribution: goreleaser
         version: latest
         args: build --snapshot --clean --single-target -p 2
+
+    - name: Run XGo Hello World
+      env:
+        XGOROOT: ${{ github.workspace }}
+      run: |
+        smoke_dir=$(mktemp -d "$RUNNER_TEMP/xgo-smoke.XXXXXX")
+        cd "$smoke_dir"
+        printf '%s\n' 'echo "Hello, world!"' > hello.xgo
+        hello_output=$("$XGOROOT/.dist/xgo_linux_amd64_v1/bin/xgo" run hello.xgo)
+        printf '%s\n' "$hello_output"
+        test "$hello_output" = 'Hello, world!'
