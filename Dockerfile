@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=golang:1.27-bookworm
+ARG BASE_IMAGE=golang:1.24-bookworm
 
 FROM $BASE_IMAGE AS build
 
