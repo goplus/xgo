@@ -7,7 +7,7 @@ permissions:
   contents: read
 
 jobs:
-  TestReleaseBuild:
+  BuildRelease:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v7
@@ -17,20 +17,98 @@ jobs:
       with:
         go-version: 1.27.x
 
-    - name: Build with GoReleaser
+    - name: Build release packages
       uses: goreleaser/goreleaser-action@v7
       with:
         distribution: goreleaser
         version: latest
-        args: build --snapshot --clean --single-target -p 2
+        args: release --snapshot --clean --skip=docker,snapcraft,winget -p 4
 
-    - name: Run XGo Hello World
+    - name: Upload release packages
+      uses: actions/upload-artifact@v7
+      with:
+        name: xgo-release-packages
+        path: |
+          .dist/*.tar.gz
+          .dist/*.zip
+          .dist/*.deb
+          .dist/*.rpm
+          .dist/*.checksums.txt
+        include-hidden-files: true
+        if-no-files-found: error
+        compression-level: 0
+
+  TestReleaseBuild:
+    name: TestReleaseBuild (${{ matrix.package }})
+    needs: BuildRelease
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - runner: ubuntu-latest
+          package: linux-amd64.deb
+        - runner: ubuntu-24.04-arm
+          package: linux-arm64.deb
+        - runner: macos-15-intel
+          package: darwin-amd64.tar.gz
+        - runner: macos-15
+          package: darwin-arm64.tar.gz
+        - runner: windows-latest
+          package: windows-amd64.zip
+        - runner: windows-11-arm
+          package: windows-arm64.zip
+    runs-on: ${{ matrix.runner }}
+    steps:
+    - name: Set up Go
+      uses: actions/setup-go@v7
+      with:
+        go-version: 1.27.x
+        cache: false
+
+    - name: Download release packages
+      uses: actions/download-artifact@v8
+      with:
+        name: xgo-release-packages
+        path: ${{ runner.temp }}/xgo-release-packages
+
+    - name: Install and run Hello World
+      shell: pwsh
       env:
-        XGOROOT: ${{ github.workspace }}
+        PACKAGE_SUFFIX: ${{ matrix.package }}
       run: |
-        smoke_dir=$(mktemp -d "$RUNNER_TEMP/xgo-smoke.XXXXXX")
-        cd "$smoke_dir"
-        printf '%s\n' 'echo "Hello, world!"' > hello.xgo
-        hello_output=$("$XGOROOT/.dist/xgo_linux_amd64_v1/bin/xgo" run hello.xgo)
-        printf '%s\n' "$hello_output"
-        test "$hello_output" = 'Hello, world!'
+        $PSNativeCommandUseErrorActionPreference = $true
+        $packageDir = Join-Path $env:RUNNER_TEMP 'xgo-release-packages'
+        $packages = @(Get-ChildItem -LiteralPath $packageDir -Filter "*.$env:PACKAGE_SUFFIX" -File)
+        if ($packages.Count -ne 1) {
+          throw "Expected one $env:PACKAGE_SUFFIX package, found $($packages.Count)."
+        }
+        $package = $packages[0].FullName
+
+        if ($IsLinux) {
+          sudo apt-get update
+          sudo apt-get install -y $package
+          $xgoCommands = '/usr/bin/xgo', '/usr/bin/gop'
+        } else {
+          $installDir = Join-Path $env:RUNNER_TEMP 'xgo-install'
+          New-Item -ItemType Directory -Path $installDir | Out-Null
+          if ($IsWindows) {
+            Expand-Archive -LiteralPath $package -DestinationPath $installDir
+          } else {
+            tar -xf $package -C $installDir
+          }
+          $binDir = Join-Path $installDir 'bin'
+          $env:PATH = "$binDir$([IO.Path]::PathSeparator)$env:PATH"
+          $xgoCommands = 'xgo', 'gop'
+        }
+
+        foreach ($xgoCommand in $xgoCommands) {
+          $programDir = Join-Path $env:RUNNER_TEMP "xgo-smoke-$(Split-Path -Leaf $xgoCommand)"
+          New-Item -ItemType Directory -Path $programDir | Out-Null
+          Set-Location -LiteralPath $programDir
+          Set-Content -Path hello.xgo -Value 'echo "Hello, world!"' -Encoding utf8NoBOM
+          $helloOutput = (& $xgoCommand run hello.xgo) -join "`n"
+          Write-Output "$xgoCommand printed $helloOutput"
+          if ($helloOutput -cne 'Hello, world!') {
+            throw "Unexpected Hello World output from $xgoCommand."
+          }
+        }
