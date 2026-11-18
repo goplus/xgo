@@ -58,6 +58,8 @@ jobs:
         - runner: windows-11-arm
           package: windows-arm64.zip
     runs-on: ${{ matrix.runner }}
+    env:
+      PACKAGE_SUFFIX: ${{ matrix.package }}
     steps:
     - name: Set up Go
       uses: actions/setup-go@v7
@@ -71,38 +73,63 @@ jobs:
         name: xgo-release-packages
         path: ${{ runner.temp }}/xgo-release-packages
 
-    - name: Install and run Hello World
-      shell: pwsh
-      env:
-        PACKAGE_SUFFIX: ${{ matrix.package }}
+    - name: Install DEB
+      if: runner.os == 'Linux'
+      shell: bash
       run: |
-        $PSNativeCommandUseErrorActionPreference = $true
+        packages=("$RUNNER_TEMP/xgo-release-packages"/*."$PACKAGE_SUFFIX")
+        test "${#packages[@]}" -eq 1
+        test -f "${packages[0]}"
+        sudo apt-get update
+        sudo apt-get install -y "${packages[0]}"
+
+    - name: Extract macOS tarball
+      if: runner.os == 'macOS'
+      shell: bash
+      run: |
+        packages=("$RUNNER_TEMP/xgo-release-packages"/*."$PACKAGE_SUFFIX")
+        test "${#packages[@]}" -eq 1
+        test -f "${packages[0]}"
+        install_dir="$RUNNER_TEMP/xgo-install"
+        mkdir "$install_dir"
+        tar -xf "${packages[0]}" -C "$install_dir"
+        printf '%s\n' "$install_dir/bin" >> "$GITHUB_PATH"
+
+    - name: Extract Windows ZIP
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
         $packageDir = Join-Path $env:RUNNER_TEMP 'xgo-release-packages'
         $packages = @(Get-ChildItem -LiteralPath $packageDir -Filter "*.$env:PACKAGE_SUFFIX" -File)
         if ($packages.Count -ne 1) {
           throw "Expected one $env:PACKAGE_SUFFIX package, found $($packages.Count)."
         }
-        $package = $packages[0].FullName
+        $installDir = Join-Path $env:RUNNER_TEMP 'xgo-install'
+        Expand-Archive -LiteralPath $packages[0].FullName -DestinationPath $installDir
+        Join-Path $installDir 'bin' >> $env:GITHUB_PATH
 
-        if ($IsLinux) {
-          sudo apt-get update
-          sudo apt-get install -y $package
-          $xgoCommands = '/usr/bin/xgo', '/usr/bin/gop'
-        } else {
-          $installDir = Join-Path $env:RUNNER_TEMP 'xgo-install'
-          New-Item -ItemType Directory -Path $installDir | Out-Null
-          if ($IsWindows) {
-            Expand-Archive -LiteralPath $package -DestinationPath $installDir
-          } else {
-            tar -xf $package -C $installDir
-          }
-          $binDir = Join-Path $installDir 'bin'
-          $env:PATH = "$binDir$([IO.Path]::PathSeparator)$env:PATH"
-          $xgoCommands = 'xgo', 'gop'
-        }
+    - name: Run Hello World on Linux and macOS
+      if: runner.os == 'Linux' || runner.os == 'macOS'
+      shell: bash
+      env:
+        XGO_COMMAND_PREFIX: ${{ runner.os == 'Linux' && '/usr/bin/' || '' }}
+      run: |
+        for xgo_command in xgo gop; do
+          program_dir=$(mktemp -d "$RUNNER_TEMP/xgo-smoke-$xgo_command.XXXXXX")
+          cd "$program_dir"
+          printf '%s\n' 'echo "Hello, world!"' > hello.xgo
+          hello_output=$("$XGO_COMMAND_PREFIX$xgo_command" run hello.xgo)
+          printf '%s printed %s\n' "$xgo_command" "$hello_output"
+          test "$hello_output" = 'Hello, world!'
+        done
 
-        foreach ($xgoCommand in $xgoCommands) {
-          $programDir = Join-Path $env:RUNNER_TEMP "xgo-smoke-$(Split-Path -Leaf $xgoCommand)"
+    - name: Run Hello World on Windows
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        $PSNativeCommandUseErrorActionPreference = $true
+        foreach ($xgoCommand in 'xgo', 'gop') {
+          $programDir = Join-Path $env:RUNNER_TEMP "xgo-smoke-$xgoCommand"
           New-Item -ItemType Directory -Path $programDir | Out-Null
           Set-Location -LiteralPath $programDir
           Set-Content -Path hello.xgo -Value 'echo "Hello, world!"' -Encoding utf8NoBOM
