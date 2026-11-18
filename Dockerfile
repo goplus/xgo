@@ -13,11 +13,15 @@ set -eux
 
 XGOROOT=/usr/local/xgo
 mkdir -p "$XGOROOT"
-git ls-tree --full-tree --name-only -r HEAD | grep -vE "^\." | xargs -I {} cp --parents {} "$XGOROOT"/
 
 if [ "$USE_GORELEASER_ARTIFACTS" -eq 1 ]; then
 	cp -rp "$TARGETPLATFORM"/* "$XGOROOT"/
+	package_root=$(mktemp -d)
+	dpkg-deb -x "$TARGETPLATFORM"/*.deb "$package_root"
+	cp -a "$package_root/usr/lib/xgo/." "$XGOROOT"/
+	rm -r "$package_root"
 else
+	git ls-tree --full-tree --name-only -r HEAD | grep -vE "^\." | xargs -I {} cp --parents {} "$XGOROOT"/
 	./all.bash
 	mv bin "$XGOROOT"/
 fi
