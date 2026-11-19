@@ -28,9 +28,8 @@ func main() {
 		}
 		return
 	}()
-	_autoGo_1, _ := doc.(map[string]any)
 	for animal := range maps.NodeSet_Cast(func(_xgo_yield func(maps.Node) bool) {
-		maps.New(_autoGo_1["animals"]).XGo_Child().XGo_Enum()(func(self maps.NodeSet) bool {
+		maps.New(_autoGo_1(doc)["animals"]).XGo_Child().XGo_Enum()(func(self maps.NodeSet) bool {
 			if self.XGo_Attr__0("class") == "zebra" {
 				if _xgo_val, _xgo_err := self.XGo_first(); _xgo_err == nil {
 					if !_xgo_yield(_xgo_val) {
@@ -43,4 +42,8 @@ func main() {
 	}).XGo_Enum() {
 		animal.XGo_Attr__0("at")
 	}
+}
+func _autoGo_1(value interface{}) map[string]interface{} {
+	m, _ := value.(map[string]interface{})
+	return m
 }

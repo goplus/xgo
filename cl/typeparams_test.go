@@ -874,3 +874,33 @@ func main() {
 }
 `)
 }
+
+func TestEmbeddedAnyFromGenericGoFunc(t *testing.T) {
+	gopMixedClTest(t, "main", `package main
+func box[T any](value T) struct { any; Value T } {
+	return struct { any; Value T }{any: 1, Value: value}
+}
+`, `
+any := 2
+type Local int
+v := box(Local(3))
+values := [v]
+println any, values[0].Value
+`, `package main
+
+import "fmt"
+
+func main() {
+	any := 2
+	type Local int
+	v := box(Local(3))
+	values := []_autoGo_2[Local]{v}
+	fmt.Println(any, values[0].Value)
+}
+
+type _autoGo_2[_autoGo_1 interface{}] = struct {
+	any
+	Value _autoGo_1
+}
+`)
+}

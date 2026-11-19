@@ -460,6 +460,7 @@ func doInitMethods(ld *typeLoader) {
 
 type pkgCtx struct {
 	*nodeInterp
+	cb       *gogen.CodeBuilder
 	nproj    int                      // number of non-test projects
 	projs    map[string]*classProject // project extension => project
 	classes  map[*ast.File]*classFile
@@ -471,6 +472,8 @@ type pkgCtx struct {
 	inits    []func()
 	tylds    []*typeLoader
 	errs     errors.List
+
+	embeddedPointers []embeddedPointer
 
 	flatFrags []string // available when flat project
 
@@ -581,7 +584,7 @@ func (p *pkgCtx) complete() error {
 func (p *pkgCtx) loadType(name string) {
 	if sym, ok := p.syms[name]; ok {
 		if ld, ok := sym.(*typeLoader); ok {
-			ld.load()
+			p.cb.AtPackageScope(ld.load)
 		}
 	}
 }
@@ -596,11 +599,11 @@ func (p *pkgCtx) loadSymbol(name string) bool {
 	}
 	if f, ok := p.syms[name]; ok {
 		if ld, ok := f.(*typeLoader); ok {
-			doNewType(ld) // create this type, but don't init
+			p.cb.AtPackageScope(func() { doNewType(ld) }) // create this type, but don't init
 			return true
 		}
 		delete(p.syms, name)
-		f.load()
+		p.cb.AtPackageScope(f.load)
 		return true
 	}
 	return false
@@ -749,6 +752,7 @@ func NewPackage(pkgPath string, pkg *ast.Package, conf *Config) (p *gogen.Packag
 		}()
 	}
 	p = gogen.NewPackage(pkgPath, pkg.Name, confGox)
+	ctx.cb = p.CB()
 
 	if !noMarkAutogen {
 		p.CB().NewConstStart(nil, "_").Val(true).EndInit(1)
@@ -850,6 +854,11 @@ func NewPackage(pkgPath string, pkg *ast.Package, conf *Config) (p *gogen.Packag
 	}
 	for _, load := range ctx.inits {
 		load()
+	}
+	for _, field := range ctx.embeddedPointers {
+		if _, ok := field.elem.Underlying().(*types.Interface); ok {
+			ctx.handleErr(ctx.newCodeError(field.expr.Pos(), field.expr.End(), "embedded field type cannot be a pointer to an interface"))
+		}
 	}
 	err = ctx.complete()
 
@@ -1060,7 +1069,11 @@ func preloadXGoFile(p *gogen.Package, ctx *blockCtx, file string, f *ast.File, c
 						defs := p.ClassDefsStart(recv, func(idx int, name string, typ types.Type, embed bool) {
 							var id *ast.Ident
 							if embed {
+								ctx.deferEmbeddedPointer(spec.Type, typ)
 								id = parseTypeEmbedName(spec.Type)
+								if isPredeclaredAny(id, typ) {
+									name = id.Name
+								}
 							} else {
 								id = spec.Names[idx]
 							}

@@ -825,6 +825,23 @@ func TestErrRecursiveAlias(t *testing.T) {
 	}
 }
 
+func TestErrEmbeddedPointerToInterface(t *testing.T) {
+	const message = ": embedded field type cannot be a pointer to an interface"
+	for _, tt := range []struct {
+		name, file, position, source string
+	}{
+		{"Any", "bar.xgo", "1:19", "type Box struct { *any }\n"},
+		{"ClassfileAny", "Box.gox", "1:5", "var *any\n"},
+		{"ForwardDeclared", "bar.xgo", "1:19", "type Box struct { *I }\ntype I interface{}\n"},
+		{"AlreadyLoaded", "bar.xgo", "3:19", "type I interface{}\ntype Other struct { I }\ntype Box struct { *I }\nfunc get(b Box) *I { return b.I }\n"},
+		{"ClassfileNamed", "Box.gox", "1:5", "var *I\ntype I interface{}\n"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			codeErrorTestEx(t, "main", tt.file, tt.file+":"+tt.position+message, tt.source)
+		})
+	}
+}
+
 func TestErrTypeRedefine(t *testing.T) {
 	codeErrorTest(t,
 		"bar.xgo:9:6: Point redeclared in this block\n\tprevious declaration at bar.xgo:5:6",

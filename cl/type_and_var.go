@@ -496,14 +496,18 @@ func toStructType(ctx *blockCtx, v *ast.StructType) *types.Struct {
 
 		typ := toType(ctx, field.Type)
 		if len(field.Names) == 0 { // embedded
-			name := getTypeName(typ)
+			ctx.deferEmbeddedPointer(field.Type, typ)
+			ident := parseTypeEmbedName(field.Type)
+			name := ident.Name
+			if !isPredeclaredAny(ident, typ) {
+				name = getTypeName(typ)
+			}
 			if chk.chkRedecl(ctx, name, field.Type.Pos(), field.Type.End(), fieldKindUser) {
 				continue
 			}
 			if t, ok := typ.(*types.Named); ok { // #1196: embedded type should ensure loaded
 				ctx.loadNamed(ctx.pkg, t)
 			}
-			ident := parseTypeEmbedName(field.Type)
 			fld := types.NewField(ident.NamePos, pkg, name, typ, true)
 			fields = append(fields, fld)
 			tags = append(tags, toFieldTag(field.Tag))
@@ -548,6 +552,27 @@ func noTagKey(data string) bool {
 		return true
 	}
 	return strings.IndexByte(data[:pos], ' ') >= 0
+}
+
+// isPredeclaredAny reports whether an embedded field uses XGo's built-in any.
+func isPredeclaredAny(id *ast.Ident, typ types.Type) bool {
+	if ptr, ok := typ.(*types.Pointer); ok {
+		typ = ptr.Elem()
+	}
+	return id.Name == "any" && typ == gogen.TyEmptyInterface
+}
+
+// embeddedPointer records an embedded pointer for validation after type loading.
+type embeddedPointer struct {
+	expr ast.Expr
+	elem types.Type
+}
+
+// deferEmbeddedPointer records a pointer embedding whose element type may still be incomplete.
+func (p *pkgCtx) deferEmbeddedPointer(expr ast.Expr, typ types.Type) {
+	if ptr, ok := types.Unalias(typ).(*types.Pointer); ok {
+		p.embeddedPointers = append(p.embeddedPointers, embeddedPointer{expr: expr, elem: ptr.Elem()})
+	}
 }
 
 func getTypeName(typ types.Type) string {

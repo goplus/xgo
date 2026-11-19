@@ -3378,6 +3378,15 @@ func main() {
 `)
 }
 
+func TestClassfileEmbeddedAny(t *testing.T) {
+	gopClTestFile(t, "var any\n", `package main
+
+type Holder struct {
+	any
+}
+`, "Holder.gox")
+}
+
 func TestMainEntry(t *testing.T) {
 	conf := *cltest.Conf
 	conf.NoAutoGenMain = false

@@ -209,6 +209,18 @@ const (
 		testType_scanf_ret + testType_com_ret
 )
 
+func TestPackageDeclarationScope(t *testing.T) {
+	testRun(t, `
+type Number int
+func read() int {
+	type Number string
+	return int(value)
+}
+var value Number = 2
+println read()
+`, "2\n")
+}
+
 func TestUint128_run(t *testing.T) {
 	testRunType(t, "uint128", testType_fixint_code, testType_fixint_ret)
 }
@@ -222,3 +234,155 @@ func TestBigint_run(t *testing.T) {
 }
 
 // -----------------------------------------------------------------------------
+
+func TestEmbeddedAnyValue(t *testing.T) {
+	testRun(t, `
+type Box struct { any }
+
+func printValue(box Box) {
+	any := 2
+	values := [box.any]
+	keyed := {"value": box.any}
+	println any, box.any != nil, values[0].item, keyed["value"]["item"]
+	println box.any.item, box.any["item"]
+}
+
+func loadItem() any {
+	any := 1
+	_ = any
+	return item
+}
+var initData = Box{any: map[string]any{"item": "initial"}}
+var item = initData.any.item
+
+printValue(Box{any: map[string]any{"item": "value"}})
+println Box{any: 1} == Box{any: 1}
+
+println loadItem()
+
+type Node struct {
+	*Node
+	any
+}
+println Node{Node: &Node{any: 3}}.Node.any
+`, "2 true value value\nvalue value\ntrue\ninitial\n3\n")
+}
+
+func TestAnonymousEmbeddedAny(t *testing.T) {
+	testRun(t, `
+func withLocalType() {
+	type Payload struct { Value int }
+	value := struct { any; Payload }{any: 1, Payload: Payload{2}}
+	{
+		any := 3
+		list := [value]
+		table := {"value": value}
+		println any, list[0].any, table["value"].Value
+	}
+}
+
+func withLocalAny() {
+	value := struct { any }{any: 4}
+	type any int
+	var local any = 5
+	list := [value]
+	println list[0].any, local
+}
+
+withLocalType()
+withLocalAny()
+`, "3 1 2\n4 5\n")
+}
+
+func TestShadowedStructFieldTypes(t *testing.T) {
+	testRun(t, `
+func withNamedField() {
+	type Local int
+	value := struct { any; Value Local }{any: 1, Value: 2}
+	{
+		type Local string
+		any := 3
+		list := [value]
+		table := {"value": value}
+		println any, Local("shadow"), list[0].Value, table["value"].any
+	}
+}
+func withBasicField() {
+	value := struct { any; Values []int }{any: 4, Values: []int{5}}
+	{
+		int := 6
+		list := [value]
+		println int, list[0].Values[0], list[0].any
+	}
+}
+withNamedField()
+withBasicField()
+`, "3 shadow 2 1\n6 5 4\n")
+}
+
+func TestAnyMemberEvaluation(t *testing.T) {
+	t.Run("ShortCircuit", func(t *testing.T) {
+		testRun(t, `
+var calls string
+func disabled() bool { calls += "left"; return false }
+func lookup() any { calls += "right"; return map[string]any{"item": true} }
+if disabled() && lookup().item != nil {
+	println "unexpected"
+}
+println calls
+`, "left\n")
+	})
+
+	t.Run("PackageInit", func(t *testing.T) {
+		testRun(t, `
+var initData any = map[string]any{"item": 2}
+var item = initData.item
+var other any = 1
+var missing, ok = other["item"]
+println item, missing, ok
+`, "2 <nil> false\n")
+	})
+}
+
+func TestEmbeddedAnyInClosureSignature(t *testing.T) {
+	t.Run("Parameter", func(t *testing.T) {
+		testRun(t, `
+func run() {
+	type Local int
+	consume := func(value struct { any; Local }) {
+		any := 3
+		list := [value]
+		println any, list[0].Local, list[0].any
+	}
+	consume(struct { any; Local }{any: 1, Local: 2})
+}
+run()
+`, "3 2 1\n")
+	})
+
+	t.Run("Result", func(t *testing.T) {
+		testRun(t, `
+func run() {
+	type Local int
+	makeValue := func() (value struct { any; Local }) {
+		any := 3
+		list := [value]
+		println any, list[0].Local, list[0].any
+		return
+	}
+	makeValue()
+}
+run()
+`, "3 0 <nil>\n")
+	})
+}
+
+func TestEmbeddedAnyInTypedInitializer(t *testing.T) {
+	testRun(t, `
+func run() {
+	var any struct { any } = struct { any }{any: 1}
+	println any.any
+}
+run()
+`, "1\n")
+}
