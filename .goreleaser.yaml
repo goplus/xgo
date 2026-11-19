@@ -11,7 +11,8 @@ before:
 
 builds:
   - id: xgo
-    main: ./cmd/xgo
+    dir: cmd
+    main: ./xgo
     binary: bin/xgo
     flags:
       - -trimpath
@@ -26,7 +27,8 @@ builds:
       - darwin
     mod_timestamp: "{{ .CommitTimestamp }}"
   - id: gop
-    main: ./cmd/xgo
+    dir: cmd
+    main: ./xgo
     binary: bin/gop
     flags:
       - -trimpath

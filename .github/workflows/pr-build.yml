@@ -1,0 +1,300 @@
+name: PR Build
+
+on:
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  BuildRelease:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v7
+
+    - name: Install Snapcraft
+      uses: samuelmeuli/action-snapcraft@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v7
+      with:
+        go-version: 1.27.x
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v4
+
+    - name: Build release packages
+      uses: goreleaser/goreleaser-action@v7
+      with:
+        distribution: goreleaser
+        version: latest
+        args: release --snapshot --clean --skip=publish -p 4
+
+    - name: Check Snap packages
+      shell: bash
+      run: |
+        for package in .dist/*.linux-{386,amd64,arm64}.snap; do
+          snap info "$package"
+        done
+
+    - name: Upload release packages
+      uses: actions/upload-artifact@v7
+      with:
+        name: xgo-release-packages
+        path: |
+          .dist/*.tar.gz
+          .dist/*.zip
+          .dist/*.deb
+          .dist/*.rpm
+          .dist/*.snap
+          .dist/*.checksums.txt
+          .dist/winget/**/*.yaml
+        include-hidden-files: true
+        if-no-files-found: error
+        compression-level: 0
+
+    - name: Run Hello World in release images
+      shell: bash
+      run: |
+        for arch in 386 amd64 arm64; do
+          printf 'Testing release image for linux/%s\n' "$arch"
+          docker run --rm --pull=never --platform "linux/$arch" "xgo:latest-$arch" sh -euc '
+            for xgo_command in xgo gop; do
+              program_dir=$(mktemp -d)
+              cd "$program_dir"
+              printf "%s\n" "echo \"Hello, world!\"" > hello.xgo
+              hello_output=$("$xgo_command" run hello.xgo)
+              printf "%s printed %s\n" "$xgo_command" "$hello_output"
+              test "$hello_output" = "Hello, world!"
+            done
+          '
+        done
+
+  TestReleaseBuild:
+    name: TestReleaseBuild (${{ matrix.target }})
+    needs: BuildRelease
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - runner: ubuntu-latest
+          target: linux-amd64
+        - runner: ubuntu-24.04-arm
+          target: linux-arm64
+        - runner: macos-15-intel
+          target: darwin-amd64
+        - runner: macos-15
+          target: darwin-arm64
+        - runner: windows-latest
+          target: windows-amd64
+          winget_arch: x64
+        - runner: windows-11-arm
+          target: windows-arm64
+          winget_arch: arm64
+    runs-on: ${{ matrix.runner }}
+    env:
+      PACKAGE_TARGET: ${{ matrix.target }}
+    steps:
+    - name: Set up Go
+      uses: actions/setup-go@v7
+      with:
+        go-version: 1.27.x
+        cache: false
+
+    - name: Download release packages
+      id: download
+      uses: actions/download-artifact@v8
+      with:
+        name: xgo-release-packages
+        path: ${{ runner.temp }}/xgo-release-packages
+
+    - name: Update APT
+      if: runner.os == 'Linux'
+      run: sudo apt-get update
+
+    - name: Install Snap
+      id: snap_install
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        packages=("$RUNNER_TEMP/xgo-release-packages"/*."$PACKAGE_TARGET".snap)
+        test "${#packages[@]}" -eq 1
+        test -f "${packages[0]}"
+        sudo apt-get install -y snapd
+        sudo timeout 180s snap wait system seed.loaded
+        sudo snap install --dangerous --classic "${packages[0]}"
+
+    - name: Run Hello World from Snap
+      if: steps.snap_install.outcome == 'success'
+      shell: bash
+      run: |
+        program_dir=$(mktemp -d "$RUNNER_TEMP/xgo-snap-smoke.XXXXXX")
+        cd "$program_dir"
+        printf '%s\n' 'echo "Hello, world!"' > hello.xgo
+        hello_output=$(snap run xgo run hello.xgo)
+        printf 'Installed xgo Snap printed %s\n' "$hello_output"
+        test "$hello_output" = 'Hello, world!'
+
+    - name: Uninstall Snap
+      id: snap_uninstall
+      if: ${{ !cancelled() && steps.snap_install.outcome == 'success' }}
+      run: sudo snap remove xgo --purge
+
+    - name: Install DEB
+      id: deb_install
+      if: ${{ !cancelled() && steps.snap_uninstall.outcome == 'success' }}
+      shell: bash
+      run: |
+        packages=("$RUNNER_TEMP/xgo-release-packages"/*."$PACKAGE_TARGET".deb)
+        test "${#packages[@]}" -eq 1
+        test -f "${packages[0]}"
+        sudo apt-get install -y "${packages[0]}"
+
+    - name: Extract macOS tarball
+      id: macos_extract
+      if: runner.os == 'macOS'
+      shell: bash
+      run: |
+        packages=("$RUNNER_TEMP/xgo-release-packages"/*."$PACKAGE_TARGET".tar.gz)
+        test "${#packages[@]}" -eq 1
+        test -f "${packages[0]}"
+        install_dir="$RUNNER_TEMP/xgo-install"
+        mkdir "$install_dir"
+        tar -xf "${packages[0]}" -C "$install_dir"
+        printf '%s\n' "$install_dir/bin" >> "$GITHUB_PATH"
+
+    - name: Run Hello World on Linux and macOS
+      if: ${{ !cancelled() && (steps.deb_install.outcome == 'success' || steps.macos_extract.outcome == 'success') }}
+      shell: bash
+      env:
+        XGO_COMMAND_PREFIX: ${{ runner.os == 'Linux' && '/usr/bin/' || '' }}
+      run: |
+        for xgo_command in xgo gop; do
+          program_dir=$(mktemp -d "$RUNNER_TEMP/xgo-smoke-$xgo_command.XXXXXX")
+          cd "$program_dir"
+          printf '%s\n' 'echo "Hello, world!"' > hello.xgo
+          hello_output=$("$XGO_COMMAND_PREFIX$xgo_command" run hello.xgo)
+          printf '%s printed %s\n' "$xgo_command" "$hello_output"
+          test "$hello_output" = 'Hello, world!'
+        done
+
+    - name: Uninstall DEB
+      if: ${{ !cancelled() && steps.deb_install.outcome == 'success' }}
+      run: sudo apt-get purge -y xgo
+
+    - name: Extract Windows ZIP
+      id: windows_zip
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        $packageDir = Join-Path $env:RUNNER_TEMP 'xgo-release-packages'
+        $packages = @(Get-ChildItem -LiteralPath $packageDir -Filter "*.$env:PACKAGE_TARGET.zip" -File)
+        if ($packages.Count -ne 1) {
+          throw "Expected one $env:PACKAGE_TARGET ZIP, found $($packages.Count)."
+        }
+        $installDir = Join-Path $env:RUNNER_TEMP 'xgo-install'
+        Expand-Archive -LiteralPath $packages[0].FullName -DestinationPath $installDir
+
+    - name: Run Hello World from Windows ZIP
+      if: runner.os == 'Windows'
+      shell: pwsh
+      env:
+        XGO_COMMAND_PREFIX: ${{ runner.temp }}/xgo-install/bin/
+      run: &windows_smoke |
+        $PSNativeCommandUseErrorActionPreference = $true
+        foreach ($xgoCommand in 'xgo', 'gop') {
+          $programDir = Join-Path $env:RUNNER_TEMP "xgo-smoke-$xgoCommand-$([guid]::NewGuid())"
+          New-Item -ItemType Directory -Path $programDir | Out-Null
+          Set-Location -LiteralPath $programDir
+          Set-Content -Path hello.xgo -Value 'echo "Hello, world!"' -Encoding utf8NoBOM
+          $helloOutput = (& "${env:XGO_COMMAND_PREFIX}$xgoCommand.exe" run hello.xgo) -join "`n"
+          Write-Output "$xgoCommand printed $helloOutput"
+          if ($helloOutput -cne 'Hello, world!') {
+            throw "Unexpected Hello World output from $xgoCommand."
+          }
+        }
+
+    - name: Remove extracted Windows ZIP
+      if: ${{ !cancelled() && steps.windows_zip.outcome == 'success' }}
+      shell: pwsh
+      run: Remove-Item -LiteralPath (Join-Path $env:RUNNER_TEMP 'xgo-install') -Recurse -Force
+
+    - name: Set up WinGet
+      id: winget_setup
+      if: ${{ !cancelled() && runner.os == 'Windows' && steps.download.outcome == 'success' }}
+      shell: pwsh
+      run: |
+        $PSNativeCommandUseErrorActionPreference = $true
+        Install-PSResource -Name Microsoft.WinGet.Client -Repository PSGallery -TrustRepository
+        Repair-WinGetPackageManager -Latest
+        winget --version
+        winget settings --enable LocalManifestFiles
+
+    - name: Validate and install PR package with WinGet
+      id: winget_install
+      if: ${{ !cancelled() && steps.winget_setup.outcome == 'success' }}
+      shell: pwsh
+      env:
+        WINGET_ARCH: ${{ matrix.winget_arch }}
+      run: |
+        $PSNativeCommandUseErrorActionPreference = $true
+        $packageDir = Join-Path $env:RUNNER_TEMP 'xgo-release-packages'
+        $installers = @(Get-ChildItem -LiteralPath (Join-Path $packageDir 'winget') -Recurse -File -Filter 'goplus.xgo.installer.yaml')
+        if ($installers.Count -ne 1) {
+          throw "Expected one WinGet installer manifest, found $($installers.Count)."
+        }
+        winget validate --manifest $installers[0].DirectoryName
+
+        $manifestDir = Join-Path $env:RUNNER_TEMP 'xgo-winget-manifests'
+        Copy-Item -LiteralPath $installers[0].DirectoryName -Destination $manifestDir -Recurse
+        $installerManifest = Join-Path $manifestDir $installers[0].Name
+        $manifest = Get-Content -LiteralPath $installerManifest -Raw
+        # Serve unpublished ZIPs such as xgo*.windows-amd64.zip from this runner.
+        $installerUrls = [regex]'(?m)^([ \t]*InstallerUrl:[ \t]+)https://\S+/([^/\s]+\.zip)(?=\r?$)'
+        if ($installerUrls.Matches($manifest).Count -ne 3) {
+          throw 'Expected three WinGet installer URLs for the snapshot ZIPs.'
+        }
+        $localManifest = $installerUrls.Replace($manifest, '${1}http://127.0.0.1:8765/${2}')
+        Set-Content -LiteralPath $installerManifest -Value $localManifest -Encoding utf8NoBOM -NoNewline
+
+        $server = Start-Process -FilePath python -WorkingDirectory $packageDir -NoNewWindow -PassThru `
+          -ArgumentList '-m', 'http.server', '8765', '--bind', '127.0.0.1'
+        try {
+          for ($attempt = 1; $attempt -le 15; $attempt++) {
+            try {
+              Invoke-WebRequest -Uri 'http://127.0.0.1:8765/' -Method Head -TimeoutSec 2 | Out-Null
+              break
+            } catch {
+              if ($server.HasExited -or $attempt -eq 15) { throw }
+              Start-Sleep -Seconds 1
+            }
+          }
+          winget settings --enable LocalArchiveMalwareScanOverride
+          try {
+            winget install --manifest $manifestDir --architecture $env:WINGET_ARCH `
+              --accept-source-agreements --accept-package-agreements --disable-interactivity `
+              --ignore-local-archive-malware-scan
+          } finally {
+            winget settings --disable LocalArchiveMalwareScanOverride
+          }
+        } finally {
+          if (-not $server.HasExited) { Stop-Process -Id $server.Id }
+        }
+        Join-Path $env:LOCALAPPDATA 'Microsoft\WinGet\Links' >> $env:GITHUB_PATH
+
+    - name: Run Hello World from WinGet
+      if: ${{ !cancelled() && steps.winget_install.outcome == 'success' }}
+      shell: pwsh
+      run: *windows_smoke
+
+    - name: Uninstall WinGet package
+      if: ${{ !cancelled() && steps.winget_install.outcome == 'success' }}
+      shell: pwsh
+      run: winget uninstall --id goplus.xgo --exact --purge --disable-interactivity
