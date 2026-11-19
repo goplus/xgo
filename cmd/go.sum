@@ -1,11 +1,11 @@
+github.com/aofei/fork.goplus.gogen v0.0.0-20261119135033-7a8ca16bc004 h1:qp79WPJkvETRI7g4GrgwPOjkerBIpBGCZI2H+wm4YhU=
+github.com/aofei/fork.goplus.gogen v0.0.0-20261119135033-7a8ca16bc004/go.mod h1:Y7ulYW3wonQ3d9er00b0uGFEV/IUZa6okWJZh892ACQ=
 github.com/fsnotify/fsnotify v1.10.1 h1:b0/UzAf9yR5rhf3RPm9gf3ehBPpf0oZKIjtpKrx59Ho=
 github.com/fsnotify/fsnotify v1.10.1/go.mod h1:TLheqan6HD6GBK6PrDWyDPBaEV8LspOxvPSjC+bVfgo=
 github.com/goccy/go-yaml v1.19.2 h1:PmFC1S6h8ljIz6gMRBopkjP1TVT7xuwrButHID66PoM=
 github.com/goccy/go-yaml v1.19.2/go.mod h1:XBurs7gK8ATbW4ZPGKgcbrY1Br56PdM69F7LkFRi1kA=
 github.com/goplus/cobra v1.10.8 h1:eRp8MrpOC4FJcCFZJJCpQYUqz8TVHXxMN4U32QMiEGc=
 github.com/goplus/cobra v1.10.8/go.mod h1:p4LhfNJDKEpiGjGiNn0crUXL5dUPA5DX2ztYpEJR34E=
-github.com/goplus/gogen v1.26.7 h1:m6J0gs+9Xrpm/mlv8zMiq5b3cQavIzrvA4HoAcr5rco=
-github.com/goplus/gogen v1.26.7/go.mod h1:Y7ulYW3wonQ3d9er00b0uGFEV/IUZa6okWJZh892ACQ=
 github.com/goplus/mod v0.22.1 h1:3GQZqKlcQAiMpRUDAHvFryGYie+mT0JMjguEqOtIjkE=
 github.com/goplus/mod v0.22.1/go.mod h1:APrczG2FtFcQelU4vTq9xw+GrVs4sPPKnRfGidWBlXY=
 github.com/qiniu/x v1.19.3 h1:Cc7lAq3uhlf9CQ8uo9nRfFiq09xvwEgH/82b8b+kNvI=

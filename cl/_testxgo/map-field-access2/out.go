@@ -5,12 +5,12 @@ import "fmt"
 var v interface{}
 
 func main() {
-	_autoGo_1, _ := v.(map[string]any)
-	_autoGo_2, _ := _autoGo_1["b"].(map[string]any)
-	c, ok := _autoGo_2["c"].(int)
+	c, ok := _autoGo_1(_autoGo_1(v)["b"])["c"].(int)
 	fmt.Println(c, ok)
-	_autoGo_3, _ := v.(map[string]any)
-	_autoGo_4, _ := _autoGo_3["b"].(map[string]any)
-	d, ok := _autoGo_4["c"]
+	d, ok := _autoGo_1(_autoGo_1(v)["b"])["c"]
 	fmt.Println(d, ok)
+}
+func _autoGo_1(value interface{}) map[string]interface{} {
+	m, _ := value.(map[string]interface{})
+	return m
 }

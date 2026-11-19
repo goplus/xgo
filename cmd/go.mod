@@ -19,3 +19,5 @@ require (
 )
 
 replace github.com/goplus/xgo => ../
+
+replace github.com/goplus/gogen => github.com/aofei/fork.goplus.gogen v0.0.0-20261119135033-7a8ca16bc004

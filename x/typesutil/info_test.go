@@ -2445,6 +2445,89 @@ func add = (
 014: 15: 2 | addString           | func (*main.Rect).addString(a string, b string) string`)
 }
 
+func TestEmbeddedAnyInfo(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		file string
+		src  string
+	}{
+		{
+			name: "Struct",
+			file: "Holder.xgo",
+			src: `type Holder struct { any }
+var value Holder
+_ = value.any
+`,
+		},
+		{
+			name: "Classfile",
+			file: "Holder.gox",
+			src: `var (
+	any
+)
+_ = this.any
+`,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			fset := token.NewFileSet()
+			pkg, info, _, err := parseMixedSource(xgomod.Default, fset, tt.file, tt.src, "", "", parser.Config{}, false)
+			if err != nil {
+				t.Fatal(err)
+			}
+			holder := pkg.Scope().Lookup("Holder")
+			if holder == nil {
+				t.Fatal("missing Holder type")
+			}
+			struc, ok := holder.Type().Underlying().(*types.Struct)
+			if !ok || struc.NumFields() != 1 {
+				t.Fatalf("Holder underlying = %v, want one embedded field", holder.Type().Underlying())
+			}
+			field := struc.Field(0)
+			if field.Name() != "any" || !field.Embedded() || !types.Identical(field.Type(), types.Universe.Lookup("any").Type()) {
+				t.Fatalf("field = %v, want embedded any", field)
+			}
+			var defined, used bool
+			for _, obj := range info.Defs {
+				if obj == field {
+					defined = true
+					break
+				}
+			}
+			for _, obj := range info.Uses {
+				if obj == field {
+					used = true
+					break
+				}
+			}
+			if !defined || !used {
+				t.Fatalf("embedded field definition = %v, use = %v", defined, used)
+			}
+		})
+	}
+}
+
+func TestEmbeddedAnyAfterInitializerError(t *testing.T) {
+	const src = `package main
+func use() {
+	var any struct { any } = missing
+	_ = any.any
+}
+`
+	_, info, err := parseSource(token.NewFileSet(), "main.xgo", src, 0)
+	if err == nil || !strings.Contains(err.Error(), "undefined: missing") {
+		t.Fatalf("checker error = %v, want undefined initializer", err)
+	}
+	for ident, obj := range info.Uses {
+		if ident.Name == "any" {
+			if field, ok := obj.(*types.Var); ok && field.Embedded() {
+				return
+			}
+		}
+	}
+	t.Fatal("missing embedded field selection after initializer error")
+}
+
 func TestTypesAlias(t *testing.T) {
 	testInfo(t, `package main
 import "fmt"

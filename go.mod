@@ -21,3 +21,5 @@ retract (
 	v1.7.6
 	v1.1.12
 )
+
+replace github.com/goplus/gogen => github.com/aofei/fork.goplus.gogen v0.0.0-20261119135033-7a8ca16bc004
