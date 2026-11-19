@@ -513,6 +513,18 @@ func test() {
 `)
 }
 
+func TestParenthesizedLHSInfo(t *testing.T) {
+	testInfo(t, `package main
+
+func assign(p *int, values []int, entries map[int]int) {
+	((*p)) = 1
+	(values[0]) += 2
+	((entries[0])) = 3
+	(p) = p
+}
+`)
+}
+
 func TestTypeAssert(t *testing.T) {
 	testInfo(t, `package main
 

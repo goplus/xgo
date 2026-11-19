@@ -261,7 +261,7 @@ func (rec *goxRecorder) recordIdent(ident *ast.Ident, obj types.Object) {
 	rec.Type(ident, typesutil.NewTypeAndValueForObject(obj))
 }
 
-func (rec *goxRecorder) recordExpr(ctx *blockCtx, expr ast.Expr, _ bool) {
+func (rec *goxRecorder) recordExpr(ctx *blockCtx, expr ast.Expr, lhs bool) {
 	switch v := expr.(type) {
 	case *ast.Ident:
 	case *ast.BasicLit:
@@ -300,7 +300,11 @@ func (rec *goxRecorder) recordExpr(ctx *blockCtx, expr ast.Expr, _ bool) {
 	case *ast.TypeAssertExpr:
 		rec.recordTypeValue(ctx, v, typesutil.CommaOK)
 	case *ast.ParenExpr:
-		rec.recordTypeValue(ctx, v, typesutil.Value)
+		if !lhs {
+			rec.recordTypeValue(ctx, v, typesutil.Value)
+		} else if tv, ok := rec.types[v.X]; ok {
+			rec.Type(v, tv)
+		}
 	case *ast.ErrWrapExpr:
 	case *ast.FuncType:
 		rec.recordTypeValue(ctx, v, typesutil.TypExpr)

@@ -334,6 +334,8 @@ func compileExprLHS(ctx *blockCtx, expr ast.Expr) {
 		compileSelectorExprLHS(ctx, v)
 	case *ast.StarExpr:
 		compileStarExprLHS(ctx, v)
+	case *ast.ParenExpr:
+		compileExprLHS(ctx, v.X)
 	default:
 		panic(ctx.newCodeErrorf(v.Pos(), v.End(), "compileExprLHS failed: unknown - %T", expr))
 	}

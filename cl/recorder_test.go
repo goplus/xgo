@@ -1,5 +1,3 @@
-//go:build !genjs
-
 /*
  * Copyright (c) 2021 The XGo Authors (xgo.dev). All rights reserved.
  *
@@ -23,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/goplus/xgo/ast"
+	"github.com/goplus/xgo/cl/internal/typesutil"
 )
 
 type recordedType struct {
@@ -110,5 +109,31 @@ func TestGoxRecorderRecordCompositeLit(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestGoxRecorderParenthesizedLHS(t *testing.T) {
+	sink := &typeRecordingRecorder{}
+	rec := newRecorder(sink)
+
+	index := &ast.IndexExpr{}
+	tv := typesutil.NewTypeAndValueForValue(types.Typ[types.Int], nil, typesutil.MapIndex)
+	rec.Type(index, tv)
+	paren := &ast.ParenExpr{X: index}
+	rec.recordExpr(nil, paren, true)
+	if got := rec.types[paren]; got != tv {
+		t.Fatalf("parenthesized map index = %v, want %v", got, tv)
+	}
+	if len(sink.records) != 2 {
+		t.Fatalf("forwarded %d types, want 2", len(sink.records))
+	}
+	if got := sink.records[1]; got.expr != paren || got.tv != tv {
+		t.Fatalf("forwarded parenthesized map index = %v, want %v", got, recordedType{paren, tv})
+	}
+
+	blank := &ast.ParenExpr{X: &ast.Ident{Name: "_"}}
+	rec.recordExpr(nil, blank, true)
+	if _, ok := rec.types[blank]; ok || len(sink.records) != 2 {
+		t.Fatal("recorded a type for a parenthesized blank identifier")
 	}
 }
