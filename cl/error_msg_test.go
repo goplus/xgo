@@ -445,6 +445,67 @@ func foo() byte {
 `)
 }
 
+func TestErrReturnOperands(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		src  string
+		want string
+	}{
+		{
+			name: "Call",
+			src: `func single(x int) int { return x }
+func f(values []int) int {
+	return single(values...)
+}
+`,
+			want: "bar.xgo:3:9: cannot use ... in call to non-variadic single",
+		},
+		{
+			name: "PartialOperands",
+			src: `func f() (int, int) {
+	return 1, "prefix" + missing
+}
+`,
+			want: "bar.xgo:2:23: undefined: missing",
+		},
+		{
+			name: "Closure",
+			src: `func single(x int) int { return x }
+func f(values []int) (int, func() int) {
+	return 1, func() int {
+		return single(values...)
+	}
+}
+`,
+			want: "bar.xgo:4:10: cannot use ... in call to non-variadic single",
+		},
+		{
+			name: "InlineErrorWrap",
+			src: `func value() int { return 1 }
+func f() (int, error) {
+	return value()?, nil
+}
+`,
+			want: "bar.xgo:3:9: cannot use value() (type int) as type error in assignment",
+		},
+		{
+			name: "MissingReturn",
+			src: `func single(x int) int { return x }
+func f(values []int, ok bool) int {
+	if ok {
+		return single(values...)
+	}
+}
+`,
+			want: "bar.xgo:4:10: cannot use ... in call to non-variadic single\nbar.xgo:6:1: missing return",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			codeErrorTest(t, tt.want, tt.src)
+		})
+	}
+}
+
 func TestErrForRange(t *testing.T) {
 	codeErrorTest(t,
 		`bar.xgo:4:8: cannot assign type string to a (type int) in range`, `
