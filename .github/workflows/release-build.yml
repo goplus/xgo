@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release, for example v1.8.0"
+        required: true
+        type: string
 
 jobs:
   build:
@@ -13,6 +19,23 @@ jobs:
       with:
         fetch-depth: 0
 
+    - name: Checkout tag
+      env:
+        RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+      run: |
+        tag_name="${RELEASE_TAG}"
+        echo Current tag: $tag_name
+        if [[ ! "$tag_name" =~ ^v ]]; then
+          echo "::error::release tag must start with 'v': $tag_name"
+          exit 1
+        fi
+        if ! git rev-parse -q --verify "refs/tags/${tag_name}^{commit}" >/dev/null; then
+          echo "::error::'${tag_name}' is not an existing tag"
+          exit 1
+        fi
+        git checkout "refs/tags/${tag_name}"
+        echo "TAG_NAME=${tag_name}" >> $GITHUB_ENV
+
     - name: Check goreleaser files
       run: |
         pip install --no-input pyyaml
@@ -20,14 +43,6 @@ jobs:
 
     - name: Install Snapcraft
       uses: samuelmeuli/action-snapcraft@v3
-
-    - name: Checkout tag
-      run: |
-        git fetch --depth=1 origin +refs/tags/*:refs/tags/*
-        tag_name="${GITHUB_REF##*/}"
-        echo Current tag: $tag_name
-        git checkout $tag_name
-        echo "TAG_NAME=${tag_name}" >> $GITHUB_ENV
 
     - name: Check pre-release
       run: |
@@ -65,6 +80,7 @@ jobs:
         args: release --clean -p 4
       env:
         GITHUB_TOKEN: ${{ github.token }}
+        GORELEASER_CURRENT_TAG: ${{ inputs.tag || github.ref_name }}
         DOCKER_IMAGE_REPO: ghcr.io/${{ github.repository }}
         WINGET_PKGS_PRIVATE_KEY: ${{ secrets.WINGET_PKGS_PRIVATE_KEY }}
 
