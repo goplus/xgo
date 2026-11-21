@@ -11,7 +11,8 @@ before:
 
 builds:
   - id: xgo
-    main: ./cmd/xgo
+    dir: cmd
+    main: ./xgo
     binary: bin/xgo
     flags:
       - -trimpath
@@ -26,7 +27,8 @@ builds:
       - darwin
     mod_timestamp: "{{ .CommitTimestamp }}"
   - id: gop
-    main: ./cmd/xgo
+    dir: cmd
+    main: ./xgo
     binary: bin/gop
     flags:
       - -trimpath
@@ -50,7 +52,7 @@ archives:
       - goos: windows
         format: zip
     files:
-      - "CLAUDE.md"
+      - "AGENTS.md"
       - "CODE_OF_CONDUCT.md"
       - "Dockerfile"
       - "LICENSE"
@@ -182,8 +184,8 @@ nfpms:
     bindir: /usr/lib/{{ .ProjectName }}
     contents:
       # source folder
-      - src: "CLAUDE.md"
-        dst: "/usr/lib/{{ .ProjectName }}/CLAUDE.md"
+      - src: "AGENTS.md"
+        dst: "/usr/lib/{{ .ProjectName }}/AGENTS.md"
       - src: "CODE_OF_CONDUCT.md"
         dst: "/usr/lib/{{ .ProjectName }}/CODE_OF_CONDUCT.md"
       - src: "Dockerfile"
@@ -267,8 +269,8 @@ snapcrafts:
       {{- if .Arm }}v{{ .Arm }}{{ end }}
     extra_files:
       # source folder
-      - source: "CLAUDE.md"
-        destination: "CLAUDE.md"
+      - source: "AGENTS.md"
+        destination: "AGENTS.md"
       - source: "CODE_OF_CONDUCT.md"
         destination: "CODE_OF_CONDUCT.md"
       - source: "Dockerfile"

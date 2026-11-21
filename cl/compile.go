@@ -1076,21 +1076,8 @@ func preloadXGoFile(p *gogen.Package, ctx *blockCtx, file string, f *ast.File, c
 							tags = append(tags, toFieldTag(spec.Tag))
 						})
 						for _, v := range classDecl.Specs {
-							var pos token.Pos
-							var names []string
-							var fldType types.Type
 							spec = v.(*ast.ValueSpec)
-							if spec.Type != nil {
-								fldType = toType(ctx, spec.Type)
-							}
-							if specNames := spec.Names; len(specNames) > 0 {
-								names = makeNames(specNames)
-								pos = specNames[0].Pos()
-							} else {
-								pos = spec.Type.Pos()
-							}
-							initExpr := makeInitExpr(ctx, spec, fldType, names)
-							defs.NewAndInit(initExpr, pos, fldType, names...)
+							loadClassField(ctx, defs, spec)
 						}
 						defs.End()
 						ctx.prelimStruct = nil
@@ -1619,18 +1606,19 @@ var (
 	sigDecoFuncs = [...]*types.Signature{sigMainFunc, sigDecoFuncError}
 )
 
+// getDecoratorForm returns the explicit argument count and callback kind of a decorator.
 func getDecoratorForm(decoTyp types.Type) (int, int) {
 	if decoSig, ok := decoTyp.(*types.Signature); ok {
 		params := decoSig.Params()
 		if n := params.Len(); n > 0 {
-			if fnSig, ok := params.At(n - 1).Type().(*types.Signature); ok {
+			if fnSig, ok := types.Unalias(params.At(n - 1).Type()).(*types.Signature); ok {
 				if fnSig.Params().Len() == 0 {
 					results := fnSig.Results()
 					switch results.Len() {
 					case 0:
 						return n - 1, decoFunc // func()
 					case 1:
-						if results.At(0).Type() == gogen.TyError {
+						if types.Unalias(results.At(0).Type()) == gogen.TyError {
 							return n - 1, decoFuncError // func() error
 						}
 					}
@@ -1656,6 +1644,7 @@ func compileDecoratedFun(ctx *blockCtx, deco *ast.FuncDecorator) int {
 	panic(ctx.newCodeErrorf(decoName.Pos(), decoName.End(), "invalid decorator `%v`", decoName))
 }
 
+// genDecoratedFunc generates a wrapper that invokes the function through its decorators.
 func genDecoratedFunc(ctx *blockCtx, name string, fnDeco *gogen.Func, d *ast.FuncDecl) {
 	pkg := ctx.pkg
 	pkgTypes := pkg.Types
@@ -1683,8 +1672,12 @@ func genDecoratedFunc(ctx *blockCtx, name string, fnDeco *gogen.Func, d *ast.Fun
 	decorators := d.Decorators
 	last := len(decorators) - 1
 	decoKinds := make([]int, len(decorators))
+	nret := rets.Len()
 	for i, deco := range decorators {
 		decoKind := compileDecoratedFun(ctx, deco)
+		if decoKind == decoFuncError && (nret == 0 || !gogen.AssignableTo(pkg, types.Unalias(rets.At(nret-1).Type()), gogen.TyError)) {
+			panic(ctx.newCodeErrorf(deco.Fun.Pos(), deco.Fun.End(), "decorator `%v` requires a function with an error result", ctx.LoadExpr(deco.Fun)))
+		}
 		for _, arg := range deco.Args {
 			compileExpr(ctx, 1, arg)
 		}
@@ -1692,7 +1685,6 @@ func genDecoratedFunc(ctx *blockCtx, name string, fnDeco *gogen.Func, d *ast.Fun
 		decoKinds[i] = decoKind
 	}
 	nparam := params.Len()
-	nret := rets.Len()
 	for i := last; i >= 0; i-- {
 		decoKind := decoKinds[i]
 		if i == last {
@@ -2004,6 +1996,29 @@ func loadConsts(ctx *blockCtx, cdecl *gogen.ConstDefs, v *ast.ValueSpec, iotav i
 	}
 	cdecl.New(fn, iotav, v.Pos(), typ, names...)
 	defNames(ctx, v.Names, nil)
+}
+
+// loadClassField preserves explicitly typed fields and continues type loading
+// when a field declaration or initializer cannot be compiled.
+func loadClassField(ctx *blockCtx, defs *gogen.ClassDefs, spec *ast.ValueSpec) {
+	var typ types.Type
+	names := makeNames(spec.Names)
+	if enableRecover {
+		defer func() {
+			if e := recover(); e != nil {
+				ctx.handleRecover(e, spec)
+				ctx.cb.ResetStmt()
+				if typ != nil {
+					defs.NewAndInit(nil, spec.Pos(), typ, names...)
+				}
+			}
+		}()
+	}
+	if spec.Type != nil {
+		typ = toType(ctx, spec.Type)
+	}
+	initExpr := makeInitExpr(ctx, spec, typ, names)
+	defs.NewAndInit(initExpr, spec.Pos(), typ, names...)
 }
 
 func loadVars(ctx *blockCtx, v *ast.ValueSpec, doc *ast.CommentGroup, global bool) {

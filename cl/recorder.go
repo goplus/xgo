@@ -167,7 +167,11 @@ func (rec *goxRecorder) checkExprByValue(v ast.Expr) bool {
 	return false
 }
 
+// Type records the type of expr and forwards it to the wrapped Recorder. A nil expression is ignored.
 func (rec *goxRecorder) Type(expr ast.Expr, tv types.TypeAndValue) {
+	if expr == nil {
+		return
+	}
 	rec.types[expr] = tv
 	rec.Recorder.Type(expr, tv)
 }
@@ -257,7 +261,7 @@ func (rec *goxRecorder) recordIdent(ident *ast.Ident, obj types.Object) {
 	rec.Type(ident, typesutil.NewTypeAndValueForObject(obj))
 }
 
-func (rec *goxRecorder) recordExpr(ctx *blockCtx, expr ast.Expr, _ bool) {
+func (rec *goxRecorder) recordExpr(ctx *blockCtx, expr ast.Expr, lhs bool) {
 	switch v := expr.(type) {
 	case *ast.Ident:
 	case *ast.BasicLit:
@@ -296,7 +300,11 @@ func (rec *goxRecorder) recordExpr(ctx *blockCtx, expr ast.Expr, _ bool) {
 	case *ast.TypeAssertExpr:
 		rec.recordTypeValue(ctx, v, typesutil.CommaOK)
 	case *ast.ParenExpr:
-		rec.recordTypeValue(ctx, v, typesutil.Value)
+		if !lhs {
+			rec.recordTypeValue(ctx, v, typesutil.Value)
+		} else if tv, ok := rec.types[v.X]; ok {
+			rec.Type(v, tv)
+		}
 	case *ast.ErrWrapExpr:
 	case *ast.FuncType:
 		rec.recordTypeValue(ctx, v, typesutil.TypExpr)
