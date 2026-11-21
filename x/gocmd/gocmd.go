@@ -21,11 +21,10 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/goplus/mod/env"
 	"github.com/goplus/xgo/x/xgoenv"
 )
 
-type XGoEnv = env.XGo
+type XGoEnv = xgoenv.XGo
 
 type Config struct {
 	XGo   *XGoEnv

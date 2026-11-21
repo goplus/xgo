@@ -19,12 +19,14 @@ package watcher
 import (
 	"io/fs"
 	"log"
+	"os"
 	"path"
 	"path/filepath"
 	"strings"
 	"sync"
 
-	"github.com/goplus/mod/xgomod"
+	"github.com/goplus/mod/goxmod"
+	"golang.org/x/mod/modfile"
 )
 
 // -----------------------------------------------------------------------------------------
@@ -70,16 +72,8 @@ func (p *Changes) doLookupMod(name string) *module {
 	if !ok {
 		mod = new(module)
 		mod.exts = make([]string, 0, 8)
-		m, e := xgomod.Load(p.root + name)
-		if e == nil {
-			m.ImportClasses(func(c *xgomod.Project) {
-				mod.exts = append(mod.exts, c.Ext)
-				for _, w := range c.Works {
-					if w.Ext != c.Ext {
-						mod.exts = append(mod.exts, w.Ext)
-					}
-				}
-			})
+		for _, ext := range classExts(p.root + name) {
+			mod.exts = append(mod.exts, ext)
 		}
 		mod.exts = append(mod.exts, ".xgo", ".gop", ".go", ".gox")
 		p.mods[name] = mod
@@ -88,6 +82,35 @@ func (p *Changes) doLookupMod(name string) *module {
 		}
 	}
 	return mod
+}
+
+// classExts returns the classfile extensions declared by the module rooted at
+// dir (through its gox.mod, legacy gop.mod, or //xgo:class requires). It is a
+// best-effort read: a directory with no module, or an unreadable one, yields no
+// extra extensions.
+func classExts(dir string) []string {
+	gomodData, err := os.ReadFile(filepath.Join(dir, "go.mod"))
+	if err != nil {
+		return nil
+	}
+	gomod, err := modfile.Parse("go.mod", gomodData, nil)
+	if err != nil {
+		return nil
+	}
+	gox, err := goxmod.LoadModfile(gomod, filepath.Join(dir, "gox.mod"))
+	if err != nil {
+		return nil
+	}
+	var exts []string
+	for _, c := range gox.Projects {
+		exts = append(exts, c.Ext)
+		for _, w := range c.Works {
+			if w.Ext != c.Ext {
+				exts = append(exts, w.Ext)
+			}
+		}
+	}
+	return exts
 }
 
 func (p *Changes) lookupMod(name string) *module {

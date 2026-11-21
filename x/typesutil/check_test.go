@@ -11,7 +11,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/goplus/mod/xgomod"
 	"github.com/goplus/xgo/ast"
 	"github.com/goplus/xgo/parser"
 	"github.com/goplus/xgo/token"
@@ -82,7 +81,6 @@ func checkInfo(fset *token.FileSet, files []*ast.File, gofiles []*goast.File, ha
 	chkOpts := &typesutil.Config{
 		Types: types.NewPackage("main", "main"),
 		Fset:  fset,
-		Mod:   xgomod.Default,
 	}
 	info := &typesutil.Info{
 		Types:      make(map[ast.Expr]types.TypeAndValue),

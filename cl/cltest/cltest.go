@@ -22,15 +22,14 @@ import (
 	"log"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/goplus/gogen"
 	"github.com/goplus/gogen/target"
 	"github.com/goplus/mod"
-	"github.com/goplus/mod/env"
 	"github.com/goplus/mod/modfile"
-	"github.com/goplus/mod/xgomod"
 	"github.com/goplus/xgo/cl"
 	"github.com/goplus/xgo/parser"
 	"github.com/goplus/xgo/parser/fsx"
@@ -38,22 +37,25 @@ import (
 	"github.com/goplus/xgo/scanner"
 	"github.com/goplus/xgo/token"
 	"github.com/goplus/xgo/tool"
+	"github.com/goplus/xgo/x/xgoenv"
 	"github.com/qiniu/x/test"
 )
 
 var (
 	XGoRoot string
-	XGo     *env.XGo
+	XGo     *xgoenv.XGo
 	Conf    *cl.Config
 )
 
 func init() {
-	XGo = &env.XGo{Version: "1.0"}
+	XGo = &xgoenv.XGo{Version: "1.0"}
 	gogen.SetDebug(gogen.DbgFlagAll)
 	cl.SetDebug(cl.DbgFlagAll | cl.FlagNoMarkAutogen)
 	fset := token.NewFileSet()
 	imp := tool.NewImporter(nil, XGo, fset)
-	XGoRoot, _, _ = mod.FindGoMod("")
+	if gomod, err := (mod.Finder{}).FindGoMod(""); err == nil {
+		XGoRoot = filepath.Dir(gomod)
+	}
 	Conf = &cl.Config{
 		Fset:          fset,
 		Importer:      imp,
@@ -265,9 +267,9 @@ func testFrom(t *testing.T, pkgDir, sel string, genGo, genJS bool) {
 	conf := Conf
 	goMod := pkgDir + "/go.mod"
 	if _, err := os.Stat(goMod); err == nil {
-		if mod, err := xgomod.Load(pkgDir); err == nil {
+		if w, err := mod.LoadFromDir(pkgDir); err == nil {
 			confCopy := *Conf
-			confCopy.Importer = tool.NewImporter(mod, XGo, conf.Fset)
+			confCopy.Importer = tool.NewImporter(w, XGo, conf.Fset)
 			conf = &confCopy
 		}
 	} else {

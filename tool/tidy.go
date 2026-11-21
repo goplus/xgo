@@ -19,19 +19,26 @@ package tool
 import (
 	"os"
 	"os/exec"
+	"path/filepath"
 
-	"github.com/goplus/mod/env"
-	"github.com/goplus/mod/xgomod"
+	"github.com/goplus/mod"
+	"github.com/goplus/mod/gomod"
+	"github.com/goplus/xgo/x/xgoenv"
 	"github.com/qiniu/x/errors"
+	"golang.org/x/mod/modfile"
 )
 
-func Tidy(dir string, xgo *env.XGo) (err error) {
-	modObj, err := xgomod.Load(dir)
+func Tidy(dir string, xgo *xgoenv.XGo) (err error) {
+	w, err := mod.LoadFromDir(dir)
 	if err != nil {
-		return errors.NewWith(err, `xgomod.Load(dir, mod.GopModOnly)`, -2, "xgomod.Load", dir)
+		return
+	}
+	if w.IsDefault() {
+		return errors.NewWith(ErrNotFound, `no go.mod found`, -2, "tool.Tidy", dir)
 	}
 
-	modRoot := modObj.Root()
+	modRoot := w.Dir
+	gomod := filepath.Join(modRoot, "go.mod")
 
 	// Remember the classfile dependencies (declared via `//gop:class` or
 	// `//xgo:class` require directives) before running `go mod tidy`. The native
@@ -40,40 +47,15 @@ func Tidy(dir string, xgo *env.XGo) (err error) {
 	// file) looks unused to it and gets dropped from go.mod. We re-add them
 	// afterwards so that `xgo mod tidy` behaves like running `xgo get` for
 	// classfile deps.
-	classMods := classfileRequires(modObj)
+	classMods, err := classfileRequires(gomod)
+	if err != nil {
+		return
+	}
 
-	/*
-		depMods, err := GenDepMods(modObj, modRoot, true)
-		if err != nil {
-			return errors.NewWith(err, `GenDepMods(modObj, modRoot, true)`, -2, "tool.GenDepMods", modObj, modRoot, true)
-		}
-
-		old := modObj.DepMods()
-		for modPath := range old {
-			if _, ok := depMods[modPath]; !ok { // removed
-				modObj.DropRequire(modPath)
-			}
-		}
-		for modPath := range depMods {
-			if _, ok := old[modPath]; !ok { // added
-				if newMod, e := modfetch.Get(modPath); e != nil {
-					return errors.NewWith(e, `modfetch.Get(modPath)`, -1, "modfetch.Get", modPath)
-				} else {
-					modObj.AddRequire(newMod.Path, newMod.Version)
-				}
-			}
-		}
-
-		modObj.Cleanup()
-		err = modObj.Save()
-		if err != nil {
-			return errors.NewWith(err, `modObj.Save()`, -2, "(*xgomod.Module).Save")
-		}
-	*/
-	conf := &Config{XGo: xgo}
+	conf := &Config{XGo: xgo, Workspace: w}
 	err = genGoDir(modRoot, conf, true, true, 0)
 	if err != nil {
-		return errors.NewWith(err, `genGoDir(modRoot, conf, true, true)`, -2, "tool.genGoDir", modRoot, conf, true, true)
+		return
 	}
 
 	cmd := exec.Command("go", "mod", "tidy")
@@ -82,7 +64,7 @@ func Tidy(dir string, xgo *env.XGo) (err error) {
 	cmd.Dir = modRoot
 	err = cmd.Run()
 	if err != nil {
-		return errors.NewWith(err, `cmd.Run()`, -2, "(*exec.Cmd).Run")
+		return
 	}
 
 	return keepClassfileRequires(modRoot, classMods)
@@ -95,24 +77,24 @@ type classfileRequire struct {
 	Version string
 }
 
-// classfileRequires returns the classfile module requires of a module, keeping
-// the version recorded in go.mod for each one.
-func classfileRequires(modObj *xgomod.Module) []classfileRequire {
-	classMods := modObj.Opt.ClassMods
-	if len(classMods) == 0 {
-		return nil
+// classfileRequires returns the classfile module requires declared in the
+// go.mod at gomod, keeping the version recorded for each one.
+func classfileRequires(gomod string) ([]classfileRequire, error) {
+	data, err := os.ReadFile(gomod)
+	if err != nil {
+		return nil, err
 	}
-	isClass := make(map[string]bool, len(classMods))
-	for _, modPath := range classMods {
-		isClass[modPath] = true
+	f, err := modfile.Parse(gomod, data, nil)
+	if err != nil {
+		return nil, err
 	}
-	reqs := make([]classfileRequire, 0, len(classMods))
-	for _, r := range modObj.File.Require {
-		if isClass[r.Mod.Path] {
+	var reqs []classfileRequire
+	for _, r := range f.Require {
+		if isClassRequire(r) {
 			reqs = append(reqs, classfileRequire{Path: r.Mod.Path, Version: r.Mod.Version})
 		}
 	}
-	return reqs
+	return reqs, nil
 }
 
 // keepClassfileRequires re-adds classfile module requires that `go mod tidy`
@@ -125,12 +107,12 @@ func keepClassfileRequires(modRoot string, classMods []classfileRequire) (err er
 	if len(classMods) == 0 {
 		return nil
 	}
-	modObj, err := xgomod.Load(modRoot)
+	modObj, err := gomod.Load(filepath.Join(modRoot, "go.mod"))
 	if err != nil {
-		return errors.NewWith(err, `xgomod.Load(modRoot)`, -2, "xgomod.Load", modRoot)
+		return
 	}
-	have := make(map[string]bool, len(modObj.File.Require))
-	for _, r := range modObj.File.Require {
+	have := make(map[string]bool, len(modObj.Require))
+	for _, r := range modObj.Require {
 		have[r.Mod.Path] = true
 	}
 	changed := false
@@ -138,16 +120,13 @@ func keepClassfileRequires(modRoot string, classMods []classfileRequire) (err er
 		if have[c.Path] {
 			continue
 		}
-		if e := modObj.AddRequire(c.Path, c.Version, true); e != nil {
-			return errors.NewWith(e, `modObj.AddRequire(path, vers, true)`, -2, "(*xgomod.Module).AddRequire", c.Path, c.Version, true)
+		if err = modObj.AddRequire(c.Path, c.Version, true); err != nil {
+			return
 		}
 		changed = true
 	}
 	if !changed {
 		return nil
 	}
-	if err = modObj.Save(); err != nil {
-		return errors.NewWith(err, `modObj.Save()`, -2, "(*xgomod.Module).Save")
-	}
-	return nil
+	return modObj.Save()
 }

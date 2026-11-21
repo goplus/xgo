@@ -23,7 +23,6 @@ import (
 
 	"github.com/goplus/mod/modcache"
 	"github.com/goplus/mod/modfetch"
-	"github.com/goplus/mod/modload"
 	"github.com/goplus/xgo/cmd/internal/base"
 	"github.com/goplus/xgo/tool"
 )
@@ -60,15 +59,13 @@ func runCmd(cmd *base.Command, args []string) {
 }
 
 func get(pkgPath string) {
-	modBase := ""
-	mod, err := modload.Load(".")
-	noMod := tool.NotFound(err)
+	mod, err := tool.FindAndLoadGoMod(".")
+	noMod := os.IsNotExist(err)
 	if !noMod {
 		check(err)
-		modBase = mod.Path()
 	}
 
-	pkgModVer, _, err := modfetch.GetPkg(pkgPath, modBase)
+	pkgModVer, _, err := modfetch.GetPkg(pkgPath)
 	check(err)
 	if noMod {
 		return
@@ -77,10 +74,7 @@ func get(pkgPath string) {
 	pkgModRoot, err := modcache.Path(pkgModVer)
 	check(err)
 
-	pkgMod, err := modload.Load(pkgModRoot)
-	check(err)
-
-	check(mod.AddRequire(pkgModVer.Path, pkgModVer.Version, pkgMod.HasProject()))
+	check(mod.AddRequire(pkgModVer.Path, pkgModVer.Version, tool.HasProject(pkgModRoot)))
 	fmt.Fprintf(os.Stderr, "gop get: added %s %s\n", pkgModVer.Path, pkgModVer.Version)
 
 	check(mod.Save())

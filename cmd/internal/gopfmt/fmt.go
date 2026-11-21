@@ -26,10 +26,11 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/goplus/mod"
+	"github.com/goplus/mod/goxmod"
 	"github.com/goplus/xgo/cmd/internal/base"
 	"github.com/goplus/xgo/format"
 	xgoparser "github.com/goplus/xgo/parser"
-	"github.com/goplus/xgo/tool"
 
 	goformat "go/format"
 	"go/parser"
@@ -147,8 +148,8 @@ func (w *walker) walk(path string, d fs.DirEntry, err error) error {
 		dir, _ := filepath.Split(path)
 		fn, ok := w.dirMap[dir]
 		if !ok {
-			if mod, err := tool.LoadMod(path); err == nil {
-				fn = mod.ClassInfo
+			if c, err := classesOf(dir); err == nil {
+				fn = c.ClassInfo
 			} else {
 				fn = xgoparser.DefaultClassInfo
 			}
@@ -178,6 +179,14 @@ func (w *walker) walk(path string, d fs.DirEntry, err error) error {
 		}
 	}
 	return err
+}
+
+func classesOf(dir string) (_ goxmod.Classes, err error) {
+	w, err := mod.LoadFromDir(dir)
+	if err != nil {
+		return
+	}
+	return w.Classes(dir)
 }
 
 func report(err error) {

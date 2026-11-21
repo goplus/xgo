@@ -1,0 +1,231 @@
+/*
+ * Copyright (c) 2026 The XGo Authors (xgo.dev). All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package tool
+
+import (
+	"os"
+	"path/filepath"
+	"strings"
+
+	"github.com/goplus/mod"
+	"github.com/goplus/mod/gomod"
+	"github.com/goplus/mod/goxmod"
+	"github.com/goplus/xgo/x/xgoenv"
+	"golang.org/x/mod/modfile"
+)
+
+// This file replaces the go.mod / gox.mod writing operations that used to live
+// in github.com/goplus/mod/{modload,xgomod}, which are gone in the Workspace
+// model (mod.Workspace is a read-only snapshot). The edits are done directly on
+// golang.org/x/mod/modfile, which is the same writer those packages used.
+
+// -----------------------------------------------------------------------------
+
+const (
+	defaultGoVer  = "1.23"
+	defaultXgoVer = "1.7"
+)
+
+// CreateGoMod creates a new module in dir with the given module path, writing
+// nothing to disk yet (call Save). goVer defaults when empty. xgoVer is accepted
+// for signature compatibility with the previous modload.Create; the XGo version
+// is not recorded in go.mod. It errors if a go.mod already exists in dir.
+func CreateGoMod(dir, modPath, goVer string) (_ gomod.File, err error) {
+	abs, err := filepath.Abs(dir)
+	if err != nil {
+		return
+	}
+	gomodfile := filepath.Join(abs, "go.mod")
+	if _, err = os.Stat(gomodfile); err == nil {
+		err = &os.PathError{Op: "create", Path: gomodfile, Err: os.ErrExist}
+		return
+	}
+	if goVer == "" {
+		goVer = defaultGoVer
+	}
+	return gomod.Create(gomodfile, modPath, goVer)
+}
+
+func FindAndLoadGoMod(dir string) (_ gomod.File, err error) {
+	gomodfile, err := mod.Finder{}.FindGoMod(dir)
+	if err != nil {
+		return
+	}
+	return gomod.Load(gomodfile)
+}
+
+// -----------------------------------------------------------------------------
+
+// saveXGoMod adds `require github.com/goplus/xgo` (and github.com/qiniu/x)
+// to the go.mod at gomod when the compiled package depends on them, matching
+// the old (*xgomod.Module).SaveWithXGoMod. flags come from gogen's
+// CheckXGoDeps (FlagDepModXGo / FlagDepModX).
+func saveXGoMod(gomod string, xgo *xgoenv.XGo, flags int) error {
+	data, err := os.ReadFile(gomod)
+	if err != nil {
+		return err
+	}
+	f, err := modfile.Parse(gomod, data, nil)
+	if err != nil {
+		return err
+	}
+	old := checkXGoDeps(f)
+	if (flags &^ old) == 0 { // nothing to add
+		return nil
+	}
+	changed := false
+	if (flags&flagDepModXGo) != 0 && (old&flagDepModXGo) == 0 {
+		if err := f.AddRequire(xgoMod, xgoVerOf(xgo)); err == nil {
+			changed = true
+		}
+	}
+	if (flags&flagDepModX) != 0 && (old&flagDepModX) == 0 {
+		if ver := xModVerOf(xgo); ver != "" {
+			if err := f.AddRequire(xMod, ver); err == nil {
+				changed = true
+			}
+		}
+	}
+	if !changed {
+		return nil
+	}
+	f.Cleanup()
+	out, err := f.Format()
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(gomod, out, 0644)
+}
+
+const (
+	flagDepModXGo = 1 << iota // depends on github.com/goplus/xgo
+	flagDepModX               // depends on github.com/qiniu/x
+)
+
+// checkXGoDeps reports which of the XGo toolchain modules the go.mod already
+// requires (so they are not re-added).
+func checkXGoDeps(f *modfile.File) (flags int) {
+	if f.Module != nil {
+		switch f.Module.Mod.Path {
+		case xgoMod:
+			return flagDepModXGo | flagDepModX
+		case xMod:
+			return flagDepModX
+		}
+	}
+	for _, r := range f.Require {
+		switch r.Mod.Path {
+		case xgoMod:
+			flags |= flagDepModXGo
+		case xMod:
+			flags |= flagDepModX
+		}
+	}
+	return
+}
+
+// xgoVerOf returns the XGo version to require, trimming a trailing " devel".
+func xgoVerOf(xgo *xgoenv.XGo) string {
+	ver := xgo.Version
+	if pos := strings.IndexByte(ver, ' '); pos > 0 {
+		ver = ver[:pos]
+	}
+	if ver == "" {
+		return "v" + defaultXgoVer + ".0"
+	}
+	return ver
+}
+
+// xModVerOf returns the github.com/qiniu/x version required by the XGo
+// installation's own go.mod, or "" if it cannot be determined.
+func xModVerOf(xgo *xgoenv.XGo) string {
+	data, err := os.ReadFile(filepath.Join(xgo.Root, "go.mod"))
+	if err != nil {
+		return ""
+	}
+	f, err := modfile.Parse("go.mod", data, nil)
+	if err != nil {
+		return ""
+	}
+	for _, r := range f.Require {
+		if r.Mod.Path == xMod {
+			return r.Mod.Version
+		}
+	}
+	return ""
+}
+
+// -----------------------------------------------------------------------------
+
+// isClassRequire reports whether a require line carries a //xgo:class or
+// //gop:class marker.
+func isClassRequire(r *modfile.Require) bool {
+	if r.Syntax == nil {
+		return false
+	}
+	for _, c := range r.Syntax.Suffix {
+		if len(c.Token) < 2 {
+			continue
+		}
+		text := strings.TrimLeft(c.Token[2:], " \t")
+		if strings.HasPrefix(text, "xgo:class") || strings.HasPrefix(text, "gop:class") {
+			return true
+		}
+	}
+	return false
+}
+
+// modPathOf returns the module path declared in the go.mod at the given path,
+// or "" if it cannot be read.
+func modPathOf(gomod string) string {
+	data, err := os.ReadFile(gomod)
+	if err != nil {
+		return ""
+	}
+	f, err := modfile.ParseLax(gomod, data, nil)
+	if err != nil || f.Module == nil {
+		return ""
+	}
+	return f.Module.Mod.Path
+}
+
+// HasProject reports whether the module rooted at dir declares any classfile
+// project (in its gox.mod, legacy gop.mod, or a //xgo:class require). It is
+// used by `xgo get` to decide whether a fetched dependency is a classfile
+// module.
+func HasProject(dir string) bool {
+	gomodData, err := os.ReadFile(filepath.Join(dir, "go.mod"))
+	if err != nil {
+		return false
+	}
+	gomod, err := modfile.Parse("go.mod", gomodData, nil)
+	if err != nil {
+		return false
+	}
+	for _, r := range gomod.Require {
+		if isClassRequire(r) {
+			return true
+		}
+	}
+	gox, err := goxmod.LoadModfile(gomod, filepath.Join(dir, "gox.mod"))
+	if err != nil {
+		return false
+	}
+	return len(gox.Projects) > 0
+}
+
+// -----------------------------------------------------------------------------
