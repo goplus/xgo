@@ -1257,10 +1257,10 @@ func (this *caseFoo) Main() {
 	})
 }
 func TestFoo(t *testing.T) {
-	test.Gopt_Case_TestMain(new(caseFoo), t)
+	test.XGot_Case_TestMain(new(caseFoo), t)
 }
 func TestMain(m *testing.M) {
-	test.Gopt_App_TestMain(new(App), m)
+	test.XGot_App_TestMain(new(App), m)
 }
 `, "main_xtest.gox", "Foo_xtest.gox", "_test")
 }
@@ -1285,7 +1285,7 @@ func (this *case_foo) Main() {
 	this.T().Log("Hi")
 }
 func Test_foo(t *testing.T) {
-	test.Gopt_Case_TestMain(new(case_foo), t)
+	test.XGot_Case_TestMain(new(case_foo), t)
 }
 `, "main.gox", "foo_xtest.gox", "_test")
 }
