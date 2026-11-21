@@ -64,17 +64,17 @@ Run 'gop help mod init' for more information.`)
 	}
 
 	modPath := args[0]
-	mod, err := tool.CreateGoMod(".", modPath, goMainVer(), env.MainVersion())
+	mod, err := tool.CreateGoMod(".", modPath, goMainVer())
 	check(err)
 
 	if *flagLLGo {
-		tool.AddCompiler(mod, "llgo", "1.0")
-		tool.AddRequire(mod, "github.com/goplus/lib", llgoLibVer(), false)
+		mod.AddCompiler("llgo", "1.0")
+		mod.AddRequire("github.com/goplus/lib", llgoLibVer(), false)
 	} else if *flagTinyGo {
-		tool.AddCompiler(mod, "tinygo", "0.32")
+		mod.AddCompiler("tinygo", "0.32")
 	}
 
-	err = tool.SaveGoMod(mod)
+	err = mod.Save()
 	check(err)
 }
 

@@ -7,7 +7,7 @@ require (
 	github.com/goccy/go-yaml v1.19.2
 	github.com/goplus/gogen v1.26.7
 	github.com/goplus/lib v0.7.2
-	github.com/goplus/mod v0.25.1
+	github.com/goplus/mod v0.25.2
 	github.com/qiniu/x v1.19.3
 	golang.org/x/mod v0.40.0
 	golang.org/x/net v0.62.0

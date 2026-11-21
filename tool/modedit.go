@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/goplus/mod"
+	"github.com/goplus/mod/gomod"
 	"github.com/goplus/mod/goxmod"
 	"github.com/goplus/xgo/x/xgoenv"
 	"golang.org/x/mod/modfile"
@@ -43,91 +44,28 @@ const (
 // nothing to disk yet (call Save). goVer defaults when empty. xgoVer is accepted
 // for signature compatibility with the previous modload.Create; the XGo version
 // is not recorded in go.mod. It errors if a go.mod already exists in dir.
-func CreateGoMod(dir, modPath, goVer, xgoVer string) (*modfile.File, error) {
+func CreateGoMod(dir, modPath, goVer string) (_ gomod.File, err error) {
 	abs, err := filepath.Abs(dir)
 	if err != nil {
-		return nil, err
+		return
 	}
-	gomod := filepath.Join(abs, "go.mod")
-	if _, err := os.Stat(gomod); err == nil {
-		return nil, &os.PathError{Op: "create", Path: gomod, Err: os.ErrExist}
+	gomodfile := filepath.Join(abs, "go.mod")
+	if _, err = os.Stat(gomodfile); err == nil {
+		err = &os.PathError{Op: "create", Path: gomodfile, Err: os.ErrExist}
+		return
 	}
 	if goVer == "" {
 		goVer = defaultGoVer
 	}
-	_ = xgoVer // accepted for API compatibility; see doc above
-	f := new(modfile.File)
-	if err := f.AddModuleStmt(modPath); err != nil {
-		return nil, err
-	}
-	if err := f.AddGoStmt(goVer); err != nil {
-		return nil, err
-	}
-	f.Syntax.Name = gomod
-	return f, nil
+	return gomod.Create(gomodfile, modPath, goVer)
 }
 
-func FindAndLoadGoMod(dir string) (_ *modfile.File, err error) {
-	gomod, err := mod.Finder{}.FindGoMod(dir)
+func FindAndLoadGoMod(dir string) (_ gomod.File, err error) {
+	gomodfile, err := mod.Finder{}.FindGoMod(dir)
 	if err != nil {
 		return
 	}
-	return loadGoMod(gomod)
-}
-
-func loadGoMod(gomod string) (*modfile.File, error) {
-	data, err := os.ReadFile(gomod)
-	if err != nil {
-		return nil, err
-	}
-	return modfile.Parse(gomod, data, nil)
-}
-
-// AddCompiler records a compiler directive (llgo/tinygo) as a comment on the
-// go directive in go.mod, the way the XGo toolchain reads it.
-func AddCompiler(f *modfile.File, compiler, ver string) {
-	if f.Go == nil {
-		f.AddGoStmt(defaultGoVer)
-	}
-	if line := f.Go.Syntax; line != nil {
-		line.Suffix = []modfile.Comment{{
-			Token:  "// " + compiler + " " + ver,
-			Suffix: true,
-		}}
-	}
-}
-
-// AddRequire adds a require line, marking it as a classfile require
-// (//xgo:class) when hasProj is set.
-func AddRequire(f *modfile.File, path, vers string, hasProj bool) error {
-	if err := f.AddRequire(path, vers); err != nil {
-		return err
-	}
-	if hasProj {
-		for _, r := range f.Require {
-			if r.Mod.Path == path {
-				if !isClassRequire(r) && r.Syntax != nil {
-					r.Syntax.Suffix = append(r.Syntax.Suffix, modfile.Comment{
-						Token:  "//xgo:class",
-						Suffix: true,
-					})
-				}
-				break
-			}
-		}
-	}
-	return nil
-}
-
-// Save writes go.mod to disk. The compiler directive (llgo/tinygo) lives in the
-// go.mod `go` line suffix.
-func SaveGoMod(f *modfile.File) error {
-	f.Cleanup()
-	data, err := f.Format()
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(f.Syntax.Name, data, 0644)
+	return gomod.Load(gomodfile)
 }
 
 // -----------------------------------------------------------------------------

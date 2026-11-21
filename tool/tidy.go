@@ -22,6 +22,7 @@ import (
 	"path/filepath"
 
 	"github.com/goplus/mod"
+	"github.com/goplus/mod/gomod"
 	"github.com/goplus/xgo/x/xgoenv"
 	"github.com/qiniu/x/errors"
 	"golang.org/x/mod/modfile"
@@ -106,7 +107,7 @@ func keepClassfileRequires(modRoot string, classMods []classfileRequire) (err er
 	if len(classMods) == 0 {
 		return nil
 	}
-	modObj, err := loadGoMod(filepath.Join(modRoot, "go.mod"))
+	modObj, err := gomod.Load(filepath.Join(modRoot, "go.mod"))
 	if err != nil {
 		return
 	}
@@ -119,7 +120,7 @@ func keepClassfileRequires(modRoot string, classMods []classfileRequire) (err er
 		if have[c.Path] {
 			continue
 		}
-		if err = AddRequire(modObj, c.Path, c.Version, true); err != nil {
+		if err = modObj.AddRequire(c.Path, c.Version, true); err != nil {
 			return
 		}
 		changed = true
@@ -127,5 +128,5 @@ func keepClassfileRequires(modRoot string, classMods []classfileRequire) (err er
 	if !changed {
 		return nil
 	}
-	return SaveGoMod(modObj)
+	return modObj.Save()
 }

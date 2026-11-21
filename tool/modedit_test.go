@@ -22,6 +22,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/goplus/mod/gomod"
 	"github.com/goplus/xgo/x/xgoenv"
 )
 
@@ -29,18 +30,18 @@ import (
 // replaces the removed modload.Create / AddCompiler / AddRequire / Save.
 func TestCreateGoMod(t *testing.T) {
 	dir := t.TempDir()
-	m, err := CreateGoMod(dir, "example.com/app", "1.24", "1.5")
+	m, err := CreateGoMod(dir, "example.com/app", "1.24")
 	if err != nil {
 		t.Fatal("CreateGoMod:", err)
 	}
 	if m.Module.Mod.Path != "example.com/app" {
 		t.Fatalf("Path = %q, want example.com/app", m.Module.Mod.Path)
 	}
-	AddCompiler(m, "llgo", "1.0")
-	if err := AddRequire(m, "github.com/goplus/lib", "v0.2.0", false); err != nil {
+	m.AddCompiler("llgo", "1.0")
+	if err := m.AddRequire("github.com/goplus/lib", "v0.2.0", false); err != nil {
 		t.Fatal("AddRequire:", err)
 	}
-	if err := SaveGoMod(m); err != nil {
+	if err := m.Save(); err != nil {
 		t.Fatal("Save:", err)
 	}
 	gomod, err := os.ReadFile(filepath.Join(dir, "go.mod"))
@@ -69,7 +70,7 @@ func TestCreateGoMod(t *testing.T) {
 func TestCreateGoModExists(t *testing.T) {
 	dir := t.TempDir()
 	writeGoMod(t, dir, "module there\n\ngo 1.24\n")
-	if _, err := CreateGoMod(dir, "there", "", ""); err == nil {
+	if _, err := CreateGoMod(dir, "there", ""); err == nil {
 		t.Fatal("CreateGoMod should fail when go.mod already exists")
 	}
 }
@@ -118,11 +119,11 @@ require (
 	github.com/qiniu/x v1.19.3
 )
 `)
-	m, err := loadGoMod(filepath.Join(dir, "go.mod"))
+	m, err := gomod.Load(filepath.Join(dir, "go.mod"))
 	if err != nil {
 		t.Fatal("LoadGoMod:", err)
 	}
-	if flags := checkXGoDeps(m); flags != (flagDepModXGo | flagDepModX) {
+	if flags := checkXGoDeps(m.File); flags != (flagDepModXGo | flagDepModX) {
 		t.Fatalf("checkXGoDeps = %d, want both", flags)
 	}
 }

@@ -74,10 +74,10 @@ func get(pkgPath string) {
 	pkgModRoot, err := modcache.Path(pkgModVer)
 	check(err)
 
-	check(tool.AddRequire(mod, pkgModVer.Path, pkgModVer.Version, tool.HasProject(pkgModRoot)))
+	check(mod.AddRequire(pkgModVer.Path, pkgModVer.Version, tool.HasProject(pkgModRoot)))
 	fmt.Fprintf(os.Stderr, "gop get: added %s %s\n", pkgModVer.Path, pkgModVer.Version)
 
-	check(tool.SaveGoMod(mod))
+	check(mod.Save())
 }
 
 func check(err error) {
