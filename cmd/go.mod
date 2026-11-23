@@ -8,14 +8,14 @@ require (
 	github.com/goplus/mod v0.25.2
 	github.com/goplus/xgo v0.0.0-00010101000000-000000000000
 	github.com/qiniu/x v1.19.3
-	golang.org/x/mod v0.40.0
+	golang.org/x/mod v0.43.0
 )
 
 require (
 	github.com/fsnotify/fsnotify v1.10.1 // indirect
 	github.com/goccy/go-yaml v1.19.2 // indirect
-	golang.org/x/net v0.62.0 // indirect
-	golang.org/x/sys v0.49.0 // indirect
+	golang.org/x/net v0.63.0 // indirect
+	golang.org/x/sys v0.50.0 // indirect
 )
 
 replace github.com/goplus/xgo => ../
