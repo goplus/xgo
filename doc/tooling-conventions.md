@@ -436,6 +436,9 @@ Use [typesutil.NewChecker](../x/typesutil/check.go) for mixed Go and XGo package
 [typesutil recorder](../x/typesutil/gopinfo.go). Allocate each `typesutil.Info` map needed by the consumer. Unallocated
 maps are not populated, and errors can leave partial information.
 
+The compiler keeps a private expression type map with the standard `typesutil` recorder. A custom
+[cl.TypesRecorder](../cl/compile.go) can supply its output map to the compiler for one package check.
+
 | Information | Query |
 | --- | --- |
 | Declaration and reference bindings | `Defs`, `Uses`, and `ObjectOf` |

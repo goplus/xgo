@@ -27,18 +27,33 @@ import (
 	"github.com/goplus/xgo/token"
 )
 
+// goxRecorder keeps compiler expression types while forwarding recording events.
 type goxRecorder struct {
 	Recorder
-	types     map[ast.Expr]types.TypeAndValue
-	referDefs map[*ast.Ident]ast.Node
-	referUses map[string][]*ast.Ident
+	types               map[ast.Expr]types.TypeAndValue
+	sharesTypes         bool
+	uninstantiatedTypes map[ast.Expr]types.TypeAndValue
+	referDefs           map[*ast.Ident]ast.Node
+	referUses           map[string][]*ast.Ident
 }
 
+// newRecorder starts a package check with private or shared expression storage.
 func newRecorder(rec Recorder) *goxRecorder {
-	types := make(map[ast.Expr]types.TypeAndValue)
-	referDefs := make(map[*ast.Ident]ast.Node)
-	referUses := make(map[string][]*ast.Ident)
-	return &goxRecorder{rec, types, referDefs, referUses}
+	var records map[ast.Expr]types.TypeAndValue
+	if provider, ok := rec.(TypesRecorder); ok {
+		records = provider.RecordedTypes()
+	}
+	sharesTypes := records != nil && len(records) == 0
+	if !sharesTypes {
+		records = make(map[ast.Expr]types.TypeAndValue)
+	}
+	return &goxRecorder{
+		Recorder:    rec,
+		types:       records,
+		sharesTypes: sharesTypes,
+		referDefs:   make(map[*ast.Ident]ast.Node),
+		referUses:   make(map[string][]*ast.Ident),
+	}
 }
 
 // Refer uses maps identifiers to name for ast.OverloadFuncDecl.
@@ -105,6 +120,7 @@ func (p *goxRecorder) Complete(scope *types.Scope) {
 		}
 	}
 	p.types = nil
+	p.uninstantiatedTypes = nil
 	p.referDefs = nil
 	p.referUses = nil
 }
@@ -151,34 +167,53 @@ func (p *goxRecorder) Call(id ast.Node, obj types.Object) {
 	}
 }
 
+// checkExprByValue reports whether v is a non-addressable receiver value.
 func (rec *goxRecorder) checkExprByValue(v ast.Expr) bool {
-	if tv, ok := rec.types[v]; ok {
-		switch v.(type) {
-		case *ast.CallExpr:
-			if _, ok := tv.Type.(*types.Pointer); !ok {
-				return true
-			}
-		default:
-			if tv, ok := rec.types[v]; ok {
-				return !tv.Addressable()
-			}
-		}
+	tv, ok := rec.recordedType(v)
+	if !ok {
+		return false
 	}
-	return false
+	if _, call := v.(*ast.CallExpr); call {
+		_, pointer := tv.Type.(*types.Pointer)
+		return !pointer
+	}
+	return !tv.Addressable()
 }
 
-// Type records the type of expr and forwards it to the wrapped Recorder. A nil expression is ignored.
+// Type forwards a non-nil expression type to the wrapped [Recorder]. With
+// a private map, it records the type before forwarding. With a shared map,
+// the wrapped recorder writes the entry.
 func (rec *goxRecorder) Type(expr ast.Expr, tv types.TypeAndValue) {
-	if expr == nil {
-		return
+	if expr != nil {
+		if rec.sharesTypes {
+			delete(rec.uninstantiatedTypes, expr)
+		} else {
+			rec.types[expr] = tv
+		}
+		rec.Recorder.Type(expr, tv)
 	}
-	rec.types[expr] = tv
-	rec.Recorder.Type(expr, tv)
+}
+
+// recordedType returns the compiler type even after an instantiated type has been published.
+func (rec *goxRecorder) recordedType(expr ast.Expr) (types.TypeAndValue, bool) {
+	if len(rec.uninstantiatedTypes) != 0 {
+		if tv, ok := rec.uninstantiatedTypes[expr]; ok {
+			return tv, true
+		}
+	}
+	tv, ok := rec.types[expr]
+	return tv, ok
 }
 
 func (rec *goxRecorder) instantiate(expr ast.Expr, _, typ types.Type) {
-	// check gox TyOverloadNamed
-	if tv, ok := rec.types[expr]; ok {
+	if tv, ok := rec.recordedType(expr); ok {
+		// Instantiation updates the published entry while preserving the compiler type.
+		if rec.sharesTypes {
+			if rec.uninstantiatedTypes == nil {
+				rec.uninstantiatedTypes = make(map[ast.Expr]types.TypeAndValue)
+			}
+			rec.uninstantiatedTypes[expr] = tv
+		}
 		tv.Type = typ
 		rec.Recorder.Type(expr, tv)
 	}
@@ -203,7 +238,7 @@ func (rec *goxRecorder) recordTypeValue(ctx *blockCtx, expr ast.Expr, mode types
 }
 
 func (rec *goxRecorder) indexExpr(ctx *blockCtx, expr *ast.IndexExpr) {
-	if tv, ok := rec.types[expr.X]; ok {
+	if tv, ok := rec.recordedType(expr.X); ok {
 		switch tv.Type.(type) {
 		case *types.Map:
 			rec.recordTypeValue(ctx, expr, typesutil.MapIndex)
@@ -302,7 +337,7 @@ func (rec *goxRecorder) recordExpr(ctx *blockCtx, expr ast.Expr, lhs bool) {
 	case *ast.ParenExpr:
 		if !lhs {
 			rec.recordTypeValue(ctx, v, typesutil.Value)
-		} else if tv, ok := rec.types[v.X]; ok {
+		} else if tv, ok := rec.recordedType(v.X); ok {
 			rec.Type(v, tv)
 		}
 	case *ast.ErrWrapExpr:
