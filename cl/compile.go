@@ -71,6 +71,8 @@ func SetDebug(flags dbgFlags) {
 // -----------------------------------------------------------------------------
 
 // Recorder represents a compiling event recorder.
+//
+// A recorder may implement [TypesRecorder] to share its expression type map.
 type Recorder interface {
 	// Type maps expressions to their types, and for constant
 	// expressions, also their values. Invalid expressions are
@@ -168,6 +170,25 @@ type Recorder interface {
 	//     *ast.LambdaExpr
 	//
 	Scope(ast.Node, *types.Scope)
+}
+
+// TypesRecorder is an optional [Recorder] that shares an expression type
+// map with the compiler.
+//
+// The compiler shares the map when it is non-nil and empty at the start of
+// a package check. Keep the same map throughout the check and use it for
+// only one active check at a time. Only Type may modify the shared map, and
+// each call must store the supplied value for the supplied expression
+// before returning.
+//
+// The shared map holds the latest value passed to Type for each expression.
+// A generic instantiation passes the instantiated type to Type while the
+// compiler retains the pre-instantiation type for its own lookups.
+type TypesRecorder interface {
+	Recorder
+
+	// RecordedTypes returns the expression type output map.
+	RecordedTypes() map[ast.Expr]types.TypeAndValue
 }
 
 // -----------------------------------------------------------------------------

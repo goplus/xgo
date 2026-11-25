@@ -19,10 +19,12 @@
 package typesutil_test
 
 import (
+	"go/importer"
 	"go/types"
 	"testing"
 
 	"github.com/goplus/xgo/ast"
+	"github.com/goplus/xgo/cl"
 	"github.com/goplus/xgo/parser"
 	"github.com/goplus/xgo/token"
 	"github.com/goplus/xgo/x/typesutil"
@@ -81,6 +83,98 @@ func TestRecorderType(t *testing.T) {
 			if tt.record && info.Types[nilLiteral] != tv {
 				t.Fatal("nil literal type was not recorded")
 			}
+		})
+	}
+}
+
+type importerFunc func(string) (*types.Package, error)
+
+func (f importerFunc) Import(path string) (*types.Package, error) {
+	return f(path)
+}
+
+type sharedTypesRecorder struct {
+	cl.Recorder
+	types     map[ast.Expr]types.TypeAndValue
+	requested bool
+}
+
+var _ cl.TypesRecorder = (*sharedTypesRecorder)(nil)
+
+func (r *sharedTypesRecorder) RecordedTypes() map[ast.Expr]types.TypeAndValue {
+	r.requested = true
+	return r.types
+}
+
+func TestRecorderMapIndex(t *testing.T) {
+	const source = `package probe
+
+import "example.com/helper"
+
+func value(entries map[int]int) int {
+	return entries[helper.Key]
+}
+`
+	for _, tt := range []struct {
+		name   string
+		shared bool
+	}{
+		{name: "ReplaceOutputDuringImport"},
+		{name: "SharedOutput", shared: true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			fset := token.NewFileSet()
+			file, err := parser.ParseEntry(fset, "probe.xgo", source, parser.Config{})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			info := &typesutil.Info{Types: make(map[ast.Expr]types.TypeAndValue)}
+			recorder := typesutil.NewRecorder(info)
+			var shared *sharedTypesRecorder
+			if tt.shared {
+				shared = &sharedTypesRecorder{Recorder: recorder, types: info.Types}
+				recorder = shared
+			}
+
+			helper := types.NewPackage("example.com/helper", "helper")
+			helper.Scope().Insert(types.NewVar(token.NoPos, helper, "Key", types.Typ[types.Int]))
+			helper.MarkComplete()
+			fallback := importer.Default()
+			_, err = cl.NewPackage("example.com/probe", &ast.Package{
+				Name:  "probe",
+				Files: map[string]*ast.File{"probe.xgo": file},
+			}, &cl.Config{
+				Fset:     fset,
+				Recorder: recorder,
+				Importer: importerFunc(func(path string) (*types.Package, error) {
+					if path == helper.Path() {
+						if !tt.shared {
+							// Exercise private compiler storage while the caller
+							// replaces the standard recorder's output map.
+							info.Types = make(map[ast.Expr]types.TypeAndValue)
+						}
+						return helper, nil
+					}
+					return fallback.Import(path)
+				}),
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if tt.shared && !shared.requested {
+				t.Fatal("compiler did not request the shared expression type map")
+			}
+
+			for expr, tv := range info.Types {
+				if _, ok := expr.(*ast.IndexExpr); ok {
+					if tv.Type != types.Typ[types.Int] || !tv.HasOk() || tv.Addressable() {
+						t.Fatalf("map index type = %v, HasOk = %t, Addressable = %t", tv.Type, tv.HasOk(), tv.Addressable())
+					}
+					return
+				}
+			}
+			t.Fatal("missing map index type")
 		})
 	}
 }

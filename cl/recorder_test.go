@@ -39,31 +39,50 @@ func (r *typeRecordingRecorder) Type(expr ast.Expr, tv types.TypeAndValue) {
 }
 
 func TestGoxRecorderType(t *testing.T) {
-	sink := &typeRecordingRecorder{}
-	rec := newRecorder(sink)
-	tv := types.TypeAndValue{Type: types.Typ[types.Int]}
-	for range 2000 {
-		rec.Type(&ast.Ident{Name: "value"}, tv)
-	}
+	for _, tt := range []struct {
+		name   string
+		shared bool
+	}{
+		{name: "Private"},
+		{name: "Shared", shared: true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			sink := &typeRecordingRecorder{}
+			var output Recorder = sink
+			if tt.shared {
+				shared := &sharedTypeRecordingRecorder{types: make(map[ast.Expr]types.TypeAndValue)}
+				sink = &shared.typeRecordingRecorder
+				output = shared
+			}
+			rec := newRecorder(output)
+			if rec.sharesTypes != tt.shared {
+				t.Fatalf("shared types = %t, want %t", rec.sharesTypes, tt.shared)
+			}
+			tv := types.TypeAndValue{Type: types.Typ[types.Int]}
+			for range 2000 {
+				rec.Type(&ast.Ident{Name: "value"}, tv)
+			}
 
-	rec.Type(nil, tv)
-	if len(rec.types) != 2000 || len(sink.records) != 2000 {
-		t.Fatalf("recording an absent expression changed the records: %d internal, %d forwarded", len(rec.types), len(sink.records))
-	}
-	for expr := range rec.types {
-		if expr == nil {
-			t.Fatal("recorded an absent expression")
-		}
-	}
+			rec.Type(nil, tv)
+			if len(rec.types) != 2000 || len(sink.records) != 2000 {
+				t.Fatalf("recording an absent expression changed the records: %d internal, %d forwarded", len(rec.types), len(sink.records))
+			}
+			for expr := range rec.types {
+				if expr == nil {
+					t.Fatal("recorded an absent expression")
+				}
+			}
 
-	expr := &ast.Ident{Name: "nil"}
-	tv = types.TypeAndValue{Type: types.Typ[types.UntypedNil]}
-	rec.Type(expr, tv)
-	if got := rec.types[expr]; got != tv {
-		t.Fatalf("nil literal type = %v, want %v", got, tv)
-	}
-	if got := sink.records[len(sink.records)-1]; got.expr != expr || got.tv != tv {
-		t.Fatalf("forwarded nil literal = %v, want %v", got, recordedType{expr, tv})
+			expr := &ast.Ident{Name: "nil"}
+			tv = types.TypeAndValue{Type: types.Typ[types.UntypedNil]}
+			rec.Type(expr, tv)
+			if got := rec.types[expr]; got != tv {
+				t.Fatalf("nil literal type = %v, want %v", got, tv)
+			}
+			if got := sink.records[len(sink.records)-1]; got.expr != expr || got.tv != tv {
+				t.Fatalf("forwarded nil literal = %v, want %v", got, recordedType{expr, tv})
+			}
+		})
 	}
 }
 
@@ -135,5 +154,97 @@ func TestGoxRecorderParenthesizedLHS(t *testing.T) {
 	rec.recordExpr(nil, blank, true)
 	if _, ok := rec.types[blank]; ok || len(sink.records) != 2 {
 		t.Fatal("recorded a type for a parenthesized blank identifier")
+	}
+}
+
+type sharedTypeRecordingRecorder struct {
+	typeRecordingRecorder
+	types    map[ast.Expr]types.TypeAndValue
+	previous types.TypeAndValue
+}
+
+func (r *sharedTypeRecordingRecorder) RecordedTypes() map[ast.Expr]types.TypeAndValue {
+	return r.types
+}
+
+func (r *sharedTypeRecordingRecorder) Type(expr ast.Expr, tv types.TypeAndValue) {
+	if r.types != nil {
+		r.previous = r.types[expr]
+		r.types[expr] = tv
+	}
+	r.typeRecordingRecorder.Type(expr, tv)
+}
+
+func TestGoxRecorderSharedTypes(t *testing.T) {
+	t.Run("InstantiatedTypes", func(t *testing.T) {
+		expr := &ast.Ident{Name: "Box"}
+		sink := &sharedTypeRecordingRecorder{types: make(map[ast.Expr]types.TypeAndValue)}
+		rec := newRecorder(sink)
+		if !rec.sharesTypes {
+			t.Fatal("an empty output map was not shared")
+		}
+		assertCompilerType := func(want types.TypeAndValue) {
+			t.Helper()
+			if got, ok := rec.recordedType(expr); !ok || got != want {
+				t.Fatalf("compiler type = %v, want %v", got, want)
+			}
+		}
+		original := typesutil.NewTypeAndValueForType(types.Typ[types.Int])
+		rec.Type(expr, original)
+		if sink.previous.Type != nil || sink.types[expr] != original {
+			t.Fatal("the initial callback did not see an empty entry")
+		}
+
+		published := original
+		for _, instance := range []types.Type{types.Typ[types.String], types.Typ[types.Bool]} {
+			rec.instantiate(expr, original.Type, instance)
+			if sink.previous != published {
+				t.Fatalf("previous published type = %v, want %v", sink.previous, published)
+			}
+			published.Type = instance
+			if got := sink.types[expr]; got != published {
+				t.Fatalf("published instance = %v, want %v", got, published)
+			}
+			assertCompilerType(original)
+		}
+
+		replacement := typesutil.NewTypeAndValueForValue(types.Typ[types.Int], nil, typesutil.Variable)
+		rec.Type(expr, replacement)
+		if sink.previous != published {
+			t.Fatalf("previous published type = %v, want %v", sink.previous, published)
+		}
+		assertCompilerType(replacement)
+		rec.Complete(types.NewScope(nil, 0, 0, "test"))
+		if rec.types != nil || rec.uninstantiatedTypes != nil {
+			t.Fatal("retained compiler type maps after completion")
+		}
+		if got := sink.types[expr]; got != replacement {
+			t.Fatalf("published type after completion = %v, want %v", got, replacement)
+		}
+	})
+
+	for _, tt := range []struct {
+		name      string
+		populated bool
+	}{
+		{name: "DisabledOutput"},
+		{name: "PopulatedOutput", populated: true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			expr := &ast.Ident{Name: "value"}
+			tv := typesutil.NewTypeAndValueForValue(types.Typ[types.Int], nil, typesutil.Variable)
+			sink := &sharedTypeRecordingRecorder{}
+			if tt.populated {
+				sink.types = map[ast.Expr]types.TypeAndValue{expr: tv}
+			}
+			rec := newRecorder(sink)
+			if _, ok := rec.recordedType(expr); ok {
+				t.Fatal("the compiler read a type from before the check")
+			}
+			rec.Type(expr, tv)
+			if got, ok := rec.recordedType(expr); !ok || got != tv {
+				t.Fatalf("compiler type = %v, want %v", got, tv)
+			}
+		})
 	}
 }
